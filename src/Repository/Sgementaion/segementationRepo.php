@@ -33,6 +33,14 @@ class segementationRepo extends ServiceEntityRepository
             return null;
         }
     }
+    public function getOneSegment($id){
+        $sql="SELECT s.* FROM `debt_force`.`segmentation` s WHERE s.id =:id_seg";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(":id_seg",$id);
+        $stmt = $stmt->executeQuery();
+        $statut = $stmt->fetchAssociative();
+        return $statut;
+    }
     public function getListeSgementByStatus($status){
         $sql="SELECT * FROM `segmentation` s WHERE s.id_status_id = :status";
         
@@ -139,7 +147,16 @@ class segementationRepo extends ServiceEntityRepository
         $stmt->bindValue(":id_seg_id",$id);
         $stmt = $stmt->executeQuery();
     }
-    
+    public function getValueSegment($id,$entity){
+        $table = 'seg_'.$entity.'';
+        $sql="SELECT count(id) FROM debt_force_seg.".$table." s WHERE s.id_seg = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(":id",$id);
+        $stmt = $stmt->executeQuery();
+        $result = $stmt->fetchOne();
+        return $result;
+        
+    }
     public function getDetailsSegment($id){
         $sql="SELECT * FROM `segmentation` s WHERE s.id = :id";
         $stmt = $this->conn->prepare($sql);
@@ -148,7 +165,6 @@ class segementationRepo extends ServiceEntityRepository
         $result = $stmt->fetchAssociative();
         $array["segmentation"]=$result;
 
-        
         if($result){
             $sql="SELECT * FROM `type_workflow_segmentation` t WHERE t.id in (select i.id_type_id from interm_workflow_segmentation i where i.id_segmentaion_id = :id)";
             $stmt = $this->conn->prepare($sql);
@@ -156,6 +172,14 @@ class segementationRepo extends ServiceEntityRepository
             $stmt = $stmt->executeQuery();
             $type = $stmt->fetchAssociative();
             $array["type"]=$type;
+
+            $sql="SELECT * FROM `type_workflow_segmentation` t WHERE t.id in (select i.id_type_id from interm_workflow_segmentation i where i.id_segmentaion_id = :id and i.id_workflow_id)";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindValue(":id",$id);
+            $stmt = $stmt->executeQuery();
+            $assigne = $stmt->fetchOne();
+            $isExist = $assigne > 0;
+            $array["assigne"]=$isExist;
 
             $sql="SELECT * FROM `status_seg` s WHERE s.id = ".$result["id_status_id"]." ";
             $stmt = $this->conn->prepare($sql);
@@ -239,6 +263,21 @@ class segementationRepo extends ServiceEntityRepository
         $resulat = $stmt->fetchAll();
         return $resulat;
     }
+    public function getTypeFamilles($id){
+        $sql="SELECT * FROM `details_values_critere`  WHERE id_critere_id = 38  and id_champ in (select t.id from param_activite t where t.id_branche_id = ".$id." and t.activite_p is null);";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAll();
+        return $resulat;
+    }
+    public function getQualification($idActivity){
+        $sql="SELECT * FROM `details_values_critere`  WHERE id_critere_id = 38  and id_champ in (select t.id from param_activite t where  t.activite_p = ".$idActivity.");";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAll();
+        return $resulat;
+    }
+    
     public function getDetailsSecteurActiviteInPramas($id){
         $sql="SELECT * FROM `details_values_critere` where id_parent_secteur_activite = ".$id."";
         $stmt = $this->conn->prepare($sql);

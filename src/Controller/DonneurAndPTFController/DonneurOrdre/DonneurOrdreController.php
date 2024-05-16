@@ -4,6 +4,7 @@ namespace App\Controller\DonneurAndPTFController\DonneurOrdre;
 
 use App\Entity\Champs;
 use App\Entity\ContactDonneurOrdre;
+use App\Entity\ContactHistorique;
 use App\Entity\DetailModelAffichage;
 use App\Entity\DonneurOrdre;
 use App\Entity\ModelAffichage;
@@ -53,7 +54,7 @@ class DonneurOrdreController extends AbstractController
         try {
             $data = json_decode($request->getContent(), true);
             if(isset($data['nom']) && isset($data['num_rc'])){
-                $do = $entityManager->getRepository(DonneurOrdre::class)->findBy(array("nom" => $data['nom'], "numero_rc" => $data['num_rc']));
+                $do = $entityManager->getRepository(DonneurOrdre::class)->findBy(array("numero_rc" => $data['num_rc']));
                 if ($do) {
                     $codeStatut="DONNEUR_DEJA_EXIST";
                 } else {
@@ -64,6 +65,14 @@ class DonneurOrdreController extends AbstractController
                         $codeStatut="ERROR-EMPTY-PARAMS";
                     } else {
                         $donneur = $donneurRepo->createDonneurOrdre($data);
+                        $historique = $data['listeHistorique'];
+                        if(count($historique)>0)
+                        {
+                            for ($i=0; $i < count($historique); $i++) { 
+                                $donneurRepo->createHistoriques($donneur , $historique[$i]['type']['value'], $historique[$i]['text']);
+                            }
+                        }
+
                         if ($donneur) {
                             $champs = $donneurRepo->AddChamps($data['input'], $donneur->getId());
                             if (isset($data['contact'])) {
@@ -107,6 +116,36 @@ class DonneurOrdreController extends AbstractController
             $codeStatut="ERROR";
         $respObjects["err"] = $e->getMessage();
         }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/donneur-ordre/addHistoriqueContact/{id}', methods: ['POST'])]
+    public function addHistoriqueContact(EntityManagerInterface $entityManager, Request $request, ValidationService $validator, $id): Response
+    {
+        $find_dn = $entityManager->getRepository(DonneurOrdre::class)->findOneBy(["id" => $id]);
+        if (!$find_dn) {
+            $codeStatut = "NOT_EXIST_ELEMENT";
+        }
+        $data = json_decode($request->getContent(), true);
+       
+
+        if ($request->getMethod() == "POST") {
+            if ($data['type'] == "" or $data['note'] == "") {
+                $codeStatut="EMPTY-DATA";
+            } else {
+                $contact = new ContactHistorique();
+                $contact->setIdDonneur($find_dn);
+                $contact->setType($data['type']);
+                $contact->setDateCreation(new \DateTime("now"));
+                $contact->setNote($data['note']);
+                $entityManager->persist($contact);
+                $entityManager->flush();
+                $codeStatut = "OK";
+            }
+        }
+
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
@@ -165,36 +204,21 @@ class DonneurOrdreController extends AbstractController
         }
         $contact = $entityManager->getRepository(ContactDonneurOrdre::class)->findBy(['id_donneurOrdre' => $id]);
 
-        $do = $entityManager->getRepository(Champs::class)->findBy(["form" => $id]);
-        $typee = $entityManager->getRepository(DetailModelAffichage::class)->findBy(['table_name' => "donneur_ordre"]);
-        $type = $entityManager->getRepository(Champs::class)->findBy(['champs' => $typee]);
-
-
         $data = json_decode($request->getContent(), true);
         if (
-            $data['input'] == null || $data['metier'] == null || $data['nom'] == null || $data['rs'] == null ||
+             $data['metier'] == null || $data['nom'] == null || $data['rs'] == null ||
             $data['num_rc'] == null || $data['c_postale'] == null || $data['compte_bancaire'] == null || $data['dateDebut'] == null || $data['dateFin'] == null
         ) {
-
             $respObjects["message"] = "Un des champs est vide !";
             $respObjects["codeStatut"] = "Not OK";
         } else {
 
             $donneur = $donneurRepo->UpdateDonneur($data, $id);
-            if ($donneur) {
-                $champs = $donneurRepo->UpdateChamps($data['input'], $id);
-                if ($$donneurRepo->UpdateChamps($data['input'], $id)) {
-                    $respObjects["message"] = "Modifier avec success";
-                } else {
-                    $respObjects["message"] = "une erreur s'est produite !";
-                }
-            } else {
-                $respObjects["message"] = "une erreur s'est produite !";
-            }
-        }
-        $entityManager->flush();
-        $respObjects["message"] = "Modifier avec success";
+            $respObjects["message"] = "Opération effectuée";
         $respObjects["codeStatut"] = "OK";
+        $entityManager->flush();
+            
+        }
 
         return new JsonResponse($respObjects);
     }
@@ -471,16 +495,9 @@ class DonneurOrdreController extends AbstractController
         $respObjects = array();
         $codeStatut = "ERROR";
         try{
-            $data = $entityManager->getRepository(DonneurOrdre::class)->findAll();
+            $data = $entityManager->getRepository(DonneurOrdre::class)->findBy([],["id"=>"DESC"]);
             if($data){
                 $codeStatut = "OK";
-                // $respObjects["data"] = $data;
-                // for ($i=0; $i < count($data) ; $i++) { 
-                //     # code...
-                //     $data_donneur[$i]["donneur"] = $data[$i];
-                //     $contacts = $entityManager->getRepository(ContactDonneurOrdre::class)->findBy(["id_donneurOrdre"=>$data[$i]->getId()]);
-                //     $data_donneur[$i]["donneurJ"]["details_contact"] = $contacts;
-                // }
                 
                 $respObjects["data"] = $donneurRepo->getDetailsDonneur();
             }else{
@@ -541,6 +558,16 @@ class DonneurOrdreController extends AbstractController
         $stmtd = $stmtd->executeQuery();
         $donneur = $stmtd->fetchAllAssociative();
 
+        $sqContact = "SELECT * FROM `contact_donneur_ordre` WHERE id_donneur_ordre_id =".$id;
+        $stmtd = $this->connection->prepare($sqContact);
+        $stmtd = $stmtd->executeQuery();
+        $contact = $stmtd->fetchAllAssociative();
+
+        $sqContact = "SELECT * FROM `contact_historique` WHERE id_donneur_id =".$id;
+        $stmtd = $this->connection->prepare($sqContact);
+        $stmtd = $stmtd->executeQuery();
+        $histo_contact = $stmtd->fetchAllAssociative();
+
         $champs = "SELECT c.*, dc.*
         FROM champs c, detail_model_affichage dc
         WHERE dc.id = c.champs_id
@@ -552,7 +579,9 @@ class DonneurOrdreController extends AbstractController
 
             $result = [
                 'champs'=>$resulatChamps,
-                'donneur'=>$donneur
+                'donneur'=>$donneur,
+                'contacts'=>$contact,
+                'histo_contact'=>$histo_contact
             ];
            
         return new JsonResponse($result);

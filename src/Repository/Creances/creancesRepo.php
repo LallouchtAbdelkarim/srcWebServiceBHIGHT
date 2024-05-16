@@ -194,5 +194,20 @@ class creancesRepo extends ServiceEntityRepository
         $resulat = $stmt->fetchAll();
         return $resulat;
     }
+
+    public function getTypeDetailsCreanceMultiple($data){
+        $sql="SELECT * FROM `details_type_creance` ";
+        for ($i=0; $i <count($data) ; $i++) { 
+            if($i == 0){
+                $sql .= "WHERE id_type_creance_id =".$data[$i]." ";
+            }else{
+                $sql .= "OR id_type_creance_id =".$data[$i]." ";
+            }
+        }
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAll();
+        return $resulat;
+    }
     
 }

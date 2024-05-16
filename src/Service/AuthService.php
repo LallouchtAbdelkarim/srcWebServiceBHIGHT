@@ -39,6 +39,7 @@ class AuthService
         }
         return $isConnected;
     }
+    
     public function returnUserId($request)
     {
         $jwt = $request->headers->get('Authorization');        

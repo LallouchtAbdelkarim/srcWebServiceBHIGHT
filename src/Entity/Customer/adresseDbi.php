@@ -62,6 +62,9 @@ class adresseDbi
     #[ORM\Column]
     private ?int $id_integration = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $id_adresse_import = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -254,6 +257,18 @@ class adresseDbi
     public function setIdIntegration(int $id_integration): static
     {
         $this->id_integration = $id_integration;
+
+        return $this;
+    }
+
+    public function getIdAdresseImport(): ?int
+    {
+        return $this->id_adresse_import;
+    }
+
+    public function setIdAdresseImport(?int $id_adresse_import): static
+    {
+        $this->id_adresse_import = $id_adresse_import;
 
         return $this;
     }

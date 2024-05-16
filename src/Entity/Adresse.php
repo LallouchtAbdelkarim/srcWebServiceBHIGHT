@@ -53,6 +53,12 @@ class Adresse
     #[ORM\JoinColumn(nullable: false)]
     private ?StatusAdresse $id_status = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $id_integration = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $etat = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -197,6 +203,30 @@ class Adresse
     public function setIdStatus(?StatusAdresse $id_status): static
     {
         $this->id_status = $id_status;
+
+        return $this;
+    }
+
+    public function getIdIntegration(): ?int
+    {
+        return $this->id_integration;
+    }
+
+    public function setIdIntegration(?int $id_integration): static
+    {
+        $this->id_integration = $id_integration;
+
+        return $this;
+    }
+
+    public function getEtat(): ?int
+    {
+        return $this->etat;
+    }
+
+    public function setEtat(?int $etat): static
+    {
+        $this->etat = $etat;
 
         return $this;
     }

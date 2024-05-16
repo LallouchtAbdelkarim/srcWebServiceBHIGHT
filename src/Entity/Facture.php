@@ -43,6 +43,13 @@ class Facture
     #[ORM\ManyToOne]
     private ?StatusFacture $id_status = null;
 
+    #[ORM\ManyToOne]
+    private ?RegleModelFacturation $id_model = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?Creance $id_creance = null;
+
     // #[ORM\Column(nullable: true)]
     // private ?float $total_ttc_initial_creance = null;
 
@@ -182,6 +189,29 @@ class Facture
     public function setIdStatus(?StatusFacture $id_status): static
     {
         $this->id_status = $id_status;
+
+        return $this;
+    }
+    public function getIdModel(): ?RegleModelFacturation
+    {
+        return $this->id_model;
+    }
+
+    public function setIdModel(?RegleModelFacturation $id_model): static
+    {
+        $this->id_model = $id_model;
+
+        return $this;
+    }
+
+    public function getIdCreance(): ?Creance
+    {
+        return $this->id_creance;
+    }
+
+    public function setIdCreance(?Creance $id_creance): static
+    {
+        $this->id_creance = $id_creance;
 
         return $this;
     }

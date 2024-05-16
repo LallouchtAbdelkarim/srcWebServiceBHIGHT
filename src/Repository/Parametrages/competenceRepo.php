@@ -29,7 +29,7 @@ class competenceRepo extends ServiceEntityRepository
     }
     public function createModel($titre  ){
         $data = new Competence();
-        $data->setTitre("titre");
+        $data->setTitre($titre);
         $data->setDateCreation(new \DateTime);
         $this->em->persist($data);
         $this->em->flush();
@@ -38,6 +38,13 @@ class competenceRepo extends ServiceEntityRepository
         }else{
             return null;
         }
+    }
+    public function resetComp($id){
+        $sql = 'DELETE FROM `detail_competence` WHERE id_competence_id = '.$id.';
+        DELETE FROM `detail_competence_familles` WHERE id_competence_id = '.$id.';
+        ';
+        $stmt = $this->conn->prepare($sql); 
+        $stmt = $stmt->executeQuery();
     }
     public function updateModel($comp , $titre){
         $comp->setTitre($titre);
@@ -52,6 +59,36 @@ class competenceRepo extends ServiceEntityRepository
             return null;
         }
     }
+    public function getFamilles($id){
+        $model = $this->em->getRepository(DetailCompetenceFamilles::class)->findBy(["id_competence"=>$id]);
+        if($model){
+            return $model;
+        }else{
+            return [];
+        }
+    }
+
+    public function getCompetencesNotSelected($id){
+        $query = $this->em->createQuery(
+            'SELECT t
+            FROM App\Entity\TypeParametrage t
+            
+            where t.id not in (SELECT identity(c.id_famille) from App\Entity\DetailCompetenceFamilles c where identity(c.id_competence) = :id) '
+        );
+        $query->setParameter('id',$id);
+        return $query->getResult();
+    }
+    public function getSousFamillesSelected($id){
+        $query = $this->em->createQuery(
+            'SELECT t
+            FROM App\Entity\ParamActivite t
+            
+            where t.id  in (SELECT identity(c.id_param) from App\Entity\DetailCompetence c where identity(c.id_competence) = :id) '
+        );
+        $query->setParameter('id',$id);
+        return $query->getResult();
+    }
+
     // public function updateModel($titre , $objet ,$id){
     //     $sql = "UPDATE `model_facturation` SET `titre`=:titre,`objet`=:objet WHERE `id`=:id";
     //     $stmt = $this->conn->prepare($sql);

@@ -21,6 +21,12 @@ class GarantieCreance
     #[ORM\JoinColumn(nullable: false)]
     private ?Garantie $id_garantie = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $etat = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $id_integration = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -46,6 +52,30 @@ class GarantieCreance
     public function setGarantie(?Garantie $id_garantie): static
     {
         $this->id_garantie = $id_garantie;
+
+        return $this;
+    }
+
+    public function getEtat(): ?int
+    {
+        return $this->etat;
+    }
+
+    public function setEtat(?int $etat): static
+    {
+        $this->etat = $etat;
+
+        return $this;
+    }
+
+    public function getIdIntegration(): ?int
+    {
+        return $this->id_integration;
+    }
+
+    public function setIdIntegration(?int $id_integration): static
+    {
+        $this->id_integration = $id_integration;
 
         return $this;
     }

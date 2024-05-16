@@ -25,6 +25,9 @@ class procCreanceDbi
     #[ORM\Column]
     private ?int $id_proc = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $id_integration = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -74,6 +77,18 @@ class procCreanceDbi
     public function setIdProc(int $id_proc): static
     {
         $this->id_proc = $id_proc;
+
+        return $this;
+    }
+
+    public function getIdIntegration(): ?int
+    {
+        return $this->id_integration;
+    }
+
+    public function setIdIntegration(?int $id_integration): static
+    {
+        $this->id_integration = $id_integration;
 
         return $this;
     }

@@ -4,10 +4,12 @@ namespace App\Repository\Parametrages\Activities;
 
 use App\Entity\Activite;
 use App\Entity\ActiviteParent;
+use App\Entity\Etap;
 use App\Entity\EtapActivite;
 use App\Entity\IntermResultatActivite;
 use App\Entity\ParamActivite;
 use App\Entity\ResultatActivite;
+use App\Entity\SousEtap;
 use App\Entity\TypeParametrage;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -174,13 +176,22 @@ class activityRepo extends ServiceEntityRepository
         }
     }
     public function getParamsActivityByType($id){
-        $param =  $this->em->getRepository(ParamActivite::class)->findBy(["id_branche"=>$id]);
+        $param =  $this->em->getRepository(ParamActivite::class)->findBy(["id_branche"=>$id , "typeActivite"=>1]);
         if($param){
             return $param;
         }else{
             return null;
         }
     }
+    public function getListResultatByAct($id){
+        $param =  $this->em->getRepository(ParamActivite::class)->findBy(["activite_p"=>$id]);
+        if($param){
+            return $param;
+        }else{
+            return null;
+        }
+    }
+    
     public function createActivity($parentAct , $param , $i){
         try{
             $activite_ = new Activite();
@@ -214,20 +225,40 @@ class activityRepo extends ServiceEntityRepository
         }
     }
 
-    public function createEtap($activite_  ,$param){
+    public function createEtap($activite_  ,$etap){
         try{
-            $etap = new EtapActivite();
-            $etap->setTitre("");
-            $etap->setIdActivite($activite_);
-            $etap->setEtat(0);
-            $etap->setIdParam($param);
-            $this->em->persist($etap);
+            $EtapActivite = new EtapActivite();
+            $EtapActivite->setTitre("");
+            $EtapActivite->setIdActivite($activite_);
+            $EtapActivite->setEtat(0);
+            // $etap->setIdParam($param);
+            $EtapActivite->setIdEtap($etap);
+            $this->em->persist($EtapActivite);
             $this->em->flush();
-            return $etap;
+            return $EtapActivite;
         }catch (\Exception $e){
             $codeStatut = "ERREUR";
 			return $codeStatut;
         }
+    }
+    public function createEtapParam($titre){
+        $etap = new Etap();
+        $etap->setTitre($titre);
+        $etap->setIdFamille(0);
+        $etap->setDateCreation(new \DateTime());
+        $this->em->persist($etap);
+        $this->em->flush();
+        return $etap;
+    }
+    public function createSousEtap($id ,$idEtap , $type , $order ){
+        $etap = new SousEtap();
+        $etap->setIdEtap($idEtap);
+        $etap->setIdParam($id);
+        $etap->setOrderEtap($order);
+        $etap->setEtatApproval($type);
+        $this->em->persist($etap);
+        $this->em->flush();
+        return $etap;
     }
     public function createIntermResult($resultatLink  ,$act_link){
         try{
@@ -248,6 +279,14 @@ class activityRepo extends ServiceEntityRepository
             return $data;
         }else{
             return $data;
+        }
+    }
+    public function getOneEtap($id){
+        $etapSelected =  $this->em->getRepository(Etap::class)->find($id);
+        if($etapSelected){
+            return $etapSelected;
+        }else{
+            return $etapSelected;
         }
     }
 }

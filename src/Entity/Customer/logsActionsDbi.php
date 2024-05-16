@@ -23,4 +23,19 @@ class logsActionsDbi
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $rapport = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $id_champ = null;
+
+    public function getIdChamp(): ?int
+    {
+        return $this->id_champ;
+    }
+
+    public function setIdChamp(?int $id_champ): static
+    {
+        $this->id_champ = $id_champ;
+
+        return $this;
+    }
 }

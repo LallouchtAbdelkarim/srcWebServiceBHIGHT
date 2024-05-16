@@ -20,7 +20,7 @@ class Import
     #[ORM\Column]
     private ?int $etat = null;
 
-    #[ORM\Column(type: Types::DATE_MUTABLE)]
+    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $date_creation = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
@@ -30,7 +30,7 @@ class Import
     private ?\DateTimeInterface $date_fin_execution = null;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: true)]
     private ?Integration $id_integration = null;
 
     #[ORM\ManyToOne]

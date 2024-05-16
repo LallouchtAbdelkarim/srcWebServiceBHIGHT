@@ -25,6 +25,9 @@ class procDebiteurDbi
     #[ORM\Column]
     private ?int $origin_deb = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $id_integration = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -74,6 +77,18 @@ class procDebiteurDbi
     public function setOriginDeb(int $origin_deb): static
     {
         $this->origin_deb = $origin_deb;
+
+        return $this;
+    }
+
+    public function getIdIntegration(): ?int
+    {
+        return $this->id_integration;
+    }
+
+    public function setIdIntegration(?int $id_integration): static
+    {
+        $this->id_integration = $id_integration;
 
         return $this;
     }

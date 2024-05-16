@@ -29,6 +29,9 @@ class ProcJudicaire
     #[ORM\Column(nullable: true)]
     private ?int $id_proc_dbi = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $id_integration = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -90,6 +93,18 @@ class ProcJudicaire
     public function setIdProcDbi(?int $id_proc_dbi): static
     {
         $this->id_proc_dbi = $id_proc_dbi;
+
+        return $this;
+    }
+
+    public function getIdIntegration(): ?int
+    {
+        return $this->id_integration;
+    }
+
+    public function setIdIntegration(?int $id_integration): static
+    {
+        $this->id_integration = $id_integration;
 
         return $this;
     }

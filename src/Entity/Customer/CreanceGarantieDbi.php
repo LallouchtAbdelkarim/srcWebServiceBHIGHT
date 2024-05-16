@@ -28,6 +28,9 @@ class CreanceGarantieDbi
     #[ORM\Column]
     private ?int $origin_garantie = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $id_integration = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -89,6 +92,18 @@ class CreanceGarantieDbi
     public function setOriginGarantie(int $origin_garantie): static
     {
         $this->origin_garantie = $origin_garantie;
+
+        return $this;
+    }
+
+    public function getIdIntegration(): ?int
+    {
+        return $this->id_integration;
+    }
+
+    public function setIdIntegration(?int $id_integration): static
+    {
+        $this->id_integration = $id_integration;
 
         return $this;
     }

@@ -25,6 +25,12 @@ class TypeDebiteur
     #[ORM\JoinColumn(nullable: false)]
     private ?DetailsTypeDeb $id_type = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $id_integration = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $etat = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -62,6 +68,30 @@ class TypeDebiteur
     public function setIdType(?DetailsTypeDeb $id_type): static
     {
         $this->id_type = $id_type;
+
+        return $this;
+    }
+
+    public function getIdIntegration(): ?int
+    {
+        return $this->id_integration;
+    }
+
+    public function setIdIntegration(?int $id_integration): static
+    {
+        $this->id_integration = $id_integration;
+
+        return $this;
+    }
+
+    public function getEtat(): ?int
+    {
+        return $this->etat;
+    }
+
+    public function setEtat(?int $etat): static
+    {
+        $this->etat = $etat;
 
         return $this;
     }

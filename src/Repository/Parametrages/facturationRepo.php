@@ -41,6 +41,15 @@ class facturationRepo extends ServiceEntityRepository
             return $model;
         }
     }
+    public function getModels(){
+        $model = $this->em->getRepository(ModelFacturation::class)->findAll();
+        if($model){
+            return $model;
+        }else{
+            return $model;
+        }
+    }
+    
     public function updateModel($titre , $objet ,$id){
         $sql = "UPDATE `model_facturation` SET `titre`=:titre,`objet`=:objet WHERE `id`=:id";
         $stmt = $this->conn->prepare($sql);
@@ -181,6 +190,17 @@ class facturationRepo extends ServiceEntityRepository
     public function search_value_critere($table , $column ,$value){
         $sql="select * from ".$table." where ".$column." = '".$value."'  ";
         
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+    }
+
+    public function deleteRegles($id){
+        $sql='DELETE FROM `detail_critere_model_facturation` WHERE `id_critere_id` IN (SELECT `id` FROM `critere_model_facturation` WHERE `id_regle_id` IN (SELECT `id` FROM `regle_model_facturation` WHERE `id_model_id` = '.$id.'));
+
+        DELETE FROM `critere_model_facturation` WHERE `id_regle_id` IN (SELECT `id` FROM `regle_model_facturation` WHERE `id_model_id` = '.$id.');
+        
+        DELETE FROM `regle_model_facturation` WHERE `id_model_id` = '.$id.';
+        ';
         $stmt = $this->conn->prepare($sql);
         $stmt = $stmt->executeQuery();
     }

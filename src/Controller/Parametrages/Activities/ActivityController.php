@@ -3,9 +3,11 @@
 namespace App\Controller\Parametrages\Activities;
 
 use App\Entity\Activite;
+use App\Entity\Etap;
 use App\Entity\EtapActivite;
 use App\Entity\IntermResultatActivite;
 use App\Entity\ResultatActivite;
+use App\Entity\SousEtap;
 use App\Service\AuthService;
 use App\Service\MessageService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -48,29 +50,38 @@ class ActivityController extends AbstractController
     #[Route('/activities/createParentActivity', methods: ['POST'])]
     public function createParentActivity(activityRepo $activityRepo , Request $request): JsonResponse
     {
-        $this->AuthService->checkAuth(0,$request);
-
         $respObjects = array();
         $codeStatut = "ERROR";
         $titre = $request->get("titre");
         $note = $request->get("note");
-        if(trim($titre) != ""){
-            $findActivity = $activityRepo->getOneParentActivityByTitre($titre);
-            if($findActivity){
-                $codeStatut="ELEMENT_DEJE_EXIST";
-            }
-            else{
-                $activityRepo = $activityRepo->createParentActivity($titre , $note );
-                if($activityRepo){
-                    $codeStatut = "OK";
-                    $respObjects["data"] = $activityRepo;
+        $this->AuthService->checkAuth(0,$request);
+        $data = json_decode($request->getContent(), true);
+        if(isset($data["resultArray"][0]['result_0'])){
+            if( count($data["resultArray"][0]['result_0']) < 2){
+                $codeStatut = "EMPTY-DATA-ACTIVITY";
+            }else{
+                if(trim($titre) != ""){
+                    $findActivity = $activityRepo->getOneParentActivityByTitre($titre);
+                    if($findActivity){
+                        $codeStatut="ELEMENT_DEJE_EXIST";
+                    }
+                    else{
+                        $activityRepo = $activityRepo->createParentActivity($titre , $note );
+                        if($activityRepo){
+                            $codeStatut = "OK";
+                            $respObjects["data"] = $activityRepo;
+                        }else{
+                            $codeStatut = "ERREUR";
+                        }
+                    }
                 }else{
-                    $codeStatut = "ERREUR";
+                    $codeStatut = "EMPTY-DATA";
                 }
             }
         }else{
-            $codeStatut = "EMPTY-DATA";
+            $codeStatut = "EMPTY-DATA-ACTIVITY";
         }
+
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
@@ -199,6 +210,24 @@ class ActivityController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+    #[Route('/activities/getListResultatByAct')]
+    public function getListResultatByAct(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        $id = $request->get("id");
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $parentActivities = $activityRepo->getListResultatByAct($id);
+            $codeStatut = "OK";
+            $respObjects["data"] = $parentActivities;
+        }catch(\Exception $e){
+            $codeStatut = "ERROR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
 
     #[Route('/activities/getDetailsOfActivitie')]
     public function getDetailsOfActivities(Request $request ,activityRepo $activityRepo , SerializerInterface $serializer): JsonResponse
@@ -253,77 +282,96 @@ class ActivityController extends AbstractController
         }
         return $this->json($respObjects );
     }
+    #[Route('/activities/getOneParam' )]
+    public function getOneParam(Request $request,activityRepo $activityRepo , SerializerInterface $serializer): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $id = $request->get('id');
+            $respObjects["message"] = "Opération effectué avec success";
+            $respObjects["codeStatut"] = "OK";
+            $respObjects["data"] = $activityRepo->getOneParam($id);;
+        }catch(\Exception $e){
+            $result = "Une erreur s'est produite ".$e->getMessage();
+            $respObjects["message"] = $result;
+        }
+        return $this->json($respObjects );
+    }
 
-    #[Route('/activities/saveTreeDecision')]
+
+    #[Route('/activities/saveTreeDecision', methods: ['POST'])]
     public function saveTreeDecision(activityRepo $activityRepo , Request $request ): JsonResponse
     {
         $respObjects =array();
         $codeStatut = "ERROR";
         $nbr_act = $request->get('nbr_act');
-        // try{
+        try{
             $this->AuthService->checkAuth(0,$request);
             $data = json_decode($request->getContent(), true);
             $parentActReq = $request->get("parentAct");
             $activityArray = $data["activityArray"];
-            for ($i=0; $i < count($activityArray); $i++) {
-                
-                $id_param = $activityArray[$i]["activite_".$i][0]["value"];
-                $param =  $activityRepo->getOneParam($id_param);
-
-                //----Traitement
-                $parentActivity = $activityRepo->findParentActivity($parentActReq);
-
-                if($parentActivity && $param){
-                    $activite_ = $activityRepo->createActivity($parentActivity , $param , $i);
-                    if(isset($data["resultArray"][0]["result_".$i])){
-                        $resultArray = $data["resultArray"][0]["result_".$i];
-                        if($resultArray){
-                            foreach ($resultArray as $key => $value) {
-                                
-                                $param = $activityRepo->getOneParam($value);
-                                $skip=false;
-                                // if($data["res_sauter"] == $param->getId()){
-                                //     $skip = true;
-                                // }
-                                $activityRepo->createResult($activite_ , $key ,$param ,$i , $skip);
+            
+                for ($i=0; $i < count($activityArray); $i++) {
+                    
+                    $id_param = $activityArray[$i]["activite_".$i][0]["value"];
+                    $param =  $activityRepo->getOneParam($id_param);
+                    
+                    //----Traitement
+                    $parentActivity = $activityRepo->findParentActivity($parentActReq);
+                    if($parentActivity && $param){
+                        $activite_ = $activityRepo->createActivity($parentActivity , $param , $i);
+                        if(isset($data["resultArray"][0]["result_".$i])){
+                            $resultArray = $data["resultArray"][0]["result_".$i];
+                            if($resultArray){
+                                foreach ($resultArray as $key => $value) {
+                                    
+                                    $param = $activityRepo->getOneParam($value);
+                                    $skip=false;
+                                    // if($data["res_sauter"] == $param->getId()){
+                                    //     $skip = true;
+                                    // }
+                                    $activityRepo->createResult($activite_ , $key ,$param ,$i , $skip);
+                                }
                             }
                         }
+                        if (isset($activityArray[$i]["activite_".$i][1]["etap"]) && is_array($activityArray[$i]["activite_".$i][1]["etap"])) {
+                            $liste_etap = $activityArray[$i]["activite_".$i][1]["etap"];
+                            for ($k=0; $k < count($liste_etap); $k++) { 
+                                $id_param = $liste_etap[$k];
+                                // $param =  $activityRepo->getOneParam($id_param);
+                                $etap =  $activityRepo->getOneEtap($id_param);
+                                $activityRepo->createEtap($activite_,$etap);
+                            }
+                        } 
                     }
-                    if (isset($activityArray[$i]["activite_".$i][1]["etap"]) && is_array($activityArray[$i]["activite_".$i][1]["etap"])) {
-                        $liste_etap = $activityArray[$i]["activite_".$i][1]["etap"];
-                        for ($k=0; $k < count($liste_etap); $k++) { 
-                            $id_param = $liste_etap[$k];
-                            $param =  $activityRepo->getOneParam($id_param);
-                            $activityRepo->createEtap($activite_,$param);
-                        }
-                    } 
                 }
-            }
-            if(isset($data["resLinkArray"][0])){
-                for($i = 0 ; $i<  count($data["resLinkArray"][0]) ;$i++){
-                    $listRsLink = $data["resLinkArray"][0]["act_res_link_".$i];
-                    if($listRsLink){
-                        foreach ($listRsLink as $key => $values) {
-                            $query = $this->em->createQuery('SELECT r FROM App\Entity\ResultatActivite r WHERE r.ordre = '.$key.' and r.id_activite in(SELECT a.id from App\Entity\Activite a WHERE a.id_parent_activite = :id_parent ) ')->setParameter('id_parent', $parentActReq)->setMaxResults(1);;
-                            $resultatLink = $query->getOneOrNullResult();
-                            if($resultatLink){
-                                foreach ($values as $act_num) {
-                                    $query = $this->em->createQuery('SELECT a from App\Entity\Activite a WHERE a.num_link = '.$act_num.' and a.id_parent_activite = :id_parent  ')->setParameter('id_parent', $parentActReq)->setMaxResults(1);
-                                    $act_link = $query->getOneOrNullResult();
-                                    if($act_link){
-                                        $activityRepo->createIntermResult($resultatLink , $act_link);
+                if(isset($data["resLinkArray"][0])){
+                    for($i = 0 ; $i<  count($data["resLinkArray"][0]) ;$i++){
+                        $listRsLink = $data["resLinkArray"][0]["act_res_link_".$i];
+                        if($listRsLink){
+                            foreach ($listRsLink as $key => $values) {
+                                $query = $this->em->createQuery('SELECT r FROM App\Entity\ResultatActivite r WHERE r.ordre = '.$key.' and r.id_activite in(SELECT a.id from App\Entity\Activite a WHERE a.id_parent_activite = :id_parent ) ')->setParameter('id_parent', $parentActReq)->setMaxResults(1);;
+                                $resultatLink = $query->getOneOrNullResult();
+                                if($resultatLink){
+                                    foreach ($values as $act_num) {
+                                        $query = $this->em->createQuery('SELECT a from App\Entity\Activite a WHERE a.num_link = '.$act_num.' and a.id_parent_activite = :id_parent  ')->setParameter('id_parent', $parentActReq)->setMaxResults(1);
+                                        $act_link = $query->getOneOrNullResult();
+                                        if($act_link){
+                                            $activityRepo->createIntermResult($resultatLink , $act_link);
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
-            $codeStatut="OK";
-        // }catch(\Exception $e){
-        //     $$codeStatut = "ERROR";
-        //     $respObjects["err"] = $e->getMessage();
-        // }
+                $codeStatut="OK";
+        }catch(\Exception $e){
+            $$codeStatut = "ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects );
@@ -341,8 +389,12 @@ class ActivityController extends AbstractController
             if(!$parentActivity){
                 $respObjects["codeStatut"] = "NOT_EXIST_ELEMENT";
             }else{
+                $activite =  $this->em->getRepository(Activite::class)->findOneBy(["id_parent_activite"=>$id],["id"=>"ASC"]);
+
                 $data = $this->generateDecisionTree($id);
                 $respObjects["data"] = $data;
+                $respObjects["activity"] = $parentActivity;
+                $respObjects["type"] = $activite->getIdParam()->getIdBranche();
                 $codeStatut = "OK";
             }
         }catch(\Exception $e){
@@ -352,6 +404,39 @@ class ActivityController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects );
     }
+    #[Route('/activities/saveActivity' )]
+    public function saveActivity(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $id = $request->get('parentAct');
+            $data = json_decode($request->getContent(), true);
+            $parentActivity = $activityRepo->findParentActivity($id);
+            if(!$parentActivity){
+                $respObjects["codeStatut"] = "NOT_EXIST_ELEMENT";
+            }else{
+                if($data["titre"] != ""){
+                    $parentActivity->setTitre($data["titre"]);
+                    $parentActivity->setNote($data["note"]);
+                    $this->em->flush();
+                    $codeStatut="OK";
+                }else{
+                    $codeStatut = "EMPTY-DATA";
+                }
+            }
+        }catch(\Exception $e){
+            $codeStatut = "ERROR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects );
+    }
+
+    
+    
+    
 
     #[Route('/activities/getTreeDesicionWorkFlow' )]
     public function getTreeDesicionWorkFlow(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
@@ -444,7 +529,7 @@ class ActivityController extends AbstractController
             }   
             return $activiteNode;
     }
-    #[Route('/activities/deleteActivity' )]
+    #[Route('/activities/deleteActivity' , methods: ['POST'])]
     public function deleteActivity(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
     {
         $respObjects =array();
@@ -490,6 +575,7 @@ class ActivityController extends AbstractController
                 $respObjects["codeStatut"] = "OK";
             }
         }catch(\Exception $e){
+            $codeStatut="ERROR";
             $result = "Une erreur s'est produite ".$e->getMessage();
             $respObjects["message"] = $result;
         }
@@ -544,6 +630,170 @@ class ActivityController extends AbstractController
                 $codeStatut="OK";
             }
         }catch(\Exception $e){
+            $codeStatut="ERROR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/activities/saveEtap' , methods: ['POST'])]
+    public function saveEtap(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data = json_decode($request->getContent(), true);
+            if(isset($data['titre'])  && isset($data['arrayEtapApproval']) && isset($data['arrayEtapSuivi']))
+            {
+                if(!empty($data['titre']) != "" && count($data['arrayEtapApproval']) == 1 && count($data['arrayEtapSuivi']) >= 1 ){
+                    
+                    $etap = $activityRepo->createEtapParam($data['titre']);
+                    $arrayEtapApproval = $data['arrayEtapApproval'];
+                    $arrayEtapSuivi = $data['arrayEtapSuivi'];
+                    for ($i=0; $i < count($arrayEtapApproval); $i++) { 
+                        $param = $activityRepo->getOneParam($arrayEtapApproval[$i]['id']);
+                        $activityRepo->createSousEtap($param , $etap ,1 , $i + 1);
+                    }
+
+                    for ($i=0; $i < count($arrayEtapSuivi); $i++) { 
+                        $param = $activityRepo->getOneParam($arrayEtapSuivi[$i]['id']);
+                        $activityRepo->createSousEtap($param , $etap ,2 , $i + 1);
+                    }
+                    $codeStatut="OK";
+                
+                }else{
+                    $codeStatut="EMPTY-DATA";
+                }
+            }else{
+                $codeStatut="EMPTY-DATA";
+            }
+            
+        }catch(\Exception $e){
+        $respObjects["error"] = $e->getMessage();
+            $codeStatut="ERROR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/activities/getListeEtap')]
+    public function getListeEtap(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $result =  $this->em->getRepository(Etap::class)->findAll();
+            $respObjects["data"] = $result;
+            $codeStatut="OK";
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/activities/getOneEtap')]
+    public function getOneEtap(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $id = $request->get('id');
+            $result =  $this->em->getRepository(Etap::class)->find($id);
+            $sousEtap =  $this->em->getRepository(SousEtap::class)->findBy(['id_etap'=>$result->getId()]);
+            $data = [
+                "titre"=>$result->getTitre(),
+                "arrayEtap"=>$sousEtap,
+            ];
+            $respObjects["data"] = $data;
+            $codeStatut="OK";
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/activities/updateEtap' , methods: ['POST'])]
+    public function updateEtap(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data = json_decode($request->getContent(), true);
+            $id = $data['id'];
+            $etapSelected =  $this->em->getRepository(Etap::class)->find($id);
+            if($etapSelected)
+            {
+                if(isset($data['titre'])  && isset($data['arrayEtapApproval']) && isset($data['arrayEtapSuivi']))
+                {
+                    if(!empty($data['titre']) != "" && count($data['arrayEtapApproval']) == 1 && count($data['arrayEtapSuivi']) >= 1 ){
+                        
+                        $etapSelected->setTitre($data['titre']);
+                        $sousEtap =  $this->em->getRepository(SousEtap::class)->findBy(['id_etap'=>$etapSelected->getId()]);
+
+                        foreach ($sousEtap as $sous) {
+                            $this->em->remove($sous);
+                        }
+                        $this->em->flush();
+                        $arrayEtapApproval = $data['arrayEtapApproval'];
+                        $arrayEtapSuivi = $data['arrayEtapSuivi'];
+                        for ($i=0; $i < count($arrayEtapApproval); $i++) { 
+                            $param = $activityRepo->getOneParam($arrayEtapApproval[$i]['id']);
+                            $activityRepo->createSousEtap($param , $etapSelected ,1 , $i + 1);
+                        }
+    
+                        for ($i=0; $i < count($arrayEtapSuivi); $i++) { 
+                            $param = $activityRepo->getOneParam($arrayEtapSuivi[$i]['id']);
+                            $activityRepo->createSousEtap($param , $etapSelected ,2 , $i + 1);
+                        }
+                        $codeStatut="OK";
+                    
+                    }else{
+                        $codeStatut="EMPTY-DATA";
+                    }
+                }else{
+                    $codeStatut="EMPTY-DATA";
+                }
+            }
+            
+        }catch(\Exception $e){
+        $respObjects["error"] = $e->getMessage();
+            $codeStatut="ERROR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/activities/deleteEtap' , methods: ['POST'])]
+    public function deleteEtap(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data = json_decode($request->getContent(), true);
+            $id = $request->get('id');
+            $etapSelected =  $this->em->getRepository(Etap::class)->find($id);
+
+            if($etapSelected)
+            {
+                $sousEtap =  $this->em->getRepository(SousEtap::class)->findBy(['id_etap'=>$etapSelected->getId()]);
+                foreach ($sousEtap as $sous) {
+                    $this->em->remove($sous);
+                }
+                $this->em->remove($etapSelected);
+                $this->em->flush();
+                $codeStatut='OK';
+            }
+            
+        }catch(\Exception $e){
+        $respObjects["error"] = $e->getMessage();
             $codeStatut="ERROR";
         }
         $respObjects["codeStatut"] = $codeStatut;

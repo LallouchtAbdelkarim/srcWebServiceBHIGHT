@@ -72,8 +72,8 @@ class MessageService
          "ERROR_DURRE"=>"Veuillez vérifier votre champ du durée de gestion",
          "REQUIRED_DOSSIER"=>"Veuillez remplir tous les champs de dossier !",
          "ERROR-SEG"=>"Veuillez vérifier la segmentation sélectionnée",
-         "ERROR-SEG1"=>"Veuillez vérifier la segmentation sélectionnée"
-
+         "ERROR-SEG1"=>"Veuillez vérifier la segmentation sélectionnée",
+         "EMPTY-DATA-ACTIVITY"=>"Veuillez vérifier votre schéma !"
         );
         return $listMessage[$CODEERROR];
     }

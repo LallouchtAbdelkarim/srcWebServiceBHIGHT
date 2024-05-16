@@ -32,7 +32,7 @@ class debiteurDbi
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $fax = null;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $date_naissance = null;
 
     #[ORM\Column(length: 255, nullable: true)]

@@ -77,24 +77,77 @@ class facturationController extends AbstractController
     public function updateModel(facturationRepo $facturationRepo , Request $request): JsonResponse
     {
         $respObjects = array();
+        $codeStatut="ERROR";
         $titre = $request->get("titre");
         $objet = $request->get("objet");
         $id = $request->get("id");
-        $findModel = $facturationRepo->findModel($id);
-        if($findModel){
+        $model = $facturationRepo->findModel($id);
+        if($model){
             if(trim($titre) != "" && trim($objet) ){
+                $deleteRegles = $facturationRepo->deleteRegles($id);
                 $activityRepo = $facturationRepo->updateModel($titre , $objet , $id);
-                if($activityRepo){
-                    $respObjects["message"] = "success";
+                $data_list = json_decode($request->getContent(), true);
+
+               if($data_list){
+                    for ($i=0; $i < count($data_list); $i++) { 
+                        $titre = $data_list[$i]["titre"];
+                        $regle = $facturationRepo->createRegle($titre  , $model);
+                        $criteres = $data_list[$i]["criteres"];
+                        for ($j=0; $j < count($criteres); $j++) { 
+                            # code...
+                            $table_critere =  $criteres[$j]["table_name"];
+                            $column_critere = $criteres[$j]["column_name"];
+                            $action_critere = $criteres[$j]["action_name"];
+                            $valeur1_critere = $criteres[$j]["valeur1"];
+                            $valeur2_critere = $criteres[$j]["valeur2"];
+                            $operator = "";
+                            if($j>0){
+                                $operator = $criteres[$j]["operator"];
+                            }
+                            $type_critere = $criteres[$j]["type"];
+                            $critere = $facturationRepo->createCritere($table_critere,$column_critere,$action_critere,$valeur1_critere,$valeur2_critere,$type_critere,$operator,$regle);
+
+                            //Add details search inputs
+                            if(isset($criteres[$j]["details_multiple_search"])){
+                                $details_search = $criteres[$j]["details_multiple_search"];
+                                for ($dt=0; $dt < count($details_search) ; $dt++) { 
+                                    # code...
+                                    if($details_search[$dt]["isChecked"] == true){
+                                        $detail_critere = $facturationRepo->createDetailCritere($table_critere,$column_critere,"like",$valeur1_critere,$valeur2_critere,$type_critere,$critere,"multiple","AND");
+                                    }
+                                }
+                            }
+                            if(isset($criteres[$j]["details_critere"])){
+                                $details_criteres = $criteres[$j]["details_critere"];
+
+                                for ($k=0; $k < count($details_criteres) ; $k++) { 
+                                    # code...
+                                    $column_critere = $details_criteres[$k]["column_name"];
+                                    $action_critere = $details_criteres[$k]["action_name"];
+                                    $valeur1_critere = $details_criteres[$k]["valeur1"];
+                                    $valeur2_critere = $details_criteres[$k]["valeur2"];
+                                    $type_critere = $details_criteres[$k]["type"];
+                                    $type_detail = "detail";
+                                    if(isset($details_criteres[$k]["operator"])){
+                                        $operator_detail = $details_criteres[$k]["operator"];
+                                    }
+                                    $detail_critere = $facturationRepo->createDetailCritere($table_critere,$column_critere,$action_critere,$valeur1_critere,$valeur2_critere,$type_critere,$critere,$type_detail,$operator_detail);
+                                }
+                            }
+                        }
+                    }
+                    $codeStatut = "OK";
                 }else{
-                    $respObjects["message"] = "une erreur s'est produite !";
+                    $codeStatut = "ERROR";
                 }
             }else{
-                $respObjects["message"] = "Un champ oubliguatoire est vide !";
+                $codeStatut = "ERROR-EMPTY-PARAMS";
             }
         }else{
-            $respObjects["message"] = "Model n'existe pas";
+            $codeStatut= "NOT_EXIST";
         }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
     #[Route('/facturation/deleteModel')]
@@ -131,7 +184,6 @@ class facturationController extends AbstractController
             if($model){
                 if($data_list){
                     for ($i=0; $i < count($data_list); $i++) { 
-                        # code...
                         $titre = $data_list[$i]["titre"];
                         $regle = $facturationRepo->createRegle($titre  , $model);
                         $criteres = $data_list[$i]["criteres"];
@@ -188,8 +240,8 @@ class facturationController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
-    #[Route('/facturation/getModelDetails', methods: ['GET'])]
-    public function getModels(facturationRepo $facturationRepo , Request $request): JsonResponse
+    #[Route('/facturation/getModelDetails', methods: ['POST'])]
+    public function getModelDetails(facturationRepo $facturationRepo , Request $request): JsonResponse
     {
         $codeStatut = "ERROR";
         $respObjects = array();
@@ -198,6 +250,8 @@ class facturationController extends AbstractController
         if($findModel){
             $data = $facturationRepo->getModelDetails($id);
             $respObjects["data"] = $data;
+            $respObjects["model"] = $findModel;
+            
             $codeStatut = "OK";
         }else{
             $codeStatut = "NOT_EXIST_M";
@@ -206,6 +260,7 @@ class facturationController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+ 
     #[Route('/facturation/deleteCritere')]
     public function deleteCritere(facturationRepo $facturationRepo , Request $request): JsonResponse
     {
@@ -332,4 +387,21 @@ class facturationController extends AbstractController
         $respObjects["codeStatut"]=$codeStatut;
         return $this->json($respObjects);
     }   
+
+    #[Route('/facturation/getModels')]
+    public function getModels(facturationRepo $facturationRepo , Request $request): JsonResponse
+    {
+        $codeStatut = "ERROR";
+        $respObjects = array();
+        try {
+            $data = $facturationRepo->getModels();
+            $respObjects["data"] = $data;
+            $codeStatut = "OK";
+        } catch (\Exception $e) {
+            $codeStatut = "ERROR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
 }

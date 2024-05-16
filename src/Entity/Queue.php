@@ -47,6 +47,7 @@ class Queue
     #[ORM\ManyToOne]
     private ?StatusQueue $id_status = null;
 
+
     public function getId(): ?int
     {
         return $this->id;

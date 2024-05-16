@@ -95,6 +95,15 @@ class queueRepo extends ServiceEntityRepository
         $data = $stmt->fetchOne();
         return $data;
     }
+    public function createSegValues($value1 ,$value2,$id_critere){
+        $sql="INSERT INTO `queue_values`( `value1`, `value2`, `id_critere_id`) VALUES (:value1,:value2,:id_critere)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(":value1",$value1);
+        $stmt->bindValue(":value2",$value2);
+        $stmt->bindValue(":id_critere",$id_critere);
+        $stmt = $stmt->executeQuery();   
+        return $stmt;     
+    }
     
     public function findGroupe($id){
         $sql="Select * from queue_groupe where id = :id";
@@ -139,6 +148,51 @@ class queueRepo extends ServiceEntityRepository
         }
         return $array_data;
     }
+    public function checkCreanceSegment($id_seg , $id_creance){
+        $sql2 = "select s.id from debt_force_seg.seg_creance s where s.id_seg = :id_seg and s.id_creance = :id_creance ";
+        $stmt = $this->conn->prepare($sql2);
+        $stmt->bindValue(":id_seg",$id_seg);
+        $stmt->bindValue(":id_creance",$id_creance);
+        $stmt = $stmt->executeQuery();
+        $liste_groupe = $stmt->fetchOne();
+        return $liste_groupe ;
+    }
+    public function checkDossierSegment($id_seg , $id_dossier){
+        $sql2 = "select s.id from debt_force_seg.seg_dossier s where s.id_seg = :id_seg and s.id_dossier = :id_dossier ";
+        $stmt = $this->conn->prepare($sql2);
+        $stmt->bindValue(":id_seg",$id_seg);
+        $stmt->bindValue(":id_dossier",$id_dossier);
+        $stmt = $stmt->executeQuery();
+        $liste_groupe = $stmt->fetchOne();
+        return $liste_groupe ;
+    }
+    public function checkAdresseSegment($id_seg , $id_adresse){
+        $sql2 = "select s.id from debt_force_seg.seg_adresse s where s.id_seg = :id_seg and s.id_adresse = :id_adresse ";
+        $stmt = $this->conn->prepare($sql2);
+        $stmt->bindValue(":id_seg",$id_seg);
+        $stmt->bindValue(":id_adresse",$id_adresse);
+        $stmt = $stmt->executeQuery();
+        $liste_groupe = $stmt->fetchOne();
+        return $liste_groupe ;
+    }
+    public function checkDebiteurSegment($id_seg , $id_debiteur){
+        $sql2 = "select s.id from debt_force_seg.seg_debiteur s where s.id_seg = :id_seg and s.id_debiteur = :id_debiteur ";
+        $stmt = $this->conn->prepare($sql2);
+        $stmt->bindValue(":id_seg",$id_seg);
+        $stmt->bindValue(":id_debiteur",$id_debiteur);
+        $stmt = $stmt->executeQuery();
+        $liste_groupe = $stmt->fetchOne();
+        return $liste_groupe ;
+    }
+    public function checkTelephoneSegment($id_seg , $id_telephone){
+        $sql2 = "select s.id from debt_force_seg.seg_telephone s where s.id_seg = :id_seg and s.id_telephone = :id_telephone ";
+        $stmt = $this->conn->prepare($sql2);
+        $stmt->bindValue(":id_seg",$id_seg);
+        $stmt->bindValue(":id_telephone",$id_telephone);
+        $stmt = $stmt->executeQuery();
+        $liste_groupe = $stmt->fetchOne();
+        return $liste_groupe ;
+    }
     public function clearCritereByQueue($id){
         $sql="DELETE FROM queue_values
         WHERE id_critere_id IN (
@@ -160,8 +214,8 @@ class queueRepo extends ServiceEntityRepository
         $stmt = $stmt->executeQuery();
     }
     public function createQueue( $titre,$description,$queue_groupe_id ,$id_type_id , $segment,$active){
-        $sql="INSERT INTO `queue`( `queue_groupe_id`, `titre`, `description`, `id_segmentation_id`, `id_type_id` , `active` , `date_creation`) 
-        VALUES (:queue_groupe_id,:titre,:description,:segment,:id_type_id , :active , now());";
+        $sql="INSERT INTO `queue`( `queue_groupe_id`, `titre`, `description`, `id_segmentation_id`, `id_type_id` , `active` , `date_creation`,`id_status_id`) 
+        VALUES (:queue_groupe_id,:titre,:description,:segment,:id_type_id , :active , now(),1);";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindValue(":titre",$titre);
         $stmt->bindValue(":description",$description);
@@ -170,6 +224,7 @@ class queueRepo extends ServiceEntityRepository
         $stmt->bindValue(":segment",$segment);
         $stmt->bindValue(":active",$active);
         $stmt = $stmt->executeQuery();
+        return true;
     }
     public function findQueueByTitre($titre){
         $sql="Select * from queue where titre = :titre";
@@ -180,11 +235,19 @@ class queueRepo extends ServiceEntityRepository
         return $data;
     }      
     public function findQueue($id){
-        $sql="Select * from queue where id = :id";
+        $sql="select * from queue where id = :id";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindValue(":id",$id);
         $stmt = $stmt->executeQuery();
-        $data = $stmt->fetchAll();
+        $data = $stmt->fetchOne();
+        return $data;
+    }
+    public function getOneQueue($id){
+        $sql="select * from queue where id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(":id",$id);
+        $stmt = $stmt->executeQuery();
+        $data = $stmt->fetchAssociative();
         return $data;
     }
     public function createQueueCritere($critere , $id_groupe , $type){
@@ -206,12 +269,14 @@ class queueRepo extends ServiceEntityRepository
         return $model;
     }
 
-    public function createQueueValues($value1 ,$value2 ,$id_critere){
-        $sql="INSERT INTO `queue_values`( `value1`, `value2`, `id_critere_id`) VALUES (:value1,:value2,:id_critere)";
+    public function createQueueValues($value1 ,$value2 ,$id_critere,$action,$value_view){
+        $sql="INSERT INTO `queue_values`( `value1`, `value2`, `id_critere_id`,`action`,`value_view`) VALUES (:value1,:value2,:id_critere,:action,:value_view)";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindValue(":value1",$value1);
         $stmt->bindValue(":value2",$value2);
         $stmt->bindValue(":id_critere",$id_critere);
+        $stmt->bindValue(":action",$action);
+        $stmt->bindValue(":value_view",$value_view);
         $stmt = $stmt->executeQuery();   
         return $stmt;     
     }
@@ -246,6 +311,16 @@ class queueRepo extends ServiceEntityRepository
         $stmt = $stmt->executeQuery();
         $statut = $stmt->fetchOne();
         return $statut;
+    }
+    public function getValueQueue($id,$entity){
+        $table = 'queue_'.$entity.'';
+        $sql="SELECT count(id) FROM debt_force_seg.".$table." s WHERE s.id_queue = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(":id",$id);
+        $stmt = $stmt->executeQuery();
+        $result = $stmt->fetchOne();
+        return $result;
+        
     }
     
 }

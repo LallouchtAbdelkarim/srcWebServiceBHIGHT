@@ -66,13 +66,11 @@ class WorkflowController extends AbstractController
         return $this->json($respObjects);
     }
     #[Route('/getListeSegmentByType')]
-
     public function getListeSegmentByType(Request $request,workflowRepo $workflowRepo): JsonResponse
     {
         $respObjects =array();
         $codeStatut = "ERROR";
         try{
-
             $this->AuthService->checkAuth(0,$request);
             $type = $request->get("type");
             if($type == "" || !$type){
@@ -82,10 +80,9 @@ class WorkflowController extends AbstractController
                 $codeStatut = "OK";
                 $respObjects["data"] = $data;
             }
-
         }catch(\Exception $e){
             $codeStatut = "ERREUR";
-        $respObjects["err"] = $e->getMessage();
+            $respObjects["err"] = $e->getMessage();
         }
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
@@ -110,8 +107,8 @@ class WorkflowController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+    
     #[Route('/getDetailListeObjet')]
-
     public function getDetailListeObjet(Request $request,workflowRepo $workflowRepo): JsonResponse
     {
         $respObjects =array();
@@ -164,21 +161,21 @@ class WorkflowController extends AbstractController
                     }
                 }
 
-                if($checkSg){
+                // if($checkSg){
                     $workflow = $workflowRepo->createWorkflow($titre ,$user,$type_select);
-                    for ($i=0; $i < count($data['arraySegmentation']); $i++) { 
-                        $intermSegWork = $this->em->getRepository(IntermWorkflowSegmentation::class)->findOneBy(["id_workflow"=>null , "id_segmentaion"=>$data['arraySegmentation'] , "id_type" =>$type_select]);
-                        $intermSegWork->setIdWorkflow($workflow);
-                        $this->em->flush();
-                    }
+                    // for ($i=0; $i < count($data['arraySegmentation']); $i++) { 
+                    //     $intermSegWork = $this->em->getRepository(IntermWorkflowSegmentation::class)->findOneBy(["id_workflow"=>null , "id_segmentaion"=>$data['arraySegmentation'] , "id_type" =>$type_select]);
+                    //     $intermSegWork->setIdWorkflow($workflow);
+                    //     $this->em->flush();
+                    // }
                     if($notes != ""){
                         $workflowRepo->createNoteWorkflow($workflow , $notes);
                     }
                     $respObjects["data"]["id"] = $workflow->getId();
                     $codeStatut = "OK";
-                }else{
-                    $codeStatut="ERROR-SEG1";
-                }
+                // }else{
+                //     $codeStatut="ERROR-SEG1";
+                // }
             }
             
         }catch(\Exception $e){
@@ -269,7 +266,7 @@ class WorkflowController extends AbstractController
             $codeStatut="OK";
         }catch(\Exception $e){
             $codeStatut = "ERREUR";
-        $respObjects["err"] = $e->getMessage();
+            $respObjects["err"] = $e->getMessage();
         }
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
@@ -279,7 +276,7 @@ class WorkflowController extends AbstractController
         $arrayLoop = [
             "array" => ""
         ];
-        
+
         foreach ($array as $value) {
             $componentType = $value["componentType"];
             $uid = $value["id"];
@@ -315,7 +312,7 @@ class WorkflowController extends AbstractController
             $type_workflow = $data["details"]["type_workflow"];
 
             if($titre != "" && $description != "" && $type_workflow != "" && count($segmentation) >= 1){
-                if($type_workflow == 1 ||  $type_workflow == 2 ){
+                // if($type_workflow == 1 ||  $type_workflow == 2 ){
                     $response="";
                     foreach ($segmentation as $segment) {
                         $s = $this->workflowRepo->findSegment($segment , $type_workflow);
@@ -336,13 +333,13 @@ class WorkflowController extends AbstractController
                         $codeStatut="OK";
                     }
                     
-                }else if($type_workflow == 3){
-                    if(count($segmentation) > 1){
-                        //tt
-                    }else{
-                        $codeStatut="ERROR_SEGMENTATION";
-                    }
-                }
+                // }else if($type_workflow == 3){
+                //     if(count($segmentation) > 1){
+                //         //tt
+                //     }else{
+                //         $codeStatut="ERROR_SEGMENTATION";
+                //     }
+                // }
             }else{
                 $codeStatut="EMPTY-DATA";
             }
@@ -488,13 +485,12 @@ class WorkflowController extends AbstractController
             $data = json_decode($request->getContent(), true);
             $id=$request->get("id");
             $liste_groupe = $this->workflowRepo->geListeGroupe();
-            // $array_data = array();
-            // for ($i=0; $i < count($liste_groupe); $i++) { 
-            //     $array_data[$i]=$liste_groupe[$i];
-            //     $array_data[$i]['criteres']=$this->workflowRepo->geListeCritere();;
+            $startYear = 2023;
+            $endYear = 2030;
 
-            // }
+            $yearsArray = range($startYear, $endYear);
             $respObjects["data"] = $liste_groupe;
+            $respObjects["years"] = $yearsArray;
             $codeStatut="OK";
         }catch(\Exception $e){
             $codeStatut = "ERREUR";
@@ -521,7 +517,7 @@ class WorkflowController extends AbstractController
             //Details approval step
             $array["approval_step"]["type_approval"] = $this->workflowRepo->getTypeApprovalStep();
             $array["campagne"]["typecampagne"] = $this->workflowRepo->getTypeCampagne();
-            // $array["assign_externe"] = $this->workflowRepo->getListeAssign();
+            $array["assign_externe"] =  $this->workflowRepo->getTypeAgent();
 
             $respObjects["data"] =$array;
             $codeStatut="OK";

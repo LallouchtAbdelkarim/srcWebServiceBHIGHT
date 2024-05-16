@@ -28,6 +28,9 @@ class ChampsDbi
     #[ORM\Column]
     private ?int $id_champ = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $id_integration = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -88,6 +91,18 @@ class ChampsDbi
     public function setIdChamp(int $id_champ): static
     {
         $this->id_champ = $id_champ;
+
+        return $this;
+    }
+
+    public function getIdIntegration(): ?int
+    {
+        return $this->id_integration;
+    }
+
+    public function setIdIntegration(?int $id_integration): static
+    {
+        $this->id_integration = $id_integration;
 
         return $this;
     }

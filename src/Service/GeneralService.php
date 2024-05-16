@@ -20,6 +20,21 @@ class GeneralService
 
         return $formattedDate;
     }
+    public function yearStart($year)
+    {
+        $dateTime = new \DateTime("$year-01-01");
+        $formattedDate = $dateTime->format('Y-01-01 H:i:s');
+
+        return $formattedDate;
+    }
+
+    public function yearEnd($year)
+    {
+        $dateTime = new \DateTime("$year-12-31");
+        $formattedDate = $dateTime->format('Y-12-31 H:i:s');
+
+        return $formattedDate;
+    }
     public function dateEnd($date)
     {
         $dateTime = new \DateTime($date);                        
@@ -49,6 +64,4 @@ class GeneralService
             return "NOT_EXIST_ELEMENT";
         }
     }
-
-    
 }

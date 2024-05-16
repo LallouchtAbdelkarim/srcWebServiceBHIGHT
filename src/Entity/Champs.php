@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\ChampsRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ChampsRepository::class)]
@@ -24,9 +25,15 @@ class Champs
 
     #[ORM\Column(length: 255)]
     private ?string $form = null;
+   
+    #[ORM\Column(nullable: true)]
+    private ?int $champs_id = null;
 
-    #[ORM\ManyToOne(inversedBy: 'champs')]
-    private ?DetailModelAffichage $champs = null;
+    #[ORM\Column(nullable: true)]
+    private ?int $id_details_model = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $dateCreation = null;
 
     public function getId(): ?int
     {
@@ -81,14 +88,38 @@ class Champs
         return $this;
     }
 
-    public function getChampsId(): ?DetailModelAffichage
+    public function getChampsId(): ?int
     {
-        return $this->champs;
+        return $this->champs_id;
     }
 
-    public function setChampsId(?DetailModelAffichage $champs_id): self
+    public function setChampsId(?int $champs_id): static
     {
         $this->champs = $champs_id;
+
+        return $this;
+    }
+
+    public function getIdDetailsModel(): ?int
+    {
+        return $this->id_details_model;
+    }
+
+    public function setIdDetailsModel(?int $id_details_model): static
+    {
+        $this->id_details_model = $id_details_model;
+
+        return $this;
+    }
+
+    public function getDateCreation(): ?\DateTimeInterface
+    {
+        return $this->dateCreation;
+    }
+
+    public function setDateCreation(?\DateTimeInterface $dateCreation): static
+    {
+        $this->dateCreation = $dateCreation;
 
         return $this;
     }

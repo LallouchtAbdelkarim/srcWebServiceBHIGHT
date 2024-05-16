@@ -10,6 +10,7 @@ use App\Entity\Import;
 use App\Entity\ImportTypeCreance;
 use App\Entity\ImportTypeDebiteur;
 use App\Entity\ImportTypeGarantie;
+use App\Entity\DetailModelAffichage;
 use App\Entity\IntegDebiteur;
 use App\Entity\IntegDossier;
 use App\Entity\Integration;
@@ -40,6 +41,9 @@ use App\Entity\ProcessIntegration;
 use Doctrine\Persistence\ManagerRegistry;
 use GenderApi\Client as GenderApiClient;
 use Symfony\Component\HttpFoundation\File\File;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
+use ZipArchive;
 
 #[Route('/API/integration')]
 
@@ -352,7 +356,42 @@ class IntegrationController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects );
     }
+    public function trimHeaders($filePath)
+    {
+        // Open the CSV file for reading and writing
+        // $handle = fopen($filePath, "r+");
+        
+        // // Check if the file is opened successfully
+        // if ($handle !== FALSE) {
+        //     // Read the header row
+        //     $headerRow = fgetcsv($handle, 1000000, ";");
+        //     // dump($headerRow);
+            
+        //     // dump($headerRow);
+        //     // Trim each header
+        //     $headerRow = array_map('trim', $headerRow);
 
+        //     // // Rewind to the beginning of the file
+        //     // rewind($handle);
+        //     fseek($handle, 0);
+
+
+        //     // Write the trimmed header row back into the file
+        //     fputcsv($handle, $headerRow);
+
+        //     // Close the file handle
+        //     fclose($handle);
+            
+        //     return true;
+        // } else {
+        //     // Failed to open the file for reading and writing
+        //     return false;
+        // }
+        return true;
+
+    }
+
+    
     #[Route('/setIntegration1', methods: ['POST'])]
     public function setIntegration1(integrationRepo $integrationRepo , donneurRepo $donneurRepo , Request $request , SerializerInterface $serializer): JsonResponse
     {
@@ -361,6 +400,7 @@ class IntegrationController extends AbstractController
         $respObjects = array();
         $titre=$request->get("titre");
         $ptf = $request->get("ptf");
+        $id = $request->get("id");
         
         $num_creance = $request->get("num_creance");
         $cin_debiteur = $request->get("cin_debiteur");
@@ -382,18 +422,25 @@ class IntegrationController extends AbstractController
 
         $emploi_champ = $request->get("emploi_champ");
         $employeur_champ = $request->get("employeur_champ");
+        $isMaj = $request->get("isMaj");
 
         try{
             if(!empty($titre) || $titre != ""  || $ptf != "" || empty($ptf) != ""){
                 //Debiteur details
                 $statutIntgeration = $integrationRepo->getStautsId(1);
                 $ptf_ = $donneurRepo->getOnePtf($ptf);
+                // if($isMaj == 0){
+                // }else{
+                //     $integration = $this->em->getRepository(Integration::class)->find($id);
+                //     $resetImport = $integrationRepo->resetImport($id);
+                // }
                 $integration = new Integration();
                 $integration->setTitre($titre);
                 $integration->setDateCreation(new \DateTime());
                 $integration->setEtat(1);
                 $integration->setStatus($statutIntgeration);
                 $integration->setIdPtf($ptf_);
+                // $integration->setIsMaj(0);
                 $this->em->persist($integration);
                 $this->em->flush();
                 $test=false ;
@@ -434,6 +481,7 @@ class IntegrationController extends AbstractController
                                     $filesystem->mkdir($folderPath);
                                     move_uploaded_file($fileTmpLoc, $fileStore);
                                     $import->setUrl($fileStore);
+
                                     $this->em->flush();
                                     $codeStatut="OK";
                                     $csvData = file_get_contents($import->getUrl());
@@ -442,12 +490,13 @@ class IntegrationController extends AbstractController
                                     $rowsPerFile = ceil(count($rows) / $numberOfFiles);
                                     $chunks = array_chunk($rows, $rowsPerFile);
                                     $header = array_shift($rows);
-                                    $import->setNbrLignes(count($rows) - 1);
+                                    $import->setNbrLignes(count($rows) - 2);
                                     $this->em->flush();
 
                                     if (!is_dir($folderPath)) {
                                         mkdir($folderPath);
                                     }
+
                                     $order=1;
                                     for ($i = 0; $i < count($chunks); $i++) {
                                         $outputFileName = sprintf('output_file_%d.csv', $i + 1);
@@ -541,6 +590,7 @@ class IntegrationController extends AbstractController
                                         //----Create file if n'existe pas
                                         $filesystem->mkdir($folderPath);
                                         move_uploaded_file($fileTmpLoc, $fileStore);
+                                        $this->trimHeaders($fileStore);
                                         $import->setUrl($fileStore);
                                         $this->em->flush();
                                         $codeStatut="OK";
@@ -550,7 +600,7 @@ class IntegrationController extends AbstractController
                                         $rowsPerFile = ceil(count($rows) / $numberOfFiles);
                                         $chunks = array_chunk($rows, $rowsPerFile);
                                         $header = array_shift($rows);
-                                        $import->setNbrLignes(count($rows) - 1);
+                                        $import->setNbrLignes(count($rows) - 2);
                                         $this->em->flush();
 
                                         if (!is_dir($folderPath)) {
@@ -642,7 +692,7 @@ class IntegrationController extends AbstractController
                                         $this->em->persist($import);
                                         $this->em->flush();
 
-                                        $import->setNbrLignes(count($rows) - 1);
+                                        $import->setNbrLignes(count($rows) - 2);
                                         $this->em->flush();
                                         //Import CR
                                         $filesystem = new Filesystem();
@@ -763,7 +813,7 @@ class IntegrationController extends AbstractController
                                         $rowsPerFile = ceil(count($rows) / $numberOfFiles);
                                         $chunks = array_chunk($rows, $rowsPerFile);
                                         $header = array_shift($rows);
-                                        $import->setNbrLignes(count($rows) - 1);
+                                        $import->setNbrLignes(count($rows) - 2);
                                         $this->em->flush();
                                     if (!is_dir($folderPath)) {
                                         mkdir($folderPath);
@@ -865,7 +915,7 @@ class IntegrationController extends AbstractController
                                     $rowsPerFile = ceil(count($rows) / $numberOfFiles);
                                     $chunks = array_chunk($rows, $rowsPerFile);
                                     $header = array_shift($rows);
-                                    $import->setNbrLignes(count($rows) - 1);
+                                    $import->setNbrLignes(count($rows) - 2);
                                     $this->em->flush();
 
                                     if (!is_dir($folderPath)) {
@@ -920,6 +970,7 @@ class IntegrationController extends AbstractController
                         }
                     }
                 }
+
                 if($codeStatut=="OK"){
                     if($request->get("telephone_in_step") == "1"){
                         if(!empty($_FILES['telephone_file']['name'])){
@@ -966,7 +1017,7 @@ class IntegrationController extends AbstractController
                                     $chunks = array_chunk($rows, $rowsPerFile);
                                     $header = array_shift($rows);
 
-                                    $import->setNbrLignes(count($rows) - 1);
+                                    $import->setNbrLignes(count($rows) - 2);
                                     $this->em->flush();
                                     if (!is_dir($folderPath)) {
                                         mkdir($folderPath);
@@ -1061,7 +1112,7 @@ class IntegrationController extends AbstractController
                                     $rowsPerFile = ceil(count($rows) / $numberOfFiles);
                                     $chunks = array_chunk($rows, $rowsPerFile);
                                     $header = array_shift($rows);
-                                    $import->setNbrLignes(count($rows) - 1);
+                                    $import->setNbrLignes(count($rows) - 2);
                                     $this->em->flush();
 
                                     if (!is_dir($folderPath)) {
@@ -1104,6 +1155,67 @@ class IntegrationController extends AbstractController
                                             $codeStatut="ERROR";
                                         }
                                     }
+                                }else{
+                                    $codeStatut="EMPTY_FILE";
+                                }
+                            }else{
+                                $codeStatut=$fileCheckAdresse["codeStatut"] ;
+                            }
+                        }else{
+                            $codeStatut="EMPTY_FILE";
+                        }
+                    }
+                }
+
+                if($codeStatut=="OK"){
+                    if($request->get("email_in_step") == "1"){
+                        if(!empty($_FILES['email_file']['name'])){
+                            $requiredHeaders=array();
+                            $file = $_FILES['email_file'];
+                            $fileCheckEmail=$this->FileService->checkFile($file);
+                            if($fileCheckEmail["codeStatut"] == "OK" ){
+                                $ptf_ = $donneurRepo->getOnePtf($ptf);
+                                //Check donneurordre
+                                $nom = $fileCheckEmail["nom"];
+                                $extension_upload=$fileCheckEmail["extension_upload"];
+                                $fileTmpLoc=$fileCheckEmail["fileTmpLoc"];
+                                $details_model_email  = json_decode($request->get("details_model_email"), true);
+                                $model_import = $integrationRepo->createModel($details_model_email , "email");
+                                if($model_import){
+                                    //Create import debiteur
+                                    $import = new Import();
+                                    $import->setDateCreation(new \DateTime());
+                                    $import->setEtat(0);
+                                    $import->setIdModel($model_import);
+                                    $import->setIdIntegration($integration);
+                                    $import->setOrderImport(1);
+                                    $import->setUrl("");
+                                    $import->setType("email");
+                                    $this->em->persist($import);
+                                    $this->em->flush();
+                                    //Import CR
+                                    $filesystem = new Filesystem();
+                                    $publicDirectory = $this->getParameter('kernel.project_dir') . '/public/fichiers/import/';
+                                    $folderPath = $publicDirectory . 'integration-num-'.$integration->getId()."/import-email-num-".$import->getId();
+                                    $fileStore = "fichiers/import/integration-num-".$integration->getId() ."/import-email-num-".$import->getId()."/". $nom . '.' . $extension_upload;
+                                    //----Create file if n'existe pas
+                                    $filesystem->mkdir($folderPath);
+                                    move_uploaded_file($fileTmpLoc, $fileStore);
+                                    $import->setUrl($fileStore);
+                                    $this->em->flush();
+                                    $csvData = file_get_contents($import->getUrl());
+                                    $rows = array_map('str_getcsv', explode("\n", $csvData));
+                                    $numberOfFiles = 3;
+                                    $rowsPerFile = ceil(count($rows) / $numberOfFiles);
+                                    $chunks = array_chunk($rows, $rowsPerFile);
+                                    $header = array_shift($rows);
+                                    $import->setNbrLignes(count($rows) - 2);
+                                    $this->em->flush();
+
+                                    if (!is_dir($folderPath)) {
+                                        mkdir($folderPath);
+                                    }
+                                    
                                 }else{
                                     $codeStatut="EMPTY_FILE";
                                 }
@@ -1162,7 +1274,7 @@ class IntegrationController extends AbstractController
                                         $rowsPerFile = ceil(count($rows) / $numberOfFiles);
                                         $chunks = array_chunk($rows, $rowsPerFile);
                                         $header = array_shift($rows);
-                                        $import->setNbrLignes(count($rows) - 1);
+                                        $import->setNbrLignes(count($rows) - 2);
                                         $this->em->flush();
 
                                         if (!is_dir($folderPath)) {
@@ -1267,7 +1379,7 @@ class IntegrationController extends AbstractController
                                         $rowsPerFile = ceil(count($rows) / $numberOfFiles);
                                         $chunks = array_chunk($rows, $rowsPerFile);
                                         $header = array_shift($rows);
-                                        $import->setNbrLignes(count($rows) - 1);
+                                        $import->setNbrLignes(count($rows) - 2);
                                         $this->em->flush();
 
                                         if (!is_dir($folderPath)) {
@@ -1326,7 +1438,7 @@ class IntegrationController extends AbstractController
                     }
                 }
                 if($codeStatut == "OK"){
-                    $codeStatut = $this->createTableDBI($integration->getId());
+                    $codeStatut = $this->createTableDBI($integration->getId() , $isMaj);
                     $codeStatut="OK";
                     $respObjects["data"] = $integration->getId();
                 }
@@ -1352,48 +1464,71 @@ class IntegrationController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects );
     }
-
+    function remove_accents($str) {
+        $str = mb_strtolower($str, 'UTF-8');
+        $str = str_replace(
+            ['á','à','ã','â','ä','é','è','ê','ë','í','ì','î','ï','ó','ò','õ','ô','ö','ú','ù','û','ü','ç','ñ'],
+            ['a','a','a','a','a','e','e','e','e','i','i','i','i','o','o','o','o','o','u','u','u','u','c','n'],
+            $str
+        );
+        $str = preg_replace('/[^a-z0-9\s_]/', '', $str);
+        return $str;
+    }
     // #[Route('/createTableDBI', methods : ["POST"])]
-    public function createTableDBI($id)
+    public function createTableDBI($id , $isMaj)
+    // public function createTableDBI()
     {
-        //$id=86;
-        $codeStatut= "ERROR";
-        try{
+        // $codeStatut= "ERROR";
+        // $id=239;
+        $isMaj = 0;
+        // try{
             $import = $this->integrationRepo->getAllImportByIntegration($id);
+            $maj = '';
+            if($isMaj == 1){
+                $maj = "maj_";
+            }
+            
             for ($i=0; $i <count($import) ; $i++) { 
-                $tableName = 'debt_force_integration.'.$import[$i]['type'].'_'.$id;
+                $tableName = 'debt_force_integration.'.$maj.$import[$i]['type'].'_'.$id;
                 $idModel = $import[$i]['id_model_id'];
                 $correColu = $this->em->getRepository(CorresColu::class)->findBy(['id_model_import'=>$idModel]);
-                // dump($correColu[0]->getIdColParams()->getTableBdd());
                 $params = '';
                 for ($j=0; $j < count($correColu); $j++) { 
                     $liaison = " , ";
                     if($j == (count($correColu) - 1)){
                         $liaison = " ";
                     }
-                    $name = $correColu[$j]->getColumnName();
-                    $params .=  $name.'  ' .$correColu[$j]->getIdColParams()->getTypeParam()  ;
-                    //TODO:$correColu[$j]->getIdColParams()->getTypeParam() is t s 
+                    $name = $this->remove_accents($correColu[$j]->getColumnName());
                     
-                    if(strpos($correColu[$j]->getIdColParams()->getTypeParam(), 'VARCHAR') !== false) {
-                        $params .= '  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ';
+                    if( $correColu[$j]->getOriginChamp() == 1){
+                        $params .=  $name.'  ' .$correColu[$j]->getIdColParams()->getTypeParam();
+                        //TODO:$correColu[$j]->getIdColParams()->getTypeParam() is t s 
+                        
+                        if(strpos($correColu[$j]->getIdColParams()->getTypeParam(), 'VARCHAR') !== false) {
+                            $params .= '  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ';
+                        }
+                    }else{
+                        $modelAff = $this->em->getRepository(DetailModelAffichage::class)->findOneBy(['id'=>$correColu[$j]->getColumnTable()]);
+                        $params .=  $name.'  ' .$modelAff->getTypeChamp() . ' ('.$modelAff->getLength().')' ;
+                        if(strpos($modelAff->getTypeChamp(), 'VARCHAR') !== false) {
+                            $params .= '  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ';
+                        }
                     }
                     $params .= $liaison;
                 }
                 $sql = '
-                    CREATE TABLE '.$tableName.' (
-                        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                        '.$params.' , vide_champ VARCHAR(50) 
+                CREATE TABLE '.$tableName.' (
+                    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    '.$params.' , vide_champ VARCHAR(50) , log_action VARCHAR(1000) 
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-                ';  
+                    ';  
                 $this->integrationRepo->executeSQL($sql);
                 $codeStatut = "OK";
             }
-            // return 'OK';
-        }catch(\Exception $e){
-            $codeStatut="ERROR";
-            $respObjects["err"] = $e->getMessage();
-        }
+        // }catch(\Exception $e){
+        //     $codeStatut="ERROR";
+        //     $respObjects["err"] = $e->getMessage();
+        // }
         $respObjects["codeStatut"]=$codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $codeStatut;
@@ -1401,10 +1536,12 @@ class IntegrationController extends AbstractController
     }
 
     // #[Route('/sauvguardeDataCSV', methods : ["POST"])]
+    // public function sauvguardeDataCSV()
     public function sauvguardeDataCSV($id)
     {
         $codeStatut= "ERROR";
-        try{
+        // $id =252;
+        // try{
             //TODO:Check the entite
             $import = $this->integrationRepo->getAllImportByIntegration($id);
 
@@ -1424,32 +1561,40 @@ class IntegrationController extends AbstractController
                 $setForEntete = '';
 
                 $liaison = " , ";
-                
                 for ($j=0; $j < count($header); $j++) { 
-                    $corre = $this->em->getRepository(CorresColu::class)->findBy(['id_model_import'=>$import[$i]['id_model_id'] ,'column_name'=> $header[$j]]);
+                    $corre = $this->em->getRepository(CorresColu::class)->findOneBy(['id_model_import'=>$import[$i]['id_model_id'] ,'column_name'=> $header[$j]]);
+                    // dump($header[$j],$corre);
+                    // dump($header);
+                    
                     $entiteCheck .= '@'.$header[$j] .$liaison;
                     if($corre)
                     {
-                        $setForEntete .= $header[$j] .' = @'.$header[$j] .' '.$liaison;
+                        if($corre->getIdColParams() && $corre->getIdColParams()->getTypeParam() == 'date' ){
+                            $setForEntete .= $header[$j] .' = STR_TO_DATE(@'.$header[$j] .', "%d/%m/%Y") '.$liaison;
+                        }elseif ($corre->getIdColParams() && $corre->getIdColParams()->getTypeParam() == 'datetime' ){
+                            $setForEntete .= $header[$j] .' = STR_TO_DATE(@'.$header[$j] .', "%d/%m/%Y") '.$liaison;
+                        }else{
+                            $setForEntete .= $header[$j] .' = @'.$header[$j] .' '.$liaison;
+                        }
                     }
                 }
 
-                $sql = "LOAD DATA INFILE '$realPath' INTO TABLE debt_force_integration.".$import[$i]['type']."_".$id." FIELDS TERMINATED BY ';' ENCLOSED BY '\"' LINES TERMINATED BY '\n' IGNORE 1 ROWS
+                $sql = "LOAD DATA INFILE '$realPath' INTO TABLE debt_force_integration.".$import[$i]['type']."_".$id." FIELDS TERMINATED BY ';' ENCLOSED BY '\"' LINES TERMINATED BY '\n' IGNORE 2 ROWS
                 (".rtrim($entiteCheck,' , ').")
-                SET  ".$setForEntete."  vide_champ = '' ";
-
+                SET  ".$setForEntete."  vide_champ = '' "; 
+                // dump($sql);
                 $codeStatut = $this->integrationRepo->sauvguardeData($sql); //Entete not selected
                 $codeStatut="OK";
             }
 
-        }catch(\Exception $e){
-            $codeStatut="ERROR";
-            $respObjects["err"] = $e->getMessage();
-        }
+        // }catch(\Exception $e){
+        //     $codeStatut="ERROR";
+        //     $respObjects["err"] = $e->getMessage();
+        // }
         return $codeStatut;
         // $respObjects["codeStatut"]=$codeStatut;
         // $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
-        // return $this->json($respObjects );
+        // return $this->json($respObjects);
     }
 
     #[Route('/importData', methods : ["POST"])]
@@ -1526,146 +1671,194 @@ class IntegrationController extends AbstractController
         $emDbi = $doctrine->getManager('customer');
 
         try{
-            $IntegrationNonCommencer = $integrationRepo->getAllInegrationByStatus(1);
+            $IntegrationNonCommencer = $integrationRepo->getAllInegrationByStatus2();
+            
             if($IntegrationNonCommencer){
                 for ($t=0; $t <count($IntegrationNonCommencer);$t++) {
-                    $porte_feuille = $IntegrationNonCommencer[$t]->getIdPtf()->getId(); 
-                    $integrationId =  $IntegrationNonCommencer[$t]->getId();
-                    $this->sauvguardeDataCSV($integrationId);
-                    $importByType = $integrationRepo->getOneImportType($integrationId , "debiteur");
-                    $idModelDeb = $importByType->getIdModel()->getId();
-                    $a=new actionsImportDbi();
-                    $a->setEtat(0);
-                    $a->setCodeAction("Ajo_deb");
-                    $a->setDateDebut(new \DateTime());
-                    $a->setIdImport($importByType->getId());
-                    $a->setTitre("Ajout");
-                    $emDbi->persist($a);
-                    $emDbi->flush();
-                    $sql = 'CALL debt_force_integration.PROC_INSERT_DEB_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().');';
-                    
-                    //TODO:Dossier 
-                    $importByType = $integrationRepo->getOneImportType($integrationId , "dossier");
-    
-                    $a=new actionsImportDbi();
-                    $a->setEtat(0);
-                    $a->setCodeAction("Ajo_doss");
-                    $a->setDateDebut(new \DateTime());
-                    $a->setIdImport($importByType->getId());
-                    $a->setTitre("Ajout");
-                    $emDbi->persist($a);
-                    $emDbi->flush();
-                    $sql = 'CALL debt_force_integration.PROC_INSERT_DOSSIERS_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.') ;';
-                    
-                    $importByType = $integrationRepo->getOneImportType($integrationId , "creance");
-    
-                    $a=new actionsImportDbi();
-                    $a->setEtat(0);
-                    $a->setCodeAction("Ajo_creance");
-                    $a->setDateDebut(new \DateTime());
-                    $a->setIdImport($importByType->getId());
-                    $a->setTitre("Ajout");
-                    $emDbi->persist($a);
-                    $emDbi->flush();
-    
-                    $sql = 'CALL debt_force_integration.PROC_INSERT_CREANCE_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
-                    $stmt = $integrationRepo->executeSQL($sql);
+                    try {
+                        $porte_feuille = $IntegrationNonCommencer[$t]->getIdPtf()->getId(); 
+                        $integrationId =  $IntegrationNonCommencer[$t]->getId();
 
-                    //Emploi
-                    $importByType = $integrationRepo->getOneImportType($integrationId , "emploi");
-                    if($importByType){
-                        $a=new actionsImportDbi();
-                        $a->setEtat(0);
-                        $a->setCodeAction("Ajo_emploi");
-                        $a->setDateDebut(new \DateTime());
-                        $a->setIdImport($importByType->getId());
-                        $a->setTitre("Ajout");
-                        $emDbi->persist($a);
-                        $emDbi->flush();
-        
-                        $sql = 'CALL debt_force_integration.PROC_INSERT_EMPLOI_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
-                        $stmt = $integrationRepo->executeSQL($sql);
-                    }
-    
-                    $importByType = $integrationRepo->getOneImportType($integrationId , "employeur");
-                    if($importByType){
-                        $a=new actionsImportDbi();
-                        $a->setEtat(0);
-                        $a->setCodeAction("Ajo_employeur");
-                        $a->setDateDebut(new \DateTime());
-                        $a->setIdImport($importByType->getId());
-                        $a->setTitre("Ajout");
-                        $emDbi->persist($a);
-                        $emDbi->flush();
-        
-                        $sql = 'CALL debt_force_integration.PROC_INSERT_EMPLOYEUR_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
+                        
+                        if($IntegrationNonCommencer[$t]->getStatus()->getId() == 2){
+                            $sql = 'CALL debt_force_integration.PROC_ROOLBACK_DBI('.$integrationId.');';
+                            $stmt = $integrationRepo->executeSQL($sql);
+
+                            $sql="INSERT INTO `logs_actions_integration`( `id_integration`, `logs`, `date_creation`,`etat`) VALUES (".$integrationId.",'Relancer l\'intégration',now(),1)";
+                            $stmt = $integrationRepo->executeSQL($sql);
+                        }else{
+                            $sql="INSERT INTO `logs_actions_integration`( `id_integration`, `logs`, `date_creation`,`etat`) VALUES (".$integrationId.",'Import dans la base d\'intégration',now(),1)";
+                            $stmt = $integrationRepo->executeSQL($sql);
+                        }
+
+                        $sql="UPDATE `integration` SET `status_id` = '2' WHERE `integration`.`id` = ".$integrationId.";";
                         $stmt = $integrationRepo->executeSQL($sql);
                         
-                    }
-                    $importByType = $integrationRepo->getOneImportType($integrationId , "proc");
-                    if($importByType){
-                        $a=new actionsImportDbi();
-                        $a->setEtat(0);
-                        $a->setCodeAction("Ajo_proc");
-                        $a->setDateDebut(new \DateTime());
-                        $a->setIdImport($importByType->getId());
-                        $a->setTitre("Ajout");
-                        $emDbi->persist($a);
+                        $IntegrationNonCommencer[$t]->setDateExecution(new \DateTime()); 
                         $emDbi->flush();
-        
-                        $sql = 'CALL debt_force_integration.PROC_INSERT_PROC_JUDU_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
-                        $stmt = $integrationRepo->executeSQL($sql);
-                    }
-    
-                    $importByType = $integrationRepo->getOneImportType($integrationId , "garantie");
-                    if($importByType){
+                        $this->sauvguardeDataCSV($integrationId);
+                        $importByType = $integrationRepo->getOneImportType($integrationId , "debiteur");
+                        $idModelDeb = $importByType->getIdModel()->getId();
+                        
                         $a=new actionsImportDbi();
                         $a->setEtat(0);
-                        $a->setCodeAction("Ajo_garantie");
-                        $a->setDateDebut(new \DateTime());
-                        $a->setIdImport($importByType->getId());
-                        $a->setTitre("Ajout");
-                        $emDbi->persist($a);
-                        $emDbi->flush();
-        
-                        $sql = 'CALL debt_force_integration.PROC_INSERT_GARANTIE_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
-                        $stmt = $integrationRepo->executeSQL($sql);
-                    }
-
-                    $importByType = $integrationRepo->getOneImportType($integrationId , "telephone");
-                    if($importByType){
-                        $a=new actionsImportDbi();
-                        $a->setEtat(0);
-                        $a->setCodeAction("Ajo_telephone");
+                        $a->setCodeAction("Ajo_deb");
                         $a->setDateDebut(new \DateTime());
                         $a->setIdImport($importByType->getId());
                         $a->setTitre("Ajout");
                         $emDbi->persist($a);
                         $emDbi->flush();
 
-                        $sql = 'CALL debt_force_integration.PROC_INSERT_TEL_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
+                        $sql = 'CALL debt_force_integration.PROC_INSERT_DEB_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().');';
+                        dump($sql);
                         $stmt = $integrationRepo->executeSQL($sql);
-                    }
-
-                    $importByType = $integrationRepo->getOneImportType($integrationId , "adresse");
-                    if($importByType){
+                        $importByType = $integrationRepo->getOneImportType($integrationId , "dossier");
                         $a=new actionsImportDbi();
                         $a->setEtat(0);
-                        $a->setCodeAction("Ajo_adresse");
+                        $a->setCodeAction("Ajo_doss");
+                        $a->setDateDebut(new \DateTime());
+                        $a->setIdImport($importByType->getId());
+                        $a->setTitre("Ajout");
+                        $emDbi->persist($a);
+                        $emDbi->flush();
+                        $sql = 'CALL debt_force_integration.PROC_INSERT_DOSSIERS_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.') ;';
+                        dump($sql);
+                        $stmt = $integrationRepo->executeSQL($sql);
+                        $importByType = $integrationRepo->getOneImportType($integrationId , "creance");
+        
+                        $a=new actionsImportDbi();
+                        $a->setEtat(0);
+                        $a->setCodeAction("Ajo_creance");
                         $a->setDateDebut(new \DateTime());
                         $a->setIdImport($importByType->getId());
                         $a->setTitre("Ajout");
                         $emDbi->persist($a);
                         $emDbi->flush();
         
-                        $sql = 'CALL debt_force_integration.PROC_INSERT_ADRESSE_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
+                        $sql = 'CALL debt_force_integration.PROC_INSERT_CREANCE_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';                            
+                        dump($sql);
+                        $stmt = $integrationRepo->executeSQL($sql);
+                        //TODO:Dossier 
+
+                        //Emploi
+                        $importByType = $integrationRepo->getOneImportType($integrationId , "emploi");
+                        if($importByType){
+                            $a=new actionsImportDbi();
+                            $a->setEtat(0);
+                            $a->setCodeAction("Ajo_emploi");
+                            $a->setDateDebut(new \DateTime());
+                            $a->setIdImport($importByType->getId());
+                            $a->setTitre("Ajout");
+                            $emDbi->persist($a);
+                            $emDbi->flush();
+            
+                            $sql = 'CALL debt_force_integration.PROC_INSERT_EMPLOI_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
+                            $stmt = $integrationRepo->executeSQL($sql);
+                        }
+        
+                        $importByType = $integrationRepo->getOneImportType($integrationId , "employeur");
+                        if($importByType){
+                            $a=new actionsImportDbi();
+                            $a->setEtat(0);
+                            $a->setCodeAction("Ajo_employeur");
+                            $a->setDateDebut(new \DateTime());
+                            $a->setIdImport($importByType->getId());
+                            $a->setTitre("Ajout");
+                            $emDbi->persist($a);
+                            $emDbi->flush();
+            
+                            $sql = 'CALL debt_force_integration.PROC_INSERT_EMPLOYEUR_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
+                            $stmt = $integrationRepo->executeSQL($sql);
+                        }
+
+                        $importByType = $integrationRepo->getOneImportType($integrationId , "proc");
+                        if($importByType){
+                            $a=new actionsImportDbi();
+                            $a->setEtat(0);
+                            $a->setCodeAction("Ajo_proc");
+                            $a->setDateDebut(new \DateTime());
+                            $a->setIdImport($importByType->getId());
+                            $a->setTitre("Ajout");
+                            $emDbi->persist($a);
+                            $emDbi->flush();
+            
+                            $sql = 'CALL debt_force_integration.PROC_INSERT_PROC_JUDU_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
+                            $stmt = $integrationRepo->executeSQL($sql);
+                        }
+        
+                        $importByType = $integrationRepo->getOneImportType($integrationId , "garantie");
+                        if($importByType){
+                            $a=new actionsImportDbi();
+                            $a->setEtat(0);
+                            $a->setCodeAction("Ajo_garantie");
+                            $a->setDateDebut(new \DateTime());
+                            $a->setIdImport($importByType->getId());
+                            $a->setTitre("Ajout");
+                            $emDbi->persist($a);
+                            $emDbi->flush();
+
+                            $sql = 'CALL debt_force_integration.PROC_INSERT_GARANTIE_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
+                            $stmt = $integrationRepo->executeSQL($sql);
+                        }
+
+                        $importByType = $integrationRepo->getOneImportType($integrationId , "telephone");
+                        if($importByType){
+                            $a=new actionsImportDbi();
+                            $a->setEtat(0);
+                            $a->setCodeAction("Ajo_telephone");
+                            $a->setDateDebut(new \DateTime());
+                            $a->setIdImport($importByType->getId());
+                            $a->setTitre("Ajout");
+                            $emDbi->persist($a);
+                            $emDbi->flush();
+
+                            $sql = 'CALL debt_force_integration.PROC_INSERT_TEL_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
+                            dump($sql);
+                            $stmt = $integrationRepo->executeSQL($sql);
+                        }
+
+                        $importByType = $integrationRepo->getOneImportType($integrationId , "adresse");
+                        if($importByType){
+                            $a=new actionsImportDbi();
+                            $a->setEtat(0);
+                            $a->setCodeAction("Ajo_adresse");
+                            $a->setDateDebut(new \DateTime());
+                            $a->setIdImport($importByType->getId());
+                            $a->setTitre("Ajout");
+                            $emDbi->persist($a);
+                            $emDbi->flush();
+            
+                            $sql = 'CALL debt_force_integration.PROC_INSERT_ADRESSE_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
+                            
+                            $stmt = $integrationRepo->executeSQL($sql);
+                        }
+                        $importByType = $integrationRepo->getOneImportType($integrationId , "email");
+                        if($importByType){
+                            $a=new actionsImportDbi();
+                            $a->setEtat(0);
+                            $a->setCodeAction("Ajo_email");
+                            $a->setDateDebut(new \DateTime());
+                            $a->setIdImport($importByType->getId());
+                            $a->setTitre("Ajout");
+                            $emDbi->persist($a);
+                            $emDbi->flush();
+                            $sql = 'CALL debt_force_integration.PROC_INSERT_EMAIL_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
+                            dump($sql);
+                            $stmt = $integrationRepo->executeSQL($sql);
+                        }
+
+                        $sql="update integration set status_id = 4 , `date_fin_execution_1`=now() where id = ".$IntegrationNonCommencer[$t]->getId()."";
+                        $stmt = $this->conn->prepare($sql)->executeQuery();
+                        $sql="INSERT INTO `logs_actions_integration`( `id_integration`, `logs`, `date_creation`,`etat`) VALUES (".$integrationId.",'Intégration terminée',now(),1)";
+                        $stmt = $integrationRepo->executeSQL($sql);
+                        $codeStatut="OK";
+
+                    } catch (\Exception $e) {
+                        $sql="UPDATE `integration` SET `status_id` = '3' WHERE `integration`.`id` = ".$integrationId.";";
+                        $stmt = $integrationRepo->executeSQL($sql);
+                        $sql="INSERT INTO `logs_actions_integration`( `id_integration`, `logs`, `date_creation`,`etat`) VALUES (".$integrationId.",'".$e->getMessage()."',now(),0)";
                         $stmt = $integrationRepo->executeSQL($sql);
                     }
-                    
-                    $sql="update integration set status_id = 4 , `date_fin_execution_1`=now() where id = ".$IntegrationNonCommencer[$t]->getId()."";
-                    $stmt = $this->conn->prepare($sql)->executeQuery();
-    
-                    $codeStatut="OK";
                 }
             }
         }
@@ -1683,7 +1876,17 @@ class IntegrationController extends AbstractController
     {
         $codeStatut= "ERROR";
         try{
-            
+            $IntegrationNonCommencer = $integrationRepo->getAllInegrationByStatus(10);
+            if($IntegrationNonCommencer){
+                for ($t=0; $t <count($IntegrationNonCommencer);$t++) {
+                    $integrationId =  $IntegrationNonCommencer[$t]->getId();
+                    $sql = 'CALL debt_force_integration.PROC_ROOLBACK('.$integrationId.'); ';
+                    $stmt = $integrationRepo->executeSQL($sql);
+                    $sql="update integration set status_id = 14  where id = ".$integrationId."";
+                    $stmt = $this->conn->prepare($sql)->executeQuery();
+                    $codeStatut="OK";
+                }
+            }
         }catch(\Exception $e){
             $codeStatut="ERROR";
             $respObjects["errr"] = $e->getMessage();
@@ -1692,6 +1895,126 @@ class IntegrationController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects );
     }
+
+    #[Route('/approvalImport', methods : ["POST"])]
+    public function approvalImport(integrationRepo $integrationRepo ,ManagerRegistry $doctrine ,  SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $codeStatut= "ERROR";
+        try{
+            $IntegrationNonCommencer = $integrationRepo->getAllInegrationByStatus(9);
+            if($IntegrationNonCommencer){
+                for ($t=0; $t <count($IntegrationNonCommencer);$t++) {
+                    $integrationId =  $IntegrationNonCommencer[$t]->getId();
+                    $sql = 'CALL debt_force_integration.PROC_APPROVAL('.$integrationId.'); ';
+                    $stmt = $integrationRepo->executeSQL($sql);
+                    $sql="update integration set status_id = 17  where id = ".$integrationId."";
+                    $stmt = $this->conn->prepare($sql)->executeQuery();
+                    $codeStatut="OK";
+                }
+            }
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["errr"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"]=$codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects );
+    }
+    #[Route('/getListeImport/{id}')]
+    public function getListeImport(integrationRepo $integrationRepo ,$id,ManagerRegistry $doctrine ,  SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $codeStatut= "ERROR";
+        try{
+            $IntegrationNonCommencer = $integrationRepo->getAllImportByIntegration($id);
+            $respObjects["data"] = $IntegrationNonCommencer;
+            $codeStatut="OK";
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["errr"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"]=$codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects );
+    }
+
+    #[Route('/exportLogImport/{id}')]
+    public function exportLogImport(IntegrationRepo $integrationRepo, $id, ManagerRegistry $doctrine, SerializerInterface $serializer, Request $request)
+    {
+        // Create a temporary directory to store CSV files
+        $tempDir = sys_get_temp_dir() . '/' . uniqid('export_', true);
+        if (!mkdir($tempDir) && !is_dir($tempDir)) {
+            throw new \RuntimeException(sprintf('Directory "%s" was not created', $tempDir));
+        }
+    
+        // Initialize a zip archive
+        $zipFile = tempnam(sys_get_temp_dir(), 'exports');
+        $zip = new ZipArchive();
+        $zip->open($zipFile, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+    
+        $imports = $integrationRepo->getAllImportByIntegration($id);
+
+        foreach ($imports as $import) {
+            $type = $import["type"];
+            $tableName = 'debt_force_integration.'.$type.'_'.$id;
+            $sql = "SELECT * FROM ".$tableName;
+            
+            // Prepare and execute SQL query
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $data = $stmt->fetchAllAssociative();
+            
+            // Filter out the 'vide_champ' column
+            $dataWithoutVideChamp = array_map(function ($row) {
+                return array_filter($row, function ($value, $key) {
+                    return $key !== 'vide_champ';
+                }, ARRAY_FILTER_USE_BOTH); // Use both key and value for array_filter
+            }, $data);
+        
+            // Create a CSV file for this import
+            $csvFileName = $type."_".$id.'.csv';
+            $csvFilePath = $tempDir . '/' . $csvFileName;
+            // $csvFile = fopen($csvFilePath, 'w');
+            $csvFile = fopen($csvFilePath, 'w', false, stream_context_create(['ftp' => ['encoding' => 'UTF-8']]));
+            
+            fwrite($csvFile, "\xEF\xBB\xBF");
+
+            // Write CSV headers
+            fputcsv($csvFile, array_keys($dataWithoutVideChamp[0]), ';');
+        
+            // Write CSV data
+            foreach ($dataWithoutVideChamp as $row) {
+                fputcsv($csvFile, $row, ';');
+            }
+        
+            fclose($csvFile);
+        
+            // Add the CSV file to the zip archive
+            $zip->addFile($csvFilePath, $csvFileName);
+        }
+        
+        // Close the zip archive
+        $zip->close();
+    
+        // Remove temporary directory
+        foreach (glob($tempDir . '/*') as $file) {
+            unlink($file);
+        }
+        rmdir($tempDir);
+    
+        // Create a response containing the zip file
+        $response = new StreamedResponse(function () use ($zipFile) {
+            readfile($zipFile);
+        });
+        $response->headers->set('Content-Type', 'application/zip');
+        $response->headers->set('Content-Disposition', $response->headers->makeDisposition(
+            ResponseHeaderBag::DISPOSITION_ATTACHMENT,
+            'integration_log_'.$id.'.zip'
+        ));
+    
+        return $response;
+    }
+    
+
     #[Route('/test_cron', methods : ["POST"])]
     public function test_cron(integrationRepo $integrationRepo ,ManagerRegistry $doctrine ,  SerializerInterface $serializer , Request $request): JsonResponse
     {
@@ -1701,7 +2024,6 @@ class IntegrationController extends AbstractController
         $respObjects =array();
         $codeStatut = "ERROR";
         $emDbi = $doctrine->getManager('customer');
-
         try{
             $sql="INSERT INTO `adresse` (`id`, `id_debiteur_id`, `id_type_adresse_id`, `adresse_complet`, `pays`, `ville`, `verifier`, `code_postal`, `province`, `source`, `region`, `origine`, `id_status_id`) VALUES (NULL, '159', '1', '', NULL, NULL, '0', '', '', NULL, NULL, '', '1');";
             $stmt = $integrationRepo->executeSQL($sql);
@@ -1738,7 +2060,6 @@ class IntegrationController extends AbstractController
                 // $this->em->flush();
                 $porte_feuille = $IntegrationNonCommencer[$t]->getIdPtf(); 
                 $integrationId =  $IntegrationNonCommencer[$t]->getId();
-                
                 $importByType = $integrationRepo->getOneImportType($integrationId , "debiteur");
                 //Etat en cours
                 $importByType->setEtat(2);
@@ -2026,7 +2347,6 @@ class IntegrationController extends AbstractController
                                                                 $type_presone = "Personne physique";
                                                             }
                                                             $sql="insert into debt_force_integration.debiteur_dbi(cle_identifiant,cin,nom,prenom,raison_social,type_personne,id_debiteur,id_import,id_integration) values('".$cle[$i]."','".$valCinF[$i]."','".$nom_deb[$i]."','".$prenom_deb[$i]."','".$rs_deb[$i]."','".$type_presone."','".$id_debiteur[$i]."',".$id_import.",".$integrationId.")";
-                                                            dump($sql);
                                                             $stmt = $this->conn->prepare($sql)->executeQuery();
                                                             if($this->integrationRepo->addToLogImportDbi(1,$a->getId(),'Débiteur ajouté')==true)
                                                             {
@@ -4968,8 +5288,6 @@ class IntegrationController extends AbstractController
         return $this->json($respObjects);
     }
 
-   
-    
     #[Route('/importToPROD', methods : ["POST"])]
     public function startIntegrationToDBPROD(integrationRepo $integrationRepo , SerializerInterface $serializer , Request $request ): JsonResponse
     {
@@ -4978,13 +5296,28 @@ class IntegrationController extends AbstractController
         ini_set('max_execution_time','-1');
         $respObjects =array();
         $codeStatut = "ERROR";
-        $IntegrationNonCommencer = $integrationRepo->getAllInegrationByStatus(5);
-        
+        $IntegrationNonCommencer = $integrationRepo->getAllInegrationByStatus6();
+
         if($IntegrationNonCommencer){
             for ($t=0; $t <count($IntegrationNonCommencer) ; $t++) { 
                 $integrationId =  $IntegrationNonCommencer[$t]->getId();
-                $importByType = $integrationRepo->getOneImportType($integrationId , "debiteur");
 
+                if($IntegrationNonCommencer[$t]->getStatus()->getId() == 6){
+                    $sql = 'CALL debt_force_integration.PROC_ROOLBACK('.$integrationId.');';
+                    $stmt = $integrationRepo->executeSQL($sql);
+
+                    $sql="INSERT INTO `logs_actions_integration`( `id_integration`, `logs`, `date_creation`,`etat`) VALUES (".$integrationId.",'Relancer l\'intégration',now(),1)";
+                    $stmt = $integrationRepo->executeSQL($sql);
+                }else{
+                    $sql="INSERT INTO `logs_actions_integration`( `id_integration`, `logs`, `date_creation`,`etat`) VALUES (".$integrationId.",'Import dans la base production',now(),1)";
+                    $stmt = $integrationRepo->executeSQL($sql);
+                }
+
+                $sql="UPDATE `integration` SET `status_id` = '6' WHERE `integration`.`id` = ".$integrationId.";";
+                $stmt = $integrationRepo->executeSQL($sql);
+                
+
+                $importByType = $integrationRepo->getOneImportType($integrationId , "debiteur");
                 $a=new ActionsImport();
                 $a->setEtat(0);
                 $a->setCodeAction("Ajo");
@@ -5034,6 +5367,47 @@ class IntegrationController extends AbstractController
                     $integrationRepo->insertEmploiFromDbiToProd($integrationId ,$importByType->getId() , $a->getId());
                 }
 
+                $importByType = $integrationRepo->getOneImportType($integrationId , "employeur");
+                if($importByType){
+                    $a=new ActionsImport();
+                    $a->setEtat(0);
+                    $a->setCodeAction("Ajo");
+                    $a->setDateDebut(new \DateTime());
+                    $a->setIdImport($importByType);
+                    $a->setTitre("Ajout");
+                    $this->em->persist($a);
+                    $this->em->flush();
+                    
+                    $integrationRepo->insertEmployeurFromDbiToProd($integrationId ,$importByType->getId() , $a->getId());
+                }
+
+                $importByType = $integrationRepo->getOneImportType($integrationId , "telephone");
+                if($importByType){
+                    $a=new ActionsImport();
+                    $a->setEtat(0);
+                    $a->setCodeAction("Ajo");
+                    $a->setDateDebut(new \DateTime());
+                    $a->setIdImport($importByType);
+                    $a->setTitre("Ajout");
+                    $this->em->persist($a);
+                    $this->em->flush();
+                    
+                    $integrationRepo->insertTelephoneFromDbiToProd($integrationId ,$importByType->getId() , $a->getId());
+                }
+                $importByType = $integrationRepo->getOneImportType($integrationId , "adresse");
+                if($importByType){
+                    $a=new ActionsImport();
+                    $a->setEtat(0);
+                    $a->setCodeAction("Ajo");
+                    $a->setDateDebut(new \DateTime());
+                    $a->setIdImport($importByType);
+                    $a->setTitre("Ajout");
+                    $this->em->persist($a);
+                    $this->em->flush();
+
+                    $integrationRepo->insertAdresseFromDbiToProd($integrationId ,$importByType->getId() , $a->getId());
+                }
+
                 /*$importByType = $integrationRepo->getOneImportType($integrationId , "emploi");
                 $integrationRepo->insertEmploiFromDbiToProd($importByType->getId());
 
@@ -5055,7 +5429,10 @@ class IntegrationController extends AbstractController
                 //todo
                 $sql="update integration set status_id = 8 , `date_fin_execution_2`=now() where id = ".$IntegrationNonCommencer[$t]->getId()."";
                 $stmt = $this->conn->prepare($sql)->executeQuery();
-             
+
+                $sql="INSERT INTO `logs_actions_integration`( `id_integration`, `logs`, `date_creation`,`etat`) VALUES (".$integrationId.",'Intégration production terminée',now(),1)";
+                $stmt = $integrationRepo->executeSQL($sql);
+
                 $codeStatut='OK';
             }
         }
@@ -5088,6 +5465,33 @@ class IntegrationController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+    #[Route('/findIntegrationValide')]
+    public function findIntegrationValide(integrationRepo $integrationRepo , SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $id = $request->get("id");
+            $findIntegration = $this->integrationRepo->findIntegrationValide($id);
+            
+            if($findIntegration){
+                $respObjects["data"] = $findIntegration;
+                $respObjects["import"] = $this->integrationRepo->getImport($id);;
+                $codeStatut = "OK";
+            }else{
+                $codeStatut = "NOT_EXIST";
+            }
+        }catch (\Exception $e) {
+            $codeStatut = "ERROR";
+        }
+
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    
     #[Route('/getColumnCreance')]
     public function getColumnCreance(integrationRepo $integrationRepo , Request $request , SerializerInterface $serializer): JsonResponse
     {
@@ -5198,7 +5602,6 @@ class IntegrationController extends AbstractController
             $table = $request->get("table");
             $type = $request->get("type");
             $id = $request->get("id");
-            // $id = $request->get("id");
             if($type == "creance"){
                 $dataList = $integrationRepo->getAllColumnsParams($type);
                 $query = $this->em->createQuery('SELECT t.table_bdd  from App\Entity\ColumnsParams t   where (t.table_bdd = :tb1 or t.table_bdd = :tb2 or t.table_bdd = :tb3 or t.table_bdd = :tb4)   group by t.table_bdd ')
@@ -5287,24 +5690,6 @@ class IntegrationController extends AbstractController
                 $respObjects["data"] = $dataList;
             }
             else if($type == "telephone"){
-                //     $table=array();
-                //     $tableObj=array();
-                //     $j=0;
-
-                // $typeTel = $integrationRepo->getTypeTel();
-
-                // for ($s = 0 ; $s < count($typeTel) ; $s++)
-                // {
-                //     $tableObj["table"][$j]="Tel";
-                //     $tableObj["obj"][$j]=$typeTel[$s]->getType();
-                //     $j++;
-                // }
-
-                // // $table[0]="Adresse";
-                // $table[0]="Tel";
-                // $respObjects["columnsCadrage"] = $table;
-                // $respObjects["col2"]= $tableObj;
-                // $codeStatut="OK";
                 $dataList = $integrationRepo->getAllColumnsParams($type);
                 $query = $this->em->createQuery('SELECT t.table_bdd  from App\Entity\ColumnsParams t where t.table_bdd = :tb1 or t.table_bdd = :tb2 group by t.table_bdd ')
                 ->setParameters([
@@ -5322,23 +5707,6 @@ class IntegrationController extends AbstractController
                 $respObjects["data"] = $dataList;
             }
             else if($type == "adresse"){
-                // $table=array();
-                // $tableObj=array();
-                // $j=0;
-
-                // $typeAdresse = $integrationRepo->getTypeAdresse();
-
-                // for ($a = 0 ; $a < count($typeAdresse) ; $a++)
-                // {
-                //     $tableObj["table"][$j]="Adresse";
-                //     $tableObj["obj"][$j]=$typeAdresse[$a]->getType();
-                //     $j++;
-                // }
-                
-                // $table[0]="Adresse";
-                // $respObjects["columnsCadrageA"] = $table;
-                // $respObjects["col3"]= $tableObj;
-                // $codeStatut="OK";
                 $dataList = $integrationRepo->getAllColumnsParams($type);
                 $query = $this->em->createQuery('SELECT t.table_bdd  from App\Entity\ColumnsParams t where t.table_bdd = :tb1 or t.table_bdd = :tb2 group by t.table_bdd ')
                 ->setParameters([
@@ -5353,7 +5721,24 @@ class IntegrationController extends AbstractController
                 $respObjects["groupe_table_detail"] = $dataModel;
                 $codeStatut="OK";
                 $respObjects["data"] = $dataList;
-            }else if($type == "emploi"){
+            }
+            else if($type == "email"){
+                $dataList = $integrationRepo->getAllColumnsParams($type);
+                $query = $this->em->createQuery('SELECT t.table_bdd  from App\Entity\ColumnsParams t where t.table_bdd = :tb1 or t.table_bdd = :tb2 group by t.table_bdd ')
+                ->setParameters([
+                    'tb1' => 'email',
+                    'tb2' => 'debiteur'
+                ]);
+                $tables = $query->getResult();
+                $respObjects["groupe_tables"] = $tables;
+                $dataModel = $affichageRepo->listDetailsModels($id,$type);
+                $respObjects["detail_model"] = $dataModel;
+                $dataModel = $affichageRepo->groupingListDetailsModels($id,$type);
+                $respObjects["groupe_table_detail"] = $dataModel;
+                $codeStatut="OK";
+                $respObjects["data"] = $dataList;
+            }
+            else if($type == "emploi"){
                 $dataList = $integrationRepo->getAllColumnsParams($type);
                 $query = $this->em->createQuery('SELECT t.table_bdd  from App\Entity\ColumnsParams t where t.table_bdd = :tb1 or t.table_bdd = :tb2 group by t.table_bdd ')
                 ->setParameters([
@@ -5450,6 +5835,7 @@ class IntegrationController extends AbstractController
                 $extension_upload = strtolower(substr(strrchr($fileName, '.'), 1));
                 $fileError = $_FILES['fichier']['error'];
                 $fileTmpLoc = $_FILES['fichier']['tmp_name'];
+
                 if ($fileError > 0)
                 {
                     $codeStatut="ERROR-FILE";
@@ -5461,41 +5847,13 @@ class IntegrationController extends AbstractController
                             {
                                 break;
                             }
+                            $data[0] = preg_replace('/\x{EF}\x{BB}\x{BF}/', '', $data[0]);
+                            for($i=0; $i < count($data); $i++) { 
+                                $data[$i] = mb_convert_encoding($data[$i], 'UTF-8','Windows-1252');
+                            }
                             fclose($handle);
-                            $data=array_map("utf8_encode",$data);
                             $respObjects["data"] = $data;
                             $codeStatut = "OK";
-    
-                        //     // Split the CSV data into three parts
-                        //     $file = $this->em->getRepository(Import::class)->findOneBy(["id"=>6]);
-
-                        //     $csvData = file_get_contents($file->getUrl());
-                        //     $rows = array_map('str_getcsv', explode("\n", $csvData));
-                        //     // $chunks = array_chunk($rows, ceil(count($rows) / 3));
-                        //     // Split the CSV data into three parts
-                        //     $numberOfFiles = 3;
-                        //     $rowsPerFile = ceil(count($rows) / $numberOfFiles);
-                        //     $chunks = array_chunk($rows, $rowsPerFile); 
-    
-                        //     // // Save the files in public/split_files directory
-                        //     $outputDirectory = $this->getParameter('kernel.project_dir') . '/public/split_files';
-                        //     if (!is_dir($outputDirectory)) {
-                        //         mkdir($outputDirectory);
-                        //     }
-
-                        //     // Write the chunks into separate CSV files and move them to the public/split_files directory
-                        //     for ($i = 0; $i < count($chunks); $i++) {
-                        //         $outputFileName = sprintf('output_file_%d.csv', $i + 1);
-                        //         $outputFilePath = $outputDirectory . '/' . $outputFileName;
-                        //         $outputCsvData = implode("\n", array_map('implode', $chunks[$i]));
-                        //         try {
-                        //             // Move the file to the public/split_files directory
-                        //             file_put_contents($outputFilePath, $outputCsvData);
-                        //         } catch (FileException $e) {
-                        //             // Handle any potential file-related errors here
-                        //             // For example, log the error or display a user-friendly error message
-                        //         }
-                        //     }
                         }
                     }
                     else
@@ -5789,137 +6147,6 @@ class IntegrationController extends AbstractController
         return $this->json($respObjects );
     }
 
-    #[Route('/setIntegrationOld', methods : ["POST"])]
-    public function setIntegrationOld(integrationRepo $integrationRepo , SerializerInterface $serializer , Request $request): JsonResponse
-    {
-        $this->AuthService->checkAuth(0,$request);
-
-        $respObjects =array();
-        try{
-            $type = $request->get("type");
-            $idSchema = $request->get("idSchema");
-            $titre = $request->get("titre");
-            $id = $request->get("id");
-            $find_integration = $integrationRepo->findIntegration($id);
-            if($titre == "" || $idSchema == "" || $type == ""){
-                $respObjects["message"] = "Un champ obligatoire  est vide !";
-                $respObjects["codeStatut"] = "EMPTY_PARAMS";
-            }else{
-                $model_import = $integrationRepo->findModel($idSchema);
-                if(!$model_import){
-                    $respObjects["message"] = "Cette model n'existe pas !!";
-                    $respObjects["codeStatut"] = "NOT_FOUND";
-                }else{
-                    if(!empty($_FILES['file']['name']))
-                    {
-                        $requiredHeaders=array();
-                        $file = $_FILES['file'];
-                        $fileError = $file['error'];
-                        $fileTmpLoc = $file['tmp_name'];
-                        $extensions_valides = array('csv');
-                        $fileName = $file['name'];
-                        $extension_upload = strtolower(substr(strrchr($fileName, '.'), 1));
-                        $search = array("à","é","è");
-                        $replace = array("a","e","e");
-                        $n = $fileName . date_format(new \DateTime("now"), "Y-m-dH:i:s");
-                        $nom = sha1($n);
-                        if ($fileError > 0)
-                        {
-                            $respObjects["message"] = "Erreur lors du transfert du fichier !!";
-                            $respObjects["codeStatut"] = "ERREUR";
-                        }
-                        else
-                        {
-                            if (in_array($extension_upload, $extensions_valides))
-                            {
-                                if (($handle = fopen($fileTmpLoc, "r")) !== FALSE)
-                                {
-                                    while (($data = fgetcsv($handle, 1000000, ";")) !== FALSE)
-                                    {
-                                        break;
-                                    }
-                                    $data=array_map("utf8_encode",$data);
-                                    $data=str_replace($search, $replace, $data);
-
-                                    if(count(array_intersect($requiredHeaders, $data))==count($requiredHeaders))
-                                    {
-                                        if(!$find_integration){
-                                            $integration = new Integration();
-                                            $integration->setTitre($titre);
-                                            $integration->setDateCreation(new \DateTime());
-                                            $integration->setEtat(1);
-                                            $this->em->persist($integration);
-                                            $this->em->flush();
-                                            $import = new Import();
-                                            $filesystem = new Filesystem();
-                                            $publicDirectory = $this->getParameter('kernel.project_dir') . '/public/fichiers/import';
-                                            $folderPath = $publicDirectory . '-num-'.$integration->getId();
-                                            $fileStore = "fichiers/import/integration-num-".$integration->getId() ."/". $nom . '.' . $extension_upload;
-                                            //----Create file if n'existe pas
-                                            $filesystem->mkdir($folderPath);
-                                            move_uploaded_file($fileTmpLoc, $fileStore);
-                                            $import->setUrl($fileStore);
-                                            $import->setDateCreation(new \DateTime("now"));
-                                            $import->setEtat(0);
-                                            $import->setIdModel($model_import);
-                                            $import->setIdIntegration($integration);
-                                            $this->em->persist($import);
-                                            $this->em->flush();
-                                            $response="OK";
-                                            $respObjects["message"] = "OK";
-                                            $respObjects["codeStatut"] = "Opération effectué avec success";
-                                        }else{
-                                            $find_integration->setTitre($titre);
-                                            $import = new Import();
-                                            $filesystem = new Filesystem();
-                                            $publicDirectory = $this->getParameter('kernel.project_dir') . '/public/fichiers/import';
-            
-                                            $fileStore = "fichiers/import/integration-num-".$find_integration->getId() ."/". $nom . '.' . $extension_upload;
-                                            //Create file if n'existe pas
-                                            move_uploaded_file($fileTmpLoc, $fileStore);
-                                            $import->setUrl($fileStore);
-                                            $import->setDateCreation(new \DateTime());
-                                            $import->setEtat(0);
-                                            $import->setIdModel($model_import);
-                                            $import->setIdIntegration($find_integration);
-                                            $this->em->persist($import);
-                                            $this->em->flush();
-                                            $respObjects["message"] = "OK";
-                                            $respObjects["codeStatut"] = "Opération effectué avec success";
-                                        }
-                                        $respObjects["codeStatut"] = "OK";
-                                        $respObjects["message"] = "Opération éffectue avec success";
-                                    }
-                                    else
-                                    {
-                                        $respObjects["codeStatut"] = "ERREUR";
-                                        $respObjects["message"] = "Extension dde fichier incorrecte, importer un fichier csv SVP !!";
-                                    }
-                                    fclose($handle);
-                                }
-                            }
-                            else
-                            {
-                                $respObjects["codeStatut"] = "ERREUR";
-                                $respObjects["message"] = "Extension dde fichier incorrecte, importer un fichier csv SVP !!";
-                            }
-                        }
-                    }
-                    else
-                    {
-                        $respObjects["message"] = "Importer un fichier et remplir tous les champs SVP !!";
-                        $respObjects["codeStatut"] = "ERREUR";
-                    }
-                }
-            }
-
-        }catch(\Exception $e){
-            $result = "Une erreur s'est produite ";
-            $respObjects["message"] = $result;
-            $respObjects["codeStatut"] = "ERREUR";
-        }
-        return $this->json($respObjects );
-    }
     #[Route('/cancelIntegration')]
     public function cancelIntegration(integrationRepo $integrationRepo , SerializerInterface $serializer , Request $request): JsonResponse
     {
@@ -6051,139 +6278,6 @@ class IntegrationController extends AbstractController
     }
     
 
-    #[Route('/setIntegration', methods : ["POST"])]
-    public function setIntegration(integrationRepo $integrationRepo , donneurRepo $donneurRepo,SerializerInterface $serializer , Request $request): JsonResponse
-    {
-        $this->AuthService->checkAuth(0,$request);
-
-        $respObjects =array();
-        $codeStatut="ERROR";
-        $titre=$request->get("titre");
-        $module = $request->get("module");
-        $ptf = $request->get("ptf");
-        try{
-            if(!empty($titre) || $titre != ""  || $ptf != "" || empty($ptf) != ""){
-                //check import creance
-                    $model_import = $integrationRepo->findModel($module);
-                    if(!$model_import){
-                        $codeStatut = "NOT_EXIST_M";
-                        $check_action=false;
-                    }else{
-                        if(!empty($_FILES['file']['name'])){
-                            $requiredHeaders=array();
-                            $file = $_FILES['file'];
-                            $fileCheck=$this->FileService->checkFile($file);
-                            $ptf_ = $donneurRepo->getOnePtf($ptf);
-                            if($fileCheck["codeStatut"] == "OK" ){
-                                 //Check donneurordre
-                                 $nom = $fileCheck["nom"];
-                                 $extension_upload=$fileCheck["extension_upload"];
-                                 $fileTmpLoc=$fileCheck["fileTmpLoc"];
-                                 $integration = new Integration();
-                                 $integration->setTitre($titre);
-                                 $integration->setDateCreation(new \DateTime());
-                                 $integration->setEtat(1);
-                                 $integration->setIdPtf($ptf_);
-                                 $this->em->persist($integration);
-                                 $this->em->flush();
-                                 
-                                 //Import CR
-                                 $filesystem = new Filesystem();
-                                 $publicDirectory = $this->getParameter('kernel.project_dir') . '/public/fichiers/import/';
-                                 $folderPath = $publicDirectory . 'integration-num-'.$integration->getId();
-                                 $fileStore = "fichiers/import/integration-num-".$integration->getId() ."/". $nom . '.' . $extension_upload;
-                                 //----Create file if n'existe pas
-                                 $filesystem->mkdir($folderPath);
-                                 move_uploaded_file($fileTmpLoc, $fileStore);
-                                 $integration->setUrl($fileStore);
-                                 $this->em->flush();
-
-                                 $csvData = file_get_contents($integration->getUrl());
-                                 $rows = array_map('str_getcsv', explode("\n", $csvData));
-                                 $numberOfFiles = 3;
-                                 $rowsPerFile = ceil(count($rows) / $numberOfFiles);
-                                 $chunks = array_chunk($rows, $rowsPerFile);
-                                 $header = array_shift($rows);
-
-                                $folderPath = $publicDirectory . 'integration-num-'.$integration->getId();
-                                $fileStore = "fichiers/import/integration-num-".$integration->getId() ."/";
-
-                                if (!is_dir($folderPath)) {
-                                    mkdir($folderPath);
-                                }
-                                $order=1;
-                                for ($i = 0; $i < count($chunks); $i++) {
-                                    $outputFileName = sprintf('output_file_%d.csv', $i + 1);
-                                    $folderPath = "fichiers/import/integration-num-" . $integration->getId() . "/split_files/";
-                                    $filesystem->mkdir($folderPath);
-                                    $outputFilePath = $folderPath . $outputFileName;
-                                    if($order == 1){
-                                        $outputCsvData = implode("\n", array_map('implode', $chunks[$i]));
-                                    }else{
-                                        // Convert header and data rows to strings
-                                        $headerString = implode(",", $header);
-                                        $dataStrings = array_map(function ($row) {
-                                            return implode(",", $row);
-                                        }, $chunks[$i]);
-                                        // Combine header and data rows as CSV lines
-                                        $outputCsvLines = array_merge(array($headerString), $dataStrings);
-                                        // Convert the CSV lines to a single CSV string
-                                        $outputCsvData = implode("\n", $outputCsvLines);
-                                    }
-                                    try {
-                                        // Move the file to the public/split_files directory
-                                        file_put_contents($outputFilePath, $outputCsvData);
-                                        $import = new Import();
-                                        $filesystem = new Filesystem();
-                                        $import->setUrl($outputFilePath);
-                                        $import->setDateCreation(new \DateTime("now"));
-                                        $import->setEtat(0);
-                                        $import->setIdModel($model_import);
-                                        $import->setIdIntegration($integration);
-                                        $import->setOrderImport($order);
-                                        $this->em->persist($import);
-                                        $this->em->flush();
-                                        $order++;
-                                        $codeStatut="OK";
-                                    } catch (\Exception $e) {
-                                        $codeStatut="ERROR";
-                                    }
-                                }
-                                 $codeStatut="OK";
-                            }else{
-                                $codeStatut=$fileCheck["codeStatut"] ;
-                                $check_action=false;
-                            }
-                        }else{
-                            $codeStatut="EMPTY_FILE";
-                            $check_action=false;
-                        }
-                    }
-                
-                //END_CHECK_CREANCE
-
-                //CHECK_DONNEUR_ORDRE
-               
-
-                //END_CHECK_DONNEUR_ORDRE
-
-            }else{
-                $codeStatut="ERROR-EMPTY-PARAMS";
-            }
-            
-            
-        }catch(\Exception $e){
-            $respObjects["codeStatut"]="ERROR";
-            $respObjects["err"]=$e->getMessage();
-            // if($integration){
-            //     $integration->setEtat(4);
-            //     $this->em->flush();
-            // }
-        }
-        $respObjects["codeStatut"] = $codeStatut;
-        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
-        return $this->json($respObjects);
-    }
     #[Route('/detailsIntegration')]
     public function detailsIntegration(integrationRepo $integrationRepo , SerializerInterface $serializer , Request $request): JsonResponse
     {
@@ -6312,10 +6406,12 @@ class IntegrationController extends AbstractController
                     $param=(array("id"=>$details_import[$i]["id"]  ));
                     $error = $this->conn->fetchAllAssociative($sql , $param);
 
-                    $sql="SELECT distinct l.rapport as rapport, count(l.rapport) as nombrefrom from logs_actions l where l.etat=1 and l.id_action_id in(select a.id from actions_import_dbi a where a.id_import = :id  ) group by l.rapport";
+                    $sql="SELECT distinct l.rapport as rapport, count(l.rapport) as nombrefrom from logs_actions l where l.etat=1 and l.id_action_id in(select a.id from actions_import a where a.id_import_id = :id  ) group by l.rapport";
+                    $sql="SELECT distinct l.rapport as rapport, count(l.rapport) as nombrefrom from logs_actions l where l.etat=1 and l.id_action_id in(select a.id from actions_import a where a.id_import_id = :id  ) group by l.rapport";
+
                     $param=(array("id"=>$details_import[$i]["id"] ));
                     $rapport = $this->conn->fetchAllAssociative($sql , $param);
-                    // dump($success);
+                    
                     $array_details_prod[$i]["success"] = $success;
                     $array_details_prod[$i]["rapport"] = $rapport;
                     $array_details_prod[$i]["error"] = $error;
@@ -6607,5 +6703,4 @@ class IntegrationController extends AbstractController
             }
         }
     }
-    
 }

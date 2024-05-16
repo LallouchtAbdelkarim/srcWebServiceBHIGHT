@@ -68,29 +68,32 @@ class competencesController extends AbstractController
     {
         $respObjects = array();
         $titre = $request->get("titre");
+        $data = json_decode($request->getContent() , true);
+        $list_check = $data["data_check"];
+        $list_check_famile = $data["data_check_famille"];
         $codeStatut = "ERREUR";
-        if(trim($titre) != ""  ){
-            $comp = $competenceRepo->createModel($titre  );
-            if($comp){
-                $data = json_decode($request->getContent() , true);
-                $list_check = $data["data_check"];
-                $list_check_famile = $data["data_check_famille"];
-
+        if(count($list_check) >= 1 && count($list_check_famile) >= 1){
+            if(trim($titre) != ""  ){
+                $comp = $competenceRepo->createModel($titre  );
                 if($comp){
-                    for ($i=0; $i < count($list_check) ; $i++) { 
-                        $p = $activityRepo->getOneParam($list_check[$i]);
-                        $competenceRepo->createDetailModel($p , $comp); 
+                    if($comp){
+                        for ($i=0; $i < count($list_check) ; $i++) { 
+                            $p = $activityRepo->getOneParam($list_check[$i]);
+                            $competenceRepo->createDetailModel($p , $comp); 
+                        }
+                        for ($j=0; $j < count($list_check_famile) ; $j++) { 
+                            # code...
+                            $famille = $activityRepo->getOneTypesOfSParametrages($list_check_famile[$j]["id"]);
+                            $competenceRepo->createDetailCompetenceFamille($famille , $comp); 
+                        }
+                        $codeStatut="OK";
                     }
-                    for ($j=0; $j < count($list_check_famile) ; $j++) { 
-                        # code...
-                        $famille = $activityRepo->getOneTypesOfSParametrages($list_check_famile[$j]["id"]);
-                        $competenceRepo->createDetailCompetenceFamille($famille , $comp); 
-                    }
-                    $codeStatut="OK";
+    
+                }else{
+                    $codeStatut = "ERROR";
                 }
-
             }else{
-                $codeStatut = "ERROR";
+                $codeStatut = "EMPTY-DATA";
             }
         }else{
             $codeStatut = "EMPTY-DATA";
@@ -135,6 +138,8 @@ class competencesController extends AbstractController
         $list_check = $data["data_check"];
         $list_check_famile = $data["data_check_famille"];
 
+        
+
         if($comp){
             for ($i=0; $i < count($list_check) ; $i++) { 
                 $p = $activityRepo->getOneParam($list_check[$i]);
@@ -164,24 +169,21 @@ class competencesController extends AbstractController
         $comp = $competenceRepo->findModel($id);
 
         $list_check = $data["data_check"];
+        $list_check_famile = $data["data_check_famille"];
         if($comp){
-            for ($i=0; $i < count($listParams); $i++) { 
-                # code...
-                $param = $activityRepo->getParamsActivity()[$i];
-                if(in_array("".$param->getId()."", $list_check)){
-                    $find_interm_param = $this->em->getRepository(DetailCompetence::class)->findOneBy(['id_competence' => $id , 'id_param' => $param->getId() ]);
-                    if(!$find_interm_param){
-                        $competenceRepo->createDetailModel($param , $comp);
-                    }
-                }else{
-                   $find_interm_param_uncheck = $this->em->getRepository(DetailCompetence::class)->findOneBy(['id_competence' => $id , 'id_param' =>  $param->getId()]);
-                    // if($find_interm_param_uncheck){
-                        $this->em->remove($find_interm_param_uncheck);
-                        $this->em->flush();
-                    // }
-                }                
+            if(count($list_check) >= 1 && count($list_check_famile) >= 1){
+                $competenceRepo->resetComp($id);
+                for ($i=0; $i < count($list_check) ; $i++) { 
+                    $p = $activityRepo->getOneParam($list_check[$i]);
+                    $competenceRepo->createDetailModel($p , $comp); 
+                }
+                for ($j=0; $j < count($list_check_famile) ; $j++) { 
+                    # code...
+                    $famille = $activityRepo->getOneTypesOfSParametrages($list_check_famile[$j]["id"]);
+                    $competenceRepo->createDetailCompetenceFamille($famille , $comp); 
+                }
+                $codeStatut="OK";
             }
-            $codeStatut = "OK";
         }else{
             $codeStatut= "NOT_EXIST_M";
         }
@@ -215,6 +217,7 @@ class competencesController extends AbstractController
     {
         $respObjects = array();
         $codeStatut = "ERROR";
+        // $this->AuthService->checkAuth(0,$request);
         $id = $request->get("id");
         if(trim($id) != ""){
             $competence = $competenceRepo->findModel($id);
@@ -238,6 +241,16 @@ class competencesController extends AbstractController
                         $param_list[$j]["check"] =false;
                     }
                 }
+                $familles = [];
+                $comp = $competenceRepo->getFamilles($id_competence);
+                for ($i=0; $i < count($comp); $i++) { 
+                    $familles[$i] = $comp[$i]->getIdFamille();
+                }
+                $respObjects["data"]["familles"] = $familles;
+                $respObjects["data"]["famillesNotSelected"] = $competenceRepo->getCompetencesNotSelected($id_competence);
+                $respObjects["data"]["sousFamillesSelected"] = $competenceRepo->getSousFamillesSelected($id_competence);
+                
+
                 $respObjects["data"]["params"]= $param_list;
             }else{
                 $codeStatut = "NOT_EXIST_M";

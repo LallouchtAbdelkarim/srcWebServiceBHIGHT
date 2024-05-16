@@ -312,7 +312,7 @@ class affichageController extends AbstractController
                             $detail_model = new DetailModelAffichage();
                             $detail_model->setTableName($d['table_name']);
                             $detail_model->setChampName($d['champ_name']);
-                            $detail_model->setTypeChamp($d['type_champ']);
+                            $detail_model->setTypeChamp($d['type_champ'] == 'text' ? 'VARCHAR' : $d['type_champ']);
                             $detail_model->setLength($d['length']);
                             $detail_model->setIdModelAffichage($model);
                             $detail_model->setEtat($d['etat']);
@@ -396,6 +396,7 @@ class affichageController extends AbstractController
             $detail_model->setTableName($data['table_name']);
             $detail_model->setChampName($data['champ_name']);
             $detail_model->setTypeChamp($data['type_champ']);
+            $detail_model->setTypeChamp($data['type_champ'] == 'text' ? 'VARCHAR' : $data['type_champ']);
             $detail_model->setLength($data['length']);
             $detail_model->setIdModelAffichage($model);
             $detail_model->setEtat($data['etat']);

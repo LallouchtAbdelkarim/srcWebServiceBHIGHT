@@ -57,6 +57,21 @@ class Creance
     #[ORM\Column(nullable: true)]
     private ?int $id_creance = null;
 
+    #[ORM\ManyToOne]
+    private ?ParamActivite $id_activite = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $taux_honoraire = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?float $honoraire_petentiel = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?float $honoraire_facture = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?float $honoraire_restant = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -227,6 +242,66 @@ class Creance
     public function setIdCreance(?int $id_creance): static
     {
         $this->id_creance = $id_creance;
+
+        return $this;
+    }
+
+    public function getIdActivite(): ?ParamActivite
+    {
+        return $this->id_activite;
+    }
+
+    public function setIdActivite(?ParamActivite $id_activite): static
+    {
+        $this->id_activite = $id_activite;
+
+        return $this;
+    }
+
+    public function getTauxHonoraire(): ?int
+    {
+        return $this->taux_honoraire;
+    }
+
+    public function setTauxHonoraire(?int $taux_honoraire): static
+    {
+        $this->taux_honoraire = $taux_honoraire;
+
+        return $this;
+    }
+
+    public function getHonorairePetentiel(): ?float
+    {
+        return $this->honoraire_petentiel;
+    }
+
+    public function setHonorairePetentiel(?float $honoraire_petentiel): static
+    {
+        $this->honoraire_petentiel = $honoraire_petentiel;
+
+        return $this;
+    }
+
+    public function getHonoraireFacture(): ?float
+    {
+        return $this->honoraire_facture;
+    }
+
+    public function setHonoraireFacture(?float $honoraire_facture): static
+    {
+        $this->honoraire_facture = $honoraire_facture;
+
+        return $this;
+    }
+
+    public function getHonoraireRestant(): ?float
+    {
+        return $this->honoraire_restant;
+    }
+
+    public function setHonoraireRestant(?float $honoraire_restant): static
+    {
+        $this->honoraire_restant = $honoraire_restant;
 
         return $this;
     }

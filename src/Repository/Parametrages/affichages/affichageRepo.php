@@ -84,6 +84,9 @@ class affichageRepo extends ServiceEntityRepository
         }
     }
     public function createDetailModel($id_model_affichage_id,$table_name , $champ_name ,$length , $etat , $type_creance , $type_champ , $required){
+        if($type_champ  == 'text'){
+            $type_champ = 'VARCHAR';
+        }
         $sql = "INSERT INTO `detail_model_affichage`( `id_model_affichage_id`, `table_name`, `champ_name`, `length`, `etat`, `type_creance`, `type_champ`, `required`) VALUES (:id_model_affichage_id , :table_name, :champ_name, :length, :etat, :type_creance, :type_champ, :required)";
         $stmt = $this->conn->prepare($sql); 
         $stmt->bindParam('id_model_affichage_id', $id_model_affichage_id);
@@ -106,6 +109,7 @@ class affichageRepo extends ServiceEntityRepository
     public function listDetailsModels($id , $type){
         $resultList = [];
         if($type == "creance"){
+
             $param = ["creance","detail_creance"];
             $sql2 = "SELECT * FROM `detail_model_affichage` d where d.table_name = :tb1 or d.table_name = :tb2 and d.id_model_affichage_id 
             in (select m.id from model_affichage m where m.id_ptf_id = :id) ";
@@ -126,6 +130,7 @@ class affichageRepo extends ServiceEntityRepository
             $resultList = $stmt->fetchAll();
         }else if($type == "dossier"){
             $param = ["dossier"];
+
             $sql2 = "SELECT * FROM `detail_model_affichage` d where d.table_name = :tb1  and d.id_model_affichage_id in (select m.id from model_affichage m where m.id_ptf_id = :id) ";
             $stmt = $this->conn->prepare($sql2);
             $stmt->bindParam('tb1', $param[0]);
@@ -142,6 +147,22 @@ class affichageRepo extends ServiceEntityRepository
             $resultList = $stmt->fetchAll();
         }else if($type == "proc_judicaire"){
             $param = ["proc_judicaire"];
+            $sql2 = "SELECT * FROM `detail_model_affichage` d where d.table_name = :tb1  and d.id_model_affichage_id in (select m.id from model_affichage m where m.id_ptf_id = :id) ";
+            $stmt = $this->conn->prepare($sql2);
+            $stmt->bindParam('tb1', $param[0]);
+            $stmt->bindParam('id', $id);
+            $stmt = $stmt->executeQuery();
+            $resultList = $stmt->fetchAll();
+        }else if($type == "telephone"){
+            $param = ["telephone"];
+            $sql2 = "SELECT * FROM `detail_model_affichage` d where d.table_name = :tb1  and d.id_model_affichage_id in (select m.id from model_affichage m where m.id_ptf_id = :id) ";
+            $stmt = $this->conn->prepare($sql2);
+            $stmt->bindParam('tb1', $param[0]);
+            $stmt->bindParam('id', $id);
+            $stmt = $stmt->executeQuery();
+            $resultList = $stmt->fetchAll();
+        }else if($type == "adresse"){
+            $param = ["adresse"];
             $sql2 = "SELECT * FROM `detail_model_affichage` d where d.table_name = :tb1  and d.id_model_affichage_id in (select m.id from model_affichage m where m.id_ptf_id = :id) ";
             $stmt = $this->conn->prepare($sql2);
             $stmt->bindParam('tb1', $param[0]);
@@ -197,6 +218,22 @@ class affichageRepo extends ServiceEntityRepository
             $resultList = $stmt->fetchAll();
         }else if($type == "proc"){
             $param = ["garantie"];
+            $sql2 = "SELECT d.table_name FROM `detail_model_affichage` d where d.table_name = :tb1  and d.id_model_affichage_id in (select m.id from model_affichage m where m.id_ptf_id = :id) group by d.table_name";
+            $stmt = $this->conn->prepare($sql2);
+            $stmt->bindParam('tb1', $param[0]);
+            $stmt->bindParam('id', $id);
+            $stmt = $stmt->executeQuery();
+            $resultList = $stmt->fetchAll();
+        }else if($type == "telephone"){
+            $param = ["telephone"];
+            $sql2 = "SELECT d.table_name FROM `detail_model_affichage` d where d.table_name = :tb1  and d.id_model_affichage_id in (select m.id from model_affichage m where m.id_ptf_id = :id) group by d.table_name";
+            $stmt = $this->conn->prepare($sql2);
+            $stmt->bindParam('tb1', $param[0]);
+            $stmt->bindParam('id', $id);
+            $stmt = $stmt->executeQuery();
+            $resultList = $stmt->fetchAll();
+        }else if($type == "adresse"){
+            $param = ["adresse"];
             $sql2 = "SELECT d.table_name FROM `detail_model_affichage` d where d.table_name = :tb1  and d.id_model_affichage_id in (select m.id from model_affichage m where m.id_ptf_id = :id) group by d.table_name";
             $stmt = $this->conn->prepare($sql2);
             $stmt->bindParam('tb1', $param[0]);

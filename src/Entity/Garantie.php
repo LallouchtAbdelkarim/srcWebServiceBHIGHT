@@ -28,6 +28,9 @@ class Garantie
     #[ORM\Column(nullable: true)]
     private ?int $id_garantie_dbi = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $id_integration = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -89,6 +92,18 @@ class Garantie
     public function setIdGarantieDbi(?int $id_garantie_dbi): static
     {
         $this->id_garantie_dbi = $id_garantie_dbi;
+
+        return $this;
+    }
+
+    public function getIdIntegration(): ?int
+    {
+        return $this->id_integration;
+    }
+
+    public function setIdIntegration(?int $id_integration): static
+    {
+        $this->id_integration = $id_integration;
 
         return $this;
     }

@@ -58,6 +58,21 @@ class Telephone
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $date_creation = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $id_integration = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $etat = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $codeP = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $id_dn = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $type = null;
+
 
 
     public function getId(): ?int
@@ -228,6 +243,66 @@ class Telephone
     public function setDateCreation(\DateTimeInterface $date_creation): static
     {
         $this->date_creation = $date_creation;
+
+        return $this;
+    }
+
+    public function getIdIntegration(): ?int
+    {
+        return $this->id_integration;
+    }
+
+    public function setIdIntegration(?int $id_integration): static
+    {
+        $this->id_integration = $id_integration;
+
+        return $this;
+    }
+
+    public function getEtat(): ?int
+    {
+        return $this->etat;
+    }
+
+    public function setEtat(?int $etat): static
+    {
+        $this->etat = $etat;
+
+        return $this;
+    }
+
+    public function getCodeP(): ?int
+    {
+        return $this->codeP;
+    }
+
+    public function setCodeP(?int $codeP): static
+    {
+        $this->codeP = $codeP;
+
+        return $this;
+    }
+
+    public function getIdDn(): ?int
+    {
+        return $this->id_dn;
+    }
+
+    public function setIdDn(?int $id_dn): static
+    {
+        $this->id_dn = $id_dn;
+
+        return $this;
+    }
+
+    public function getType(): ?string
+    {
+        return $this->type;
+    }
+
+    public function setType(?string $type): static
+    {
+        $this->type = $type;
 
         return $this;
     }

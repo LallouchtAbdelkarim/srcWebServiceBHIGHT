@@ -38,6 +38,18 @@ class HistoTelephone
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $date_creation = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $indecatif = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $id_dn = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $id_debiteur_id = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $id_integration = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -135,6 +147,54 @@ class HistoTelephone
     public function setDateCreation(\DateTimeInterface $date_creation): static
     {
         $this->date_creation = $date_creation;
+
+        return $this;
+    }
+
+    public function getIndecatif(): ?int
+    {
+        return $this->indecatif;
+    }
+
+    public function setIndecatif(?int $indecatif): static
+    {
+        $this->indecatif = $indecatif;
+
+        return $this;
+    }
+
+    public function getIdDn(): ?int
+    {
+        return $this->id_dn;
+    }
+
+    public function setIdDn(?int $id_dn): static
+    {
+        $this->id_dn = $id_dn;
+
+        return $this;
+    }
+
+    public function getIdDebiteurId(): ?int
+    {
+        return $this->id_debiteur_id;
+    }
+
+    public function setIdDebiteurId(?int $id_debiteur_id): static
+    {
+        $this->id_debiteur_id = $id_debiteur_id;
+
+        return $this;
+    }
+
+    public function getIdIntegration(): ?int
+    {
+        return $this->id_integration;
+    }
+
+    public function setIdIntegration(?int $id_integration): static
+    {
+        $this->id_integration = $id_integration;
 
         return $this;
     }

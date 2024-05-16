@@ -16,8 +16,8 @@ class FileService
         $extensions_valides = array('csv');
         $fileName = $file['name'];
         $extension_upload = strtolower(substr(strrchr($fileName, '.'), 1));
-        $search = array("à","é","è");
-        $replace = array("a","e","e");
+        $search = array("à","é","è","\""," ");
+        $replace = array("a","e","e","","_");
         $n = $fileName . date_format(new \DateTime("now"), "Y-m-dH:i:s");
         $nom = sha1($n);
         if ($fileError > 0)
@@ -29,14 +29,20 @@ class FileService
             $codeStatut="OK";
             if (in_array($extension_upload, $extensions_valides))
             {
-                if (($handle = fopen($fileTmpLoc, "r")) !== FALSE)
+                if (($handle = fopen($fileTmpLoc, "r+")) !== FALSE)
                 {
                     while (($data = fgetcsv($handle, 1000000, ";")) !== FALSE)
                     {
                         break;
                     }
+                    $data=array_map("trim",$data);
                     $data=array_map("utf8_encode",$data);
                     $data=str_replace($search, $replace, $data);
+                    $pattern = '/[^a-zA-Z0-9\s_]/';
+                    $data[0] = preg_replace($pattern, '', $data[0]);
+                    rewind($handle);
+                    fputcsv($handle, $data,";");
+
                     if(count(array_intersect($requiredHeaders, $data))==count($requiredHeaders))
                     {
                         $codeStatut="OK";

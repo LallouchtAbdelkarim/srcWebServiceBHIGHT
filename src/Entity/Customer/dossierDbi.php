@@ -50,6 +50,9 @@ class dossierDbi
     #[ORM\Column]
     private ?int $id_debiteur = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $id_dossier_import = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -194,6 +197,18 @@ class dossierDbi
     public function setIdDebiteur(int $id_debiteur): static
     {
         $this->id_debiteur = $id_debiteur;
+
+        return $this;
+    }
+
+    public function getIdDossierImport(): ?int
+    {
+        return $this->id_dossier_import;
+    }
+
+    public function setIdDossierImport(?int $id_dossier_import): static
+    {
+        $this->id_dossier_import = $id_dossier_import;
 
         return $this;
     }

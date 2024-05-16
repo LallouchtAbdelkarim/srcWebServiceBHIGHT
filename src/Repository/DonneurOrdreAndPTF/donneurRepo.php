@@ -4,11 +4,13 @@ namespace App\Repository\DonneurOrdreAndPTF;
 
 use App\Entity\Champs;
 use App\Entity\ContactDonneurOrdre;
+use App\Entity\ContactHistorique;
 use App\Entity\DetailModelAffichage;
 use App\Entity\DetailsTypeCreance;
 use App\Entity\DonneurOrdre;
 use App\Entity\ListesRoles;
 use App\Entity\Portefeuille;
+use App\Entity\PtfTypeCreanceD;
 use App\Entity\TypeDonneur;
 use App\Entity\DetailsSecteurActivite;
 use DateTime;
@@ -51,6 +53,16 @@ class donneurRepo extends ServiceEntityRepository
 
             return $donneur_ordre;
         } else return false;
+    }
+
+    public function createHistoriques($idDonneur , $type , $note){
+        $contact = new ContactHistorique();
+        $contact->setIdDonneur($idDonneur);
+        $contact->setType($type);
+        $contact->setNote($note);
+        $contact->setDateCreation(new \DateTime());
+        $this->em->persist($contact);
+        $this->em->flush();
     }
 
     public function getDetailsDonneur(){
@@ -171,6 +183,10 @@ class donneurRepo extends ServiceEntityRepository
 
             return false;
         } else {
+            $contacts = $this->em->getRepository(ContactHistorique::class)->findBy(['idDonneur' => $id]);
+            foreach ($contacts as $contact) {
+                $this->em->remove($contact);
+            }
             $contacts = $this->em->getRepository(ContactDonneurOrdre::class)->findBy(['id_donneurOrdre' => $id]);
             foreach ($contacts as $contact) {
                 $this->em->remove($contact);
@@ -218,7 +234,7 @@ class donneurRepo extends ServiceEntityRepository
             $ptf->setDateDebutGestion(new \DateTime($data['dateDebutGestion']));
             $ptf->setDateFinGestion(new \DateTime($data['dateFinGestion']));
             $ptf->setTypeMission($data['typeMission']);
-            $ptf->setIdTypeCreance($type_creance);
+            $ptf->setTypeCreance(json_encode($data['typeCreance']));
             // $ptf->setIdDetailSecteurActivite($id_activity);
             $ptf->setIdDonneurOrdre($donneurOrdre);
             $this->em->persist($ptf);
@@ -227,6 +243,25 @@ class donneurRepo extends ServiceEntityRepository
         } else 
         return false;
     }
+    public function majDetails($idPtf){
+        $sql="DELETE FROM ptf_type_creance_d WHERE id_ptf_id = ".$idPtf->getId().";
+        DELETE FROM regle_portefeuille WHERE id_ptf_id = ".$idPtf->getId().";
+        ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
+    }
+    public function createPortefeuilleType($idPtf , $type){
+        //Delete if already ptf_type
+        $sql="DELETE FROM ptf_type_creance_d WHERE id = ".$idPtf->getId()."";
+        $stmt = $this->conn->prepare($sql );
+        $stmt->execute();
+        $ptf = new PtfTypeCreanceD();
+        $ptf->setIdPtf($idPtf);
+        $ptf->setIdType($type);
+        $this->em->persist($ptf);
+        $this->em->flush();
+    }
+
     public function AddChampsPortefeuille($data, $id)
     {
         if ($data) {
@@ -260,7 +295,7 @@ class donneurRepo extends ServiceEntityRepository
             $ptf->setDateDebutGestion(new \DateTime($data['dateDebutGestion']));
             $ptf->setDateFinGestion(new \DateTime($data['dateFinGestion']));
             $ptf->setTypeMission($data['typeMission']);
-            $ptf->setTypeCreance($data['typeCreance']);
+            $ptf->setTypeCreance(json_encode($data['typeCreance']));
             $ptf->setIdDonneurOrdre($donneurOrdreExist);
             $this->em->persist($ptf);
             $this->em->flush();

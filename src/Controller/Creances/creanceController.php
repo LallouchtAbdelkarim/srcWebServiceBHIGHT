@@ -198,6 +198,25 @@ class creanceController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+    #[Route('/getTypeDetailsCreanceMultiple')]
+    public function getTypeDetailsCreanceMultiple(Request $request,creancesRepo $creancesRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data =explode(',',$request->get("liste"));
+            $respObjects["data"]  =$creancesRepo->getTypeDetailsCreanceMultiple($data);
+            $codeStatut="OK";
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    
     
     #[Route('/createAccord',methods:"POST")]
     public function createAccord(Request $request,creancesRepo $creancesRepo): JsonResponse

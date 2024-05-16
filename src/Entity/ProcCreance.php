@@ -21,6 +21,12 @@ class ProcCreance
     #[ORM\JoinColumn(nullable: false)]
     private ?Creance $id_creance = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $id_integration = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $etat = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -46,6 +52,30 @@ class ProcCreance
     public function setIdCreance(?Creance $id_creance): static
     {
         $this->id_creance = $id_creance;
+
+        return $this;
+    }
+
+    public function getIdIntegration(): ?int
+    {
+        return $this->id_integration;
+    }
+
+    public function setIdIntegration(?int $id_integration): static
+    {
+        $this->id_integration = $id_integration;
+
+        return $this;
+    }
+
+    public function getEtat(): ?int
+    {
+        return $this->etat;
+    }
+
+    public function setEtat(?int $etat): static
+    {
+        $this->etat = $etat;
 
         return $this;
     }

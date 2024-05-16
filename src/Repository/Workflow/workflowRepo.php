@@ -91,6 +91,13 @@ class workflowRepo extends ServiceEntityRepository
         $resultList = $stmt->fetchAll();
         return $resultList;
     }
+    public function getTypeAssignation(){
+        $sql2 = "select * from type_assignation";
+        $stmt = $this->conn->prepare($sql2);
+        $stmt = $stmt->executeQuery();
+        $resultList = $stmt->fetchAll();
+        return $resultList;
+    }
     public function getTypeCall(){
         $sql2 = "select * from type_appel";
         $stmt = $this->conn->prepare($sql2);
@@ -99,7 +106,9 @@ class workflowRepo extends ServiceEntityRepository
         return $resultList;
     }
     public function getListeSegmentByType($type){
-        $resultList = $this->em->getRepository(Segmentation::class)->findBy(["type"=>$type , "id_status"=>3]);
+        $query = $this->em->createQuery('SELECT d FROM App\Entity\Segmentation d WHERE d.id  IN (SELECT IDENTITY(cr.id_segmentaion) FROM App\Entity\IntermWorkflowSegmentation cr WHERE IDENTITY(cr.id_workflow) IS NULL)');
+        $resultList = $query->getResult();
+
         if($resultList){
             return $resultList;
         }else{

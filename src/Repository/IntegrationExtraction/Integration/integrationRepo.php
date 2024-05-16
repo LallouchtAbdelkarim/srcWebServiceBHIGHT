@@ -3,9 +3,12 @@
 namespace App\Repository\IntegrationExtraction\Integration;
 
 use App\Entity\CorresColu;
+use App\Entity\DetailModelAffichage;
 use App\Entity\ImportType;
 use App\Entity\Integration;
 use App\Entity\ModelImport;
+use App\Entity\Import;
+
 use App\Entity\TypeAdresse;
 use App\Entity\TypeTel;
 use App\Entity\ColumnsParams;
@@ -151,6 +154,12 @@ class integrationRepo extends ServiceEntityRepository
             return null;
         }
     }
+    public function resetImport($id){
+        $sql = 'UPDATE `import` SET id_integration_id = null where id_integration_id = :id';
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(":id",$id);
+        $stmt = $stmt->execute();
+    }
     public function findModelByTitle($titre){
         $model = $this->em->getRepository(ModelImport::class)->findOneBy(["titre"=>$titre]);
         if($model){
@@ -223,6 +232,15 @@ class integrationRepo extends ServiceEntityRepository
                     ]);
                 $tables = $query->getResult();
                 return $tables ?: null;
+            case 'email':
+                $query = $this->em->createQuery('SELECT t.table_bdd, t.id, t.titre_col FROM App\Entity\ColumnsParams t WHERE t.table_bdd = :tb1 OR ( t.table_bdd = :tb3 and t.titre_col = :cin)')
+                    ->setParameters([
+                        'tb1' => 'email',
+                        'tb3' => 'debiteur',
+                        'cin' => 'id_debiteur',
+                    ]);
+                $tables = $query->getResult();
+                return $tables ?: null;
             case 'telephone':
                 $query = $this->em->createQuery('SELECT t.table_bdd, t.id, t.titre_col FROM App\Entity\ColumnsParams t WHERE t.table_bdd = :tb1 OR ( t.table_bdd = :tb3 and t.titre_col = :cin)')
                     ->setParameters([
@@ -262,6 +280,8 @@ class integrationRepo extends ServiceEntityRepository
             return null;
         }
     }
+
+    
     function testDebiteurCle($cle){
         $array = array();
         $sql="SELECT d.id FROM `debt_force_integration`.`debiteur_dbi` d where d.cle_identifiant = :cle";
@@ -358,6 +378,23 @@ class integrationRepo extends ServiceEntityRepository
             return null;
         }
     }
+    public function getAllInegrationByStatus2(){
+        $resultList = $this->em->getRepository(Integration::class)->findBy(["status" => [1, 2]]);
+        if($resultList){
+            return $resultList; 
+        }else{
+            return null;
+        }
+    }
+    public function getAllInegrationByStatus6(){
+        $resultList = $this->em->getRepository(Integration::class)->findBy(["status" => [5, 6]]);
+        if($resultList){
+            return $resultList; 
+        }else{
+            return null;
+        }
+    }
+    
     public function getAllInegration(){
         // $resultList = $this->em->getRepository(Integration::class)->findAll();
         $sql="SELECT t.* from integration t WHERE t.status_id != 15 ORDER BY t.id DESC";
@@ -916,6 +953,8 @@ class integrationRepo extends ServiceEntityRepository
         return $data;
     }
     function insertDebFromDbiToProd($idIntegration,$id_import,$idAction){
+        $sql1 = "CALL debt_force_integration.PROC_INSERT_DEB_PROD(".$idIntegration." , ".$id_import." , ".$idAction.")";
+        // dump($sql1);
         $sql = "CALL debt_force_integration.PROC_INSERT_DEB_PROD(:idIntegration , :idImport , :idAction)";
         $stmt = $this->conn->prepare($sql); 
         $stmt->bindValue(":idImport",$id_import);
@@ -924,11 +963,8 @@ class integrationRepo extends ServiceEntityRepository
         $stmt = $stmt->executeQuery();
     }
     function insertDossierFromDbiToProd($idIntegration ,$id_import , $id_action){
-        // $sql="INSERT INTO `dossier` (`id_dossier_dbi`, `id_ptf_id`, `id_users_id`, `numero_dossier`, `date_creation`, `date_fin_prevesionnel`, `date_fin`, `etat`, `date_ouverture`,`id_qualification_id`) 
-        // SELECT id ,id_ptf , id_users , numero_dossier , date_creation , date_fin_prevesionnel , date_fin , etat , date_ouverture , id_qualification FROM `debt_force_integration`.`dossier_dbi` WHERE id_import = :id;";
-        // $stmt = $this->conn->prepare($sql); 
-        // $stmt->bindValue(":id",$id);
-        // $stmt = $stmt->executeQuery();
+        $sql1 = "CALL debt_force_integration.PROC_INSERT_DOSSIERS_PROD(".$idIntegration." , ".$id_import." , ".$id_action.")";
+        // dump($sql1);
         $sql = "CALL debt_force_integration.PROC_INSERT_DOSSIERS_PROD(:idIntegration , :idImport , :idAction)";
         $stmt = $this->conn->prepare($sql); 
         $stmt->bindValue(":idImport",$id_import);   
@@ -937,27 +973,41 @@ class integrationRepo extends ServiceEntityRepository
         $stmt = $stmt->executeQuery();
     }
     function insertEmploiFromDbiToProd($idIntegration ,$id_import , $id_action){	
-        // $sql="INSERT INTO `debt_force`.`emploi`(`id_debiteur_id`, `date_debut`, `date_fin`, `date_dernier_salaire`, `id_status_id`, `nom_empl`, `salaire`, `profession_id`,`etat`) 
-        // SELECT 
-        //     CASE
-        //         WHEN dbi.origin_deb = 2 THEN (SELECT d.id FROM `debt_force`.`debiteur` d WHERE d.id = dbi.id_debiteur)
-        //         WHEN dbi.origin_deb = 1 THEN (SELECT d.id FROM `debt_force`.`debiteur` d WHERE d.id_debiteur_dbi = dbi.id)
-        //         ELSE NULL
-        //     END,
-        //     dbi.`date_debut`,
-        //     dbi.`date_fin`,
-        //     dbi.`date_dernier_salaire`,
-        //     dbi.`id_status_id`,
-        //     dbi.`nom_empl`,
-        //     dbi.`salaire`,
-        //     dbi.`profession_id`,
-        //     -1
-        // FROM `debt_force_integration`.`emploi_dbi` dbi 
-        // WHERE `id_import` = :id;";
-        $sql = "CALL debt_force_integration.PROC_INSERT_EMPLOI_PROD(".$idIntegration." , ".$id_import." , ".$id_action.")";dump($sql);
+        $sql = "CALL debt_force_integration.PROC_INSERT_EMPLOI_PROD(".$idIntegration." , ".$id_import." , ".$id_action.")";
         $stmt = $this->conn->prepare($sql); 
         // $stmt->bindValue(":id",$id);
         $stmt = $stmt->executeQuery();
+    }
+    function insertEmployeurFromDbiToProd($idIntegration ,$id_import , $id_action){	
+        $sql = "CALL debt_force_integration.PROC_INSERT_EMPLOYEUR_PROD(".$idIntegration." , ".$id_import." , ".$id_action.")";
+        $stmt = $this->conn->prepare($sql); 
+        $stmt = $stmt->executeQuery();
+    }
+    function insertTelephoneFromDbiToProd($idIntegration ,$id_import , $id_action){
+        $sql = "CALL debt_force_integration.PROC_INSERT_TEL_PROD(".$idIntegration." , ".$id_import." , ".$id_action.")";dump($sql);
+        $stmt = $this->conn->prepare($sql); 
+        $stmt = $stmt->executeQuery();
+    }
+    function insertAdresseFromDbiToProd($idIntegration ,$id_import , $id_action){
+        $sql = "CALL debt_force_integration.PROC_INSERT_ADRESSE_PROD(".$idIntegration." , ".$id_import." , ".$id_action.")";
+        $stmt = $this->conn->prepare($sql); 
+        $stmt = $stmt->executeQuery();
+    }
+    function findIntegrationValide($id){
+        $model = $this->em->getRepository(Integration::class)->findOneBy(["id"=>$id , "status"=>9]);
+        if($model){
+            return $model;
+        }else{
+            return null;
+        }
+    }
+    function getImport($id){
+        $model = $this->em->getRepository(Import::class)->findBy(["id_integration"=>$id]);
+        if($model){
+            return $model;
+        }else{
+            return null;
+        }
     }
 
     function insertCreanceFromDbiToProd($idIntegration ,$id_import , $id_action){
@@ -972,7 +1022,8 @@ class integrationRepo extends ServiceEntityRepository
         $stmt = $this->conn->prepare($sql); 
         $stmt->bindValue(":id",$id);
         $stmt = $stmt->executeQuery();*/
-        $sql = "CALL debt_force_integration.PROC_INSERT_CREANCE_PROD(".$idIntegration." , ".$id_import." , ".$id_action.")";dump($sql);
+        $sql = "CALL debt_force_integration.PROC_INSERT_CREANCE_PROD(".$idIntegration." , ".$id_import." , ".$id_action.")";
+        // dump($sql);
         $stmt = $this->conn->prepare($sql); 
         // $stmt->bindValue(":idImport",$id_import);   
         // $stmt->bindValue(":idIntegration",$idIntegration);  
@@ -1039,7 +1090,7 @@ class integrationRepo extends ServiceEntityRepository
         $stmt = $stmt->executeQuery();
     }
     function findIntegrationByTitre($titre){
-        $sql="SELECT d.id FROM `integration` d where d.titre = :titre and status_id != 15";
+        $sql="SELECT d.id FROM `integration` d where d.titre = :titre and status_id != 15 and status_id != 9";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindValue(":titre",$titre);
         $stmt = $stmt->executeQuery();
@@ -1125,72 +1176,29 @@ class integrationRepo extends ServiceEntityRepository
                                 if(isset($data_list[$i]["column_db"])){
                                     $colTbale = $data_list[$i]["column_db"];
                                 }
+                               
                                 $colParam = null;
-                                if(isset($data_list[$i]["col_param"])){
+                                if(isset($data_list[$i]["col_param"])&& $data_list[$i]["origine_champ"] == 1){
                                     $colParam = $this->em->getRepository(ColumnsParams::class)->findOneBy(["id"=>$data_list[$i]["col_param"]]); 
-                                    $colonne = new CorresColu();
-                                    $colonne->setIdModelImport($m);
-                                    $colonne->setColumnName(trim($data_list[$i]["column_file"]));
-                                    $colonne->setCode("code");
-                                    $colonne->setTableName($data_list[$i]["table_name"]);
-                                    $colonne->setColumnTable($colTbale);
-                                    $colonne->setRequired($check);
-                                    $colonne->setIdColParams($colParam);
-                                    $colonne->setOrigine(1);
-                                    $colonne->setOriginChamp($data_list[$i]["origine_champ"]);
-                                    $this->em->persist($colonne);
                                 }
-                                else
-                                {
-                                    // $typesAdresses=$this->em->getRepository(TypeAdresse::class)->findAll();
-                                    // for ($a = 0 ; $a < count($typesAdresses) ; $a++)
-                                    // {
-                                    //     if($data_list[$i]["column_db_name"]==$typesAdresses[$a]->getType()."--Adresse" or $data_list[$i]["column_db_name"]==$typesAdresses[$a]->getType()."--Adresse--status"
-                                    //         or $data_list[$i]["column_db_name"]==$typesAdresses[$a]->getType()."--Adresse--ville" or $data_list[$i]["column_db_name"]==$typesAdresses[$a]->getType()."--Adresse--pays"
-                                    //         or $data_list[$i]["column_db_name"]==$typesAdresses[$a]->getType()."--Adresse--region" or $data_list[$i]["column_db_name"]==$typesAdresses[$a]->getType()."--Adresse--cp"
-                                    //         or $data_list[$i]["column_db_name"]==$typesAdresses[$a]->getType()."--Adresse--code_postal" or $data_list[$i]["column_db_name"]==$typesAdresses[$a]->getType()."--Adresse--volet2"
-                                    //         or $data_list[$i]["column_db_name"]==$typesAdresses[$a]->getType()."--Adresse--volet3" or $data_list[$i]["column_db_name"]==$typesAdresses[$a]->getType()."--Adresse--volet4"
-                                    //         or $data_list[$i]["column_db_name"]==$typesAdresses[$a]->getType()."--Adresse--province" or $data_list[$i]["column_db_name"]==$typesAdresses[$a]->getType()."--Adresse--source")
-                                    //     {
-                                    //         $t=new ImportType();
-                                    //         $t->setTableBdd("type_adresse");
-                                    //         $t->setChamps($data_list[$i]["column_db_name"]);
-                                    //         $t->setIdModel($m);
-                                    //         $t->setNomCol($data_list[$i]["column_file"]);
-                                    //         $this->em->persist($t);
-                                    //     }
-                                    // }
-
-                                    // if($type == "telephone"){
-                                    //     $typesTel=$this->em->getRepository(TypeTel::class)->findAll();
-                                    //     for ($a = 0 ; $a < count($typesTel) ; $a++)
-                                    //     {
-                                    //         if($data_list[$i]["column_db_name"]==$typesTel[$a]->getType())
-                                    //         {
-                                    //             $t=new ImportType();
-                                    //             $t->setTableBdd("type_telephone");
-                                    //             $t->setChamps($data_list[$i]["column_db_name"]);
-                                    //             $t->setIdModel($m);
-                                    //             $t->setNomCol($data_list[$i]["column_file"]);
-                                    //             $this->em->persist($t);
-                                    //         }
-                                    //     }
-                                    // }else if ($type == "adresse"){
-                                    //     $typesAdresse=$this->em->getRepository(TypeAdresse::class)->findAll();
-                                    //     for ($a = 0 ; $a < count($typesAdresse) ; $a++)
-                                    //     {
-                                    //         if($data_list[$i]["column_db_name"]==$typesAdresse[$a]->getType())
-                                    //         {
-                                    //             $t=new ImportType();
-                                    //             $t->setTableBdd("type_adresse");
-                                    //             $t->setChamps($data_list[$i]["column_db_name"]);
-                                    //             $t->setIdModel($m);
-                                    //             $t->setNomCol($data_list[$i]["column_file"]);
-                                    //             $this->em->persist($t);
-                                    //         }
-                                    //     }
-                                    // }
+                                $tableName = "";
+                                if($data_list[$i]["origine_champ"] == 1){
+                                    $tableName = $data_list[$i]["table_name"];
+                                }else{
+                                    $champ = $this->em->getRepository(DetailModelAffichage::class)->findOneBy(["id"=>$data_list[$i]["col_param"]]); 
+                                    $tableName = $champ->getTableName();
                                 }
+                                $colonne = new CorresColu();
+                                $colonne->setIdModelImport($m);
+                                $colonne->setColumnName(str_replace(" ","_",trim($data_list[$i]["column_file"])));
+                                $colonne->setCode("code");
+                                $colonne->setTableName($tableName);
+                                $colonne->setColumnTable($colTbale);
+                                $colonne->setRequired($check);
+                                $colonne->setIdColParams($colParam);
+                                $colonne->setOrigine(0);
+                                $colonne->setOriginChamp($data_list[$i]["origine_champ"]);
+                                $this->em->persist($colonne);
                             }
                         }
                         $this->em->flush();

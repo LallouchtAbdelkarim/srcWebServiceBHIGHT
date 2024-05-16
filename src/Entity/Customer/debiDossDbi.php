@@ -25,6 +25,9 @@ class debiDossDbi
     #[ORM\Column]
     private ?int $origin_doss = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $id_integration = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -74,6 +77,18 @@ class debiDossDbi
     public function setOriginDoss(int $origin_doss): static
     {
         $this->origin_doss = $origin_doss;
+
+        return $this;
+    }
+
+    public function getIdIntegration(): ?int
+    {
+        return $this->id_integration;
+    }
+
+    public function setIdIntegration(?int $id_integration): static
+    {
+        $this->id_integration = $id_integration;
 
         return $this;
     }

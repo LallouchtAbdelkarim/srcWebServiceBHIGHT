@@ -47,6 +47,9 @@ class Integration
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $date_fin_execution_3 = null;
+
+    // #[ORM\Column]
+    // private ?int $isMaj = null;
     public function getId(): ?int
     {
         return $this->id;
@@ -182,5 +185,17 @@ public function setDateFinExecution3(?\DateTimeInterface $date_fin_execution_3):
 
     return $this;
 }
+
+// public function getIsMaj(): ?int
+// {
+//     return $this->isMaj;
+// }
+
+// public function setIsMaj(int $isMaj): static
+// {
+//     $this->isMaj = $isMaj;
+
+//     return $this;
+// }
 
 }

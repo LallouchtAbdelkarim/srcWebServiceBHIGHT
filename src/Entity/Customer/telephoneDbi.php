@@ -60,6 +60,21 @@ class telephoneDbi
     #[ORM\Column(nullable: true)]
     private ?int $id_integration = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $id_telephone_import = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $codeP = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $id_dn = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $etat_histo = null;
+
+    #[ORM\Column(length: 255)]
+    private ?string $type = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -253,6 +268,66 @@ class telephoneDbi
     public function setIdIntegration(?int $id_integration): static
     {
         $this->id_integration = $id_integration;
+
+        return $this;
+    }
+
+    public function getIdTelephoneImport(): ?int
+    {
+        return $this->id_telephone_import;
+    }
+
+    public function setIdTelephoneImport(?int $id_telephone_import): static
+    {
+        $this->id_telephone_import = $id_telephone_import;
+
+        return $this;
+    }
+
+    public function getCodeP(): ?int
+    {
+        return $this->codeP;
+    }
+
+    public function setCodeP(?int $codeP): static
+    {
+        $this->codeP = $codeP;
+
+        return $this;
+    }
+
+    public function getIdDn(): ?int
+    {
+        return $this->id_dn;
+    }
+
+    public function setIdDn(?int $id_dn): static
+    {
+        $this->id_dn = $id_dn;
+
+        return $this;
+    }
+
+    public function getEtatHisto(): ?int
+    {
+        return $this->etat_histo;
+    }
+
+    public function setEtatHisto(?int $etat_histo): static
+    {
+        $this->etat_histo = $etat_histo;
+
+        return $this;
+    }
+
+    public function getType(): ?string
+    {
+        return $this->type;
+    }
+
+    public function setType(string $type): static
+    {
+        $this->type = $type;
 
         return $this;
     }

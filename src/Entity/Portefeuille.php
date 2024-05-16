@@ -26,8 +26,8 @@ class Portefeuille
     #[ORM\Column(length: 255)]
     private ?string $titre = null;
 
-    #[ORM\ManyToOne]
-    private ?DetailsTypeCreance $id_type_creance = null;
+    #[ORM\Column(length: 255)]
+    private ?string $type_creance = null;
 
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
@@ -163,14 +163,14 @@ class Portefeuille
 
         return $this;
     }
-    public function getIdTypeCreance(): ?DetailsTypeCreance
+    public function getTypeCreance(): ?string
     {
-        return $this->id_type_creance;
+        return $this->type_creance;
     }
 
-    public function setIdTypeCreance(?DetailsTypeCreance $id_type_creance): static
+    public function setTypeCreance(?string $type_creance): self
     {
-        $this->id_type_creance = $id_type_creance;
+        $this->type_creance = $type_creance;
 
         return $this;
     }

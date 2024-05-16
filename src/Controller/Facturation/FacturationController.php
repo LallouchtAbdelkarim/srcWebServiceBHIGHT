@@ -3,6 +3,7 @@
 namespace App\Controller\Facturation;
 use App\Entity\CritereModelFacturation;
 use App\Entity\Facture;
+use App\Entity\ModelFacturation;
 use App\Repository\Facturation\facturationRepo;
 use App\Service\MessageService;
 use App\Service\GeneralService;
@@ -49,6 +50,7 @@ class FacturationController extends AbstractController
         $this->conn = $conn;
         $this->TypeService = $TypeService;
     }
+    
     #[Route('/listeFacture')]
     public function listeFacture(Request $request,facturationRepo $factureRepo): JsonResponse
     {
@@ -61,6 +63,7 @@ class FacturationController extends AbstractController
             $codeStatut="OK";
         }catch(\Exception $e){
             $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
         }
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
@@ -74,6 +77,7 @@ class FacturationController extends AbstractController
             $this->AuthService->checkAuth(0,$request);
             $data_list = json_decode($request->getContent(), true);
             $donneur = $data_list["donneur_ordre"];
+            $IdModel = $data_list["model"];
             $type = $data_list["type"];
             if((!empty($donneur) && $donneur !="" ) && (!empty($type) && $type !="" )  ){
                 $donneurOrdre = $factureRepo->getOneDonneurOrdre($donneur);
@@ -1497,7 +1501,8 @@ class FacturationController extends AbstractController
                                     
                                 }
                                 // $respObjects["data"] = $result;  
-                                $facture = $factureRepo->createFacture($donneurOrdre , $numeroFact , $yearF , $date_echeance,$type , $total_creance ,$total_ttc_initial ,$total_ttc_restant);
+                                $model =  $this->em->getRepository(ModelFacturation::class)->findOneBy(['id'=>$IdModel]);
+                                $facture = $factureRepo->createFacture($donneurOrdre , $numeroFact , $yearF , $date_echeance,$type , $total_creance ,$total_ttc_initial ,$total_ttc_restant,$model);
                                 for ($k=0; $k < count($regle) ; $k++) { 
                                     # code...
                                     $regle_entity = $this->em->getRepository(RegleModelFacturation::class)->findOneBy(['id'=>$regle[$k]]);
@@ -1508,6 +1513,7 @@ class FacturationController extends AbstractController
                                 $respObjects["data"]["total_creance"] = $total_creance;  
                                 $respObjects["data"]["total_ttc_initial"] = $total_ttc_initial;  
                                 $respObjects["data"]["total_ttc_restant"] = $total_ttc_restant; 
+
                                 $codeStatut="OK";
                             }else{
                                 $codeStatut="AUCUN_DOSSIER";
@@ -1598,6 +1604,7 @@ class FacturationController extends AbstractController
             $data_list = json_decode($request->getContent(), true);
             $donneur = $data_list["donneur"];
             $objet = $data_list["objet"];
+            $model = $data_list["model"];
             $type_paiement = $data_list["type_paiement"];
             if((!empty($donneur) && $donneur !="" ) && (!empty($type_paiement) && $type_paiement !="" ) && (!empty($objet) && $objet !="" )  ){
                 $donneurOrdre = $factureRepo->getOneDonneurOrdre($donneur);
@@ -1609,7 +1616,7 @@ class FacturationController extends AbstractController
                         $num = $factureRepo->getNumFact();
                         $numeroFact = $num[0]["numero"];
                         $totalTTC = $data_list["totalTTC"];
-                        $donneurOrdre = $factureRepo->createFacture2($donneurOrdre->getId() ,$numeroFact , $yearF , $totalTTC , $type_paiement);
+                        $donneurOrdre = $factureRepo->createFacture2($donneurOrdre->getId() ,$numeroFact , $yearF , $totalTTC , $type_paiement , $model);
                         $codeStatut="OK";
 
                     }else{

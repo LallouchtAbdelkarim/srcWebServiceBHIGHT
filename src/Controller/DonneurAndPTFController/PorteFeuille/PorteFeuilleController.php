@@ -6,6 +6,8 @@ use App\Entity\Champs;
 use App\Entity\DetailModelAffichage;
 use App\Entity\DetailsSecteurActivite;
 use App\Entity\Portefeuille;
+use App\Entity\DetailsTypeCreance;
+use App\Entity\ReglePortefeuille;
 use App\Entity\SecteurActivite;
 use App\Service\AuthService;
 use App\Service\ValidationService;
@@ -65,12 +67,22 @@ class PorteFeuilleController extends AbstractController
                     if(is_numeric($data['dureeGestion'])){
                         if($data['dateFinGestion'] > $data['dateDebutGestion']){
                             $portefeuille = $donneurRepo->createPortefeuille($data);
-                            if ($portefeuille) {
-                                if($data['input']){
-                                    $champs = $donneurRepo->AddChampsPortefeuille($data['input'], $portefeuille->getId());
-                                }
-                            } else {
-                                $codeStatut = "ERROR";
+                            $detailsTypeCreance =  $data['typeCreance'];
+                            for ($i=0; $i < count($detailsTypeCreance); $i++) { 
+                                $d = $entityManager->getRepository(DetailsTypeCreance::class)->findOneBy(array("id" => $detailsTypeCreance[$i]));
+                                $donneurRepo->createPortefeuilleType($portefeuille , $d);
+                            }
+
+                            $reglesPtf =  $data['criteres'];
+                            for ($i=0; $i < count($reglesPtf); $i++) { 
+                                $regle = new ReglePortefeuille();
+                                $regle->setType($reglesPtf[$i]['table_name']);
+                                $regle->setTypeColumn($reglesPtf[$i]['column_name']);
+                                $regle->setAction($reglesPtf[$i]['action_name']);
+                                $regle->setValue1($reglesPtf[$i]['valeur1']);
+                                $regle->setValue2($reglesPtf[$i]['valeur2']);
+                                $regle->setIdPtf($portefeuille);
+                                $entityManager->persist($regle);
                             }
                             $codeStatut="OK";
                             $entityManager->flush();
@@ -96,86 +108,84 @@ class PorteFeuilleController extends AbstractController
     public function updateDonneurOrdre(EntityManagerInterface $entityManager, Request $request, ValidationService $validator, $id, donneurRepo $donneurRepo): Response
     {
         $respObjects = [];
-
+        $codeStatut = "ERROR";
         $ptf = $entityManager->getRepository(PorteFeuille::class)->findOneBy(["id" => $id]);
         $donneurOrdre = $entityManager->getRepository(DonneurOrdre::class)->findAll();
-        $do = $entityManager->getRepository(Champs::class)->findBy(["form" => $id]);
-        $typee = $entityManager->getRepository(DetailModelAffichage::class)->findBy(['table_name' => "portefeuille"]);
-        $type = $entityManager->getRepository(Champs::class)->findBy(['champs' => $typee]);
+        // $do = $entityManager->getRepository(Champs::class)->findBy(["form" => $id]);
+        // $typee = $entityManager->getRepository(DetailModelAffichage::class)->findBy(['table_name' => "portefeuille"]);
+        // $type = $entityManager->getRepository(Champs::class)->findBy(['champs' => $typee]);
 
         $data = json_decode($request->getContent(), true);
 
             if (!$ptf) {
-                $respObjects["message"] = "Une erreur s'est produite !";
-                $respObjects["codeStatut"] = "NOT OK";
+                
+                $codeStatut = "NOT_EXIST";
             } else {
                 if (
-                    $data['input'] == null || $data['dn'] == null || $data['titre'] == null || $data['numPtf'] == null || $data['dureeGestion'] == null ||
-                    $data['dateDebutGestion'] == null || $data['dateFinGestion'] == null || $data['typeMission'] == null || $data['typeCreance'] == null
+                    // $data['input'] == null ||
+                     $data['dn'] == null || $data['titre'] == null || $data['numPtf'] == null || $data['dureeGestion'] == null ||
+                    $data['dateDebutGestion'] == null || $data['typeDetailsCreance'] == null ||  $data['dateFinGestion'] == null || $data['typeMission'] == null || $data['typeCreance'] == null
                 ) {
-                    $respObjects["message"] = "Un des champs est vide !";
-                    $respObjects["codeStatut"] = "Not OK";
+                    $codeStatut = "ERROR-EMPTY-PARAMS";
                 } else {
                     $donneurOrdreExist = $entityManager->getRepository(DonneurOrdre::class)->findOneBy(["id" => (int)$data['dn']]);
                     if (!$donneurOrdreExist) {
-                        $respObjects["message"] = "Erreur d'un Donneur d'ordre !";
-                        $respObjects["codeStatut"] = "NOT OK";
+                        $codeStatut = "NOT_EXIST_D";
                     } else {
-
                         $sql = "SELECT * from portefeuille s WHERE s.titre = '" . $data['titre'] . "' AND  s.numero_ptf = '" . $data['numPtf'] . "' AND s.id != '" . $id . "'";
                         $stmt = $this->connection->prepare($sql)->executeQuery();
                         $PorteFeuille = $stmt->fetchAllAssociative();
-                        if ($PorteFeuille) {
-                            $response = "Portefeuille déja existe !";
-                        } else {
+                        // if ($PorteFeuille) {
+                        //     $response = "Portefeuille déja existe !";
+                        // } else {
                             if (new \DateTime($data['dateDebutGestion']) > new \DateTime($data['dateFinGestion'])) {
-                                $respObjects["message"] = "Erreur dans insert date !";
-                                $respObjects["codeStatut"] = "NOT OK";
+                                $codeStatut = "ERROR_DATE";
                             } else {
-
-                                // $ptf->setTitre($data['titre']);
-                                // $ptf->setActif(0);
-                                // $ptf->setNumeroPtf($data['numPtf']);
-                                // $ptf->setDureeGestion($data['dureeGestion']);
-                                // $ptf->setDateDebutGestion(new \DateTime($data['dateDebutGestion']));
-                                // $ptf->setDateFinGestion(new \DateTime($data['dateFinGestion']));
-                                // $ptf->setTypeMission($data['typeMission']);
-                                // $ptf->setTypeCreance($data['typeCreance']);
-                                // $ptf->setIdDonneurOrdre($donneurOrdreExist);
-                                // $entityManager->persist($ptf);
-                                // foreach ($data['input'] as $key => $value) {
-                                //     $input = $entityManager->getRepository(Champs::class)->findOneBy(["champs" => (int)$key, "form" => $id]);
-                                //     $input->setValue($value);
-                                //     $input->setForm($id);
-                                //     $entityManager->persist($input);
-
-                                // }
-                                // $entityManager->flush();
-                                // $respObjects["message"] = "Modifier avec success";
-                                // $respObjects["codeStatut"] = "OK";
                                 $portefeuille = $donneurRepo->UpdatePortefeuille($data, $id);
-                                if ($portefeuille) {
-                                    $champs = $donneurRepo->UpdateChampsPortefeuille($data['input'], $id);
-                                    if (!$donneurRepo->UpdateChampsPortefeuille($data['input'], $id)) {
-                                        $respObjects["message"] = "Modifier avec success";
-                                        $respObjects["codeStatut"] = "OK";
-                                    } else {
-                                        $respObjects["message"] = "une erreur s'est produite !!!";
-                                        $respObjects["codeStatut"] = "NOT OK";
-                                    }
-                                } else {
-                                    $respObjects["message"] = "une erreur s'est produite !!";
-                                    $respObjects["codeStatut"] = "NOT OK";
-                                }
 
+                                $donneurRepo->majDetails($ptf);
+                                $detailsTypeCreance =  $data['typeCreance'];
+                                for ($i=0; $i < count($detailsTypeCreance); $i++) { 
+                                    $d = $entityManager->getRepository(DetailsTypeCreance::class)->findOneBy(array("id" => $detailsTypeCreance[$i]));
+                                    $donneurRepo->createPortefeuilleType($ptf , $d);
+                                }
+                                $reglesPtf =  $data['criteres'];
+                                for ($i=0; $i < count($reglesPtf); $i++) { 
+                                    $regle = new ReglePortefeuille();
+                                    $regle->setType($reglesPtf[$i]['table_name']);
+                                    $regle->setTypeColumn($reglesPtf[$i]['column_name']);
+                                    $regle->setAction($reglesPtf[$i]['action_name']);
+                                    $regle->setValue1($reglesPtf[$i]['valeur1']);
+                                    $regle->setValue2($reglesPtf[$i]['valeur2']);
+                                    $regle->setIdPtf($ptf);
+                                    $entityManager->persist($regle);
+                                    
+                                    $codeStatut = "OK";
+                                }
+                                $entityManager->flush();
+
+                                // if ($portefeuille) {
+                                //     $champs = $donneurRepo->UpdateChampsPortefeuille($data['input'], $id);
+                                //     if (!$donneurRepo->UpdateChampsPortefeuille($data['input'], $id)) {
+                                //         $respObjects["message"] = "Modifier avec success";
+                                //         $respObjects["codeStatut"] = "OK";
+                                //     } else {
+                                //         $respObjects["message"] = "une erreur s'est produite !!!";
+                                //         $respObjects["codeStatut"] = "NOT OK";
+                                //     }
+                                // } else {
+                                //     $respObjects["message"] = "une erreur s'est produite !!";
+                                //     $respObjects["codeStatut"] = "NOT OK";
+                                // }
                             }
-                        }
+                        // }
                     }
                 }
             }
         
-
-        return new JsonResponse($respObjects);
+            $respObjects["codeStatut"] = $codeStatut;
+            $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+            return $this->json($respObjects);
     }
     #[Route('/delete_porte_feuille/{id}', methods: ['DELETE'])]
     public function DeletePortefeuille(EntityManagerInterface $entityManager, Request $request, $id , donneurRepo $donneurRepo): Response
@@ -310,6 +320,22 @@ class PorteFeuilleController extends AbstractController
         $stmtd = $stmtd->executeQuery();
         $donneur = $stmtd->fetchAllAssociative();
 
+        $type = $donneur[0]['type_creance'];
+        $sqlDetailsType = "SELECT id_type_id FROM `ptf_type_creance_d` WHERE id_ptf_id =".$id;
+        $stmtd = $this->connection->prepare($sqlDetailsType);
+        $stmtd = $stmtd->executeQuery();
+        $DetailsType = $stmtd->fetchAllAssociative();
+
+        $sqlDetailsType = "SELECT * FROM `regle_portefeuille` WHERE id_ptf_id =".$id;
+        $stmtd = $this->connection->prepare($sqlDetailsType);
+        $stmtd = $stmtd->executeQuery();
+        $criteresSelected  = $stmtd->fetchAllAssociative();
+
+        $DetailsType = array_map(function ($el) {
+            return $el['id_type_id'];
+        }, $DetailsType);
+        
+
         $champs = "SELECT c.*, dc.*
         FROM champs c, detail_model_affichage dc
         WHERE dc.id = c.champs_id
@@ -318,12 +344,13 @@ class PorteFeuilleController extends AbstractController
         $stmt = $this->connection->prepare($champs);
         $stmt = $stmt->executeQuery();
         $resulatChamps = $stmt->fetchAllAssociative();
-
             $result = [
                 'champs'=>$resulatChamps,
-                'ptf'=>$donneur
+                'ptf'=>$donneur,
+                'typeCreance'=>json_decode($type),
+                'DetailsType'=>$DetailsType,
+                'criteresSelected'=>$criteresSelected
             ];
-           
         return new JsonResponse($result);
     }
     #[Route('/getAllSecteurActivite')]
@@ -332,7 +359,6 @@ class PorteFeuilleController extends AbstractController
         $respObjects =array();
         $codeStatut="ERROR";
         try{
-            // $this->AuthService->checkAuth(0,$request);
             $data = $donneurRepo->getAllSecteurActivite();
             $respObjects["data"] = $data;
             $codeStatut="OK";

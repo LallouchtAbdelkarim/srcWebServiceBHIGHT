@@ -77,7 +77,7 @@ class facturationRepo extends ServiceEntityRepository
             return $data;
         }
     }
-    public function createFacture($donneur ,$numeroFact , $yearFact , $date_echeance,$type,$total_creance ,$total_ttc_initial ,$total_ttc_restant){
+    public function createFacture($donneur ,$numeroFact , $yearFact , $date_echeance,$type,$total_creance ,$total_ttc_initial ,$total_ttc_restant,$model){
         $fact = new Facture();
         $fact->setIdDonneurOrdreId($donneur);
         $fact->setNumeroFact($numeroFact);
@@ -88,19 +88,21 @@ class facturationRepo extends ServiceEntityRepository
         $fact->setTotalTtcInitialCreance($total_ttc_initial);
         $fact->setTotalTtcRestantCreance($total_ttc_restant);
         $fact->setType($type);
+        $fact->setIdModel($model);
         $this->em->persist($fact);
         $this->em->flush();
         return $fact;
     }
-    public function createFacture2($donneur ,$numeroFact , $yearFact , $totalTTC,$id_type_paiemnt){
-        $sql="INSERT INTO `facture`(`id_donneur_ordre_id_id`, `numero_fact`, `year_fact`, `date_creation`, `total_ttc`, `id_type_paiement_id` , `id_status_id`) VALUES
-         (:donneur,:numeroFact,:yearFact,now(),:totalTTC,:id_type_paiemnt,1)";
+    public function createFacture2($donneur ,$numeroFact , $yearFact , $totalTTC,$id_type_paiemnt,$model){
+        $sql="INSERT INTO `facture`(`id_donneur_ordre_id_id`, `numero_fact`, `year_fact`, `date_creation`, `total_ttc`, `id_type_paiement_id` , `id_status_id`,`id_model_id`) VALUES
+         (:donneur,:numeroFact,:yearFact,now(),:totalTTC,:id_type_paiemnt,1,:model)";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam('donneur', $donneur);
         $stmt->bindParam('numeroFact', $numeroFact);
         $stmt->bindParam('yearFact', $yearFact);
         $stmt->bindParam('totalTTC', $totalTTC);
         $stmt->bindParam('id_type_paiemnt', $id_type_paiemnt);
+        $stmt->bindParam('model', $model);
         $stmt = $stmt->executeQuery();
         $resulat = $stmt->fetchAllAssociative();
         return $resulat;

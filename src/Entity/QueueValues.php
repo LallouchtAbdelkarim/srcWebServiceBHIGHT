@@ -23,6 +23,12 @@ class QueueValues
     #[ORM\JoinColumn(nullable: false)]
     private ?QueueCritere $id_critere = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $action = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $value_view = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -60,6 +66,30 @@ class QueueValues
     public function setIdCritere(?QueueCritere $id_critere): static
     {
         $this->id_critere = $id_critere;
+
+        return $this;
+    }
+
+    public function getAction(): ?string
+    {
+        return $this->action;
+    }
+
+    public function setAction(?string $action): static
+    {
+        $this->action = $action;
+
+        return $this;
+    }
+
+    public function getValueView(): ?string
+    {
+        return $this->value_view;
+    }
+
+    public function setValueView(?string $value_view): static
+    {
+        $this->value_view = $value_view;
 
         return $this;
     }

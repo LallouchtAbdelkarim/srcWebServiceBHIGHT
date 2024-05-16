@@ -28,8 +28,12 @@ class EtapActivite
     private ?string $titre = null;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: true)]
     private ?ParamActivite $id_param = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Etap $idEtap = null;
 
     // #[ORM\ManyToOne]
     // #[ORM\JoinColumn(nullable: false)]
@@ -108,6 +112,18 @@ class EtapActivite
     public function setIdParam(?ParamActivite $id_param): self
     {
         $this->id_param = $id_param;
+
+        return $this;
+    }
+
+    public function getIdEtap(): ?Etap
+    {
+        return $this->idEtap;
+    }
+
+    public function setIdEtap(?Etap $idEtap): static
+    {
+        $this->idEtap = $idEtap;
 
         return $this;
     }
