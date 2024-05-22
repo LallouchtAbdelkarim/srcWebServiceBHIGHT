@@ -2,6 +2,7 @@
 
 namespace App\Controller\Workflow;
 
+use App\Entity\EvenementWorkflow;
 use App\Entity\Workflow;
 use App\Repository\Workflow\workflowRepo;
 use App\Repository\Sgementaion\segementationRepo;
@@ -17,13 +18,14 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
 use App\Entity\Utilisateurs;
+use App\Entity\EventAction;
 
 #[Route('/API/workflow')]
 class WorkflowController extends AbstractController
 {
     private $MessageService;
     private $AuthService;
-    private $workflowRepo;
+    public $workflowRepo;
     private $conn;
     public $em;
 
@@ -161,21 +163,21 @@ class WorkflowController extends AbstractController
                     }
                 }
 
-                // if($checkSg){
+                if($checkSg){
                     $workflow = $workflowRepo->createWorkflow($titre ,$user,$type_select);
-                    // for ($i=0; $i < count($data['arraySegmentation']); $i++) { 
-                    //     $intermSegWork = $this->em->getRepository(IntermWorkflowSegmentation::class)->findOneBy(["id_workflow"=>null , "id_segmentaion"=>$data['arraySegmentation'] , "id_type" =>$type_select]);
-                    //     $intermSegWork->setIdWorkflow($workflow);
-                    //     $this->em->flush();
-                    // }
+                    for ($i=0; $i < count($data['arraySegmentation']); $i++) { 
+                        $intermSegWork = $this->em->getRepository(IntermWorkflowSegmentation::class)->findOneBy(["id_workflow"=>null , "id_segmentaion"=>$data['arraySegmentation'] , "id_type" =>$type_select]);
+                        $intermSegWork->setIdWorkflow($workflow);
+                        $this->em->flush();
+                    }
                     if($notes != ""){
                         $workflowRepo->createNoteWorkflow($workflow , $notes);
                     }
                     $respObjects["data"]["id"] = $workflow->getId();
                     $codeStatut = "OK";
-                // }else{
-                //     $codeStatut="ERROR-SEG1";
-                // }
+                }else{
+                    $codeStatut="ERROR-SEG1";
+                }
             }
             
         }catch(\Exception $e){
@@ -414,6 +416,7 @@ class WorkflowController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
     #[Route('/check-event-based',methods : ["POST"])]
     public function checkEvenetBased(Request $request , segementationRepo $segementationRepo ): JsonResponse
     {
@@ -444,6 +447,7 @@ class WorkflowController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
     #[Route('/get_liste_event')]
     public function get_liste_event(Request $request , segementationRepo $segementationRepo ): JsonResponse
     {
@@ -550,30 +554,7 @@ class WorkflowController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
-    
-    #[Route('/saveWorkflow',methods : ["POST"])]
-    public function saveWorkflow(Request $request , workflowRepo $workflowRepo,segementationRepo $segementationRepo ): JsonResponse
-    {
-        $respObjects =array();
-        $codeStatut = "ERROR"; 
-        try{
-            $this->AuthService->checkAuth(0,$request);
-            $array = array();
-            $data = json_decode($request->getContent(), true);
-            $data = $data["data"];
-            $fact = new DataWorkflow();
-            $fact->setData($data);
-            $this->em->persist($fact);
-            $this->em->flush();
-            $codeStatut="OK";
-        }catch(\Exception $e){
-            $codeStatut = "ERREUR";
-            $respObjects["err"] = $e->getMessage();
-        }
-        $respObjects["codeStatut"] = $codeStatut;
-        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
-        return $this->json($respObjects);
-    }
+
     #[Route('/getModelByType')]
     public function getModelByType(Request $request , workflowRepo $workflowRepo,segementationRepo $segementationRepo ): JsonResponse
     {
@@ -593,4 +574,222 @@ class WorkflowController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
+    
+    #[Route('/saveWorkflow',methods : ["POST"])]
+    public function saveWorkflow(Request $request , workflowRepo $workflowRepo,segementationRepo $segementationRepo ): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR"; 
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $array = array();
+            $data = json_decode($request->getContent(), true);
+            $id = $request->get('id');
+            $workflow = $workflowRepo->getWorkflow($id);
+            if(!$workflow){
+                $codeStatut="NOT_EXIST";
+            }else{
+                $data = $data["data"];
+                $fact = new DataWorkflow();
+                $fact->setData($data);
+                $fact->setIdWorkflow($workflow);
+                $this->em->persist($fact);
+                $this->em->flush();
+                //Save events
+                $this->processWorkflowData($data , $id);
+    
+                $idEvent = $this->workflowRepo->getFirstEvent($id);
+                //Save detail queue
+                $this->workflowRepo->saveQueueWorkflow($id , $idEvent);
+                $workflow = $this->workflowRepo->updateStatutWorkflow($id, 2);
+                $codeStatut="OK";
+            }
+        }catch(\Exception $e){
+            $codeStatut = "ERREUR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    private function processWorkflowData(array $components , $id)
+    {
+        foreach ($components as $component) {
+            if($component['name'] != "Stop" && $component['name'] != "Start" ){
+                $this->createEventAction($component , $id);
+            }
+            $this->processComponent($component , $id);
+        }
+    }
+
+    private function processComponent(array $component , $id)
+    {
+        if (isset($component['branches']) && is_array($component['branches'])) {
+            foreach ($component['branches'] as $branchName => $branchComponents) {
+                foreach ($branchComponents as $branchComponent) {
+                    if($branchComponent['name'] != "Stop" && $branchComponent['name'] != "Start" ){
+                        $this->createEventAction($branchComponent , $id);
+                    }
+                    $this->processComponent($branchComponent , $id);
+                }
+            }
+        }
+    }
+    public function createEventAction($branchComponent , $id){
+        $id_workflow = $this->em->getRepository(Workflow::class)->findOneBy(array("id"=>$id));
+        $entity = new EventAction();
+        $entity->setIdWorkflow($id_workflow);
+        $entity->setCle($branchComponent['id']);
+        $type = 1;
+        
+        $delay = 0;
+        if($branchComponent['id_element'] == 'delay'){
+            $type = 3;
+            $number_of_days =  $branchComponent['name']; 
+            // Use a regular expression to extract the number
+            preg_match('/\d+/', $number_of_days, $matches);
+            $delay = intval($matches[0]);
+        }
+        elseif ($branchComponent['id_element'] == 'Split flow step') {
+            $type = 2;
+        }else if($branchComponent['id_element'] == 'Decision step'){
+            $type = 4;
+        }
+        $entity->setType($type);
+        $event_workflow = null;
+        if($type == 1){
+            $event_workflow = $this->em->getRepository(EvenementWorkflow::class)->findOneBy(array("event"=>$branchComponent['id_element']));
+        }
+        $entity->setIdEvent($event_workflow);
+        $entity->setDelayAction($delay);
+        $this->em->persist($entity);
+        $this->em->flush();
+    }
+    
+  
+    #[Route('/workflowProccess',methods : ["POST"])]
+    public function workflowProccess(Request $request , workflowRepo $workflowRepo,segementationRepo $segementationRepo ): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR"; 
+        try{
+            $workflowListe = $workflowRepo->getWorkflowForProcess();
+            foreach ($workflowListe as $workflow) {
+                $id = $workflow->getId();
+                $statut = $workflow->getIdStatus()->getId();
+                if($statut == 3 || $statut == 1){
+                    /** Start process if not start */
+                    if($statut == 3){
+                        $dateDay = new \DateTime();
+                        $dateDay = $dateDay->format("Y-m-d");
+                        $dateWorkflow = $workflow->getDateStart()->format("Y-m-d");
+                        if($dateDay == $dateWorkflow){
+                            $workflowRepo->updateStatutWorkflow($id , 1);
+                        }
+                    }
+
+                    //Récuperer les actions que il a aucune action 
+                    $listQueue = $workflowRepo->getQueueEvent($id); 
+                    $checkIfUserLibre = $workflowRepo->checkIfUserLibre(); 
+                    for ($i=0; $i < count($listQueue); $i++) {
+                        $eventDetails = $workflowRepo->getEvenmentWorkflow($listQueue[$i]['id_event_action_id']);
+                        if($eventDetails['is_system'] == 1){
+                            //Sauvguarde d'une place pour  
+                        }else{
+                            if(!$checkIfUserLibre){
+                                $workflowRepo->addHistoriqueWorkflow($id , "Aucun utilisateur disponible !");
+                            }else{
+                                $userLibre = $workflowRepo->getUserLibre();
+                                $assignTask = $workflowRepo->assignTask($userLibre , $listQueue[$i]['id'] , 2);
+                                $updateEtatQueue = $workflowRepo->updateStatutQueueEvent( $listQueue[$i]['id'], 3);
+                            }
+                        }
+                    }
+                }
+            }
+            $codeStatut="OK";
+        }catch(\Exception $e){
+            $codeStatut = "ERREUR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/approbationEvent',methods : ["POST"])]
+    public function approbationEvent(Request $request , workflowRepo $workflowRepo ): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR"; 
+        try{
+            $idEventQueue = $request->get('idEventQueue');
+            $idWorkflow = 21;
+            $eventQueue = $workflowRepo->getEventByWorkflow($idEventQueue);
+            $data = $workflowRepo->getDataWorkflow($idWorkflow);
+            $workflowData = $data->getData();
+            $cleEvent = $eventQueue->getIdEventAction()->getCle();
+    
+            $nextStep = $this->getNextStep($workflowData, $cleEvent);
+            
+            if(isset($nextStep['id'])){
+                $actionEvent = $workflowRepo->getEvenmentWorkflow2($nextStep['id'] , $idWorkflow);
+                $eventQueue->setIdEventAction($actionEvent);
+                //Get statuts
+                $statutEvent = $workflowRepo->getStatutQueueEvent(2);
+                //Get status
+                $eventQueue->setIdStatut($actionEvent);
+                $this->em->flush();
+            }
+
+            $codeStatut="OK";
+        }catch(\Exception $e){
+            $codeStatut = "ERREUR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    private function getNextStep(array $workflowData, string $cleEvent)
+    {
+        $nextStep = null;
+        $foundCurrent = false;
+
+        foreach ($workflowData as $index => $component) {
+            // Check if this is the current component
+            if ($component['id'] === $cleEvent) {
+                $foundCurrent = true;
+                // Check if there is a next component in the sequence
+                if (isset($workflowData[$index + 1])) {
+                    $nextStep = $workflowData[$index + 1];
+                }
+                break;
+            }
+
+            // If the component is a switch, check its branches
+            if (isset($component['branches'])) {
+                foreach ($component['branches'] as $branchComponents) {
+                    foreach ($branchComponents as $branchComponent) {
+                        if ($branchComponent['id'] === $cleEvent) {
+                            $foundCurrent = true;
+                            // Check if there is a next component in the branch sequence
+                            if (isset($branchComponents[$index + 1])) {
+                                $nextStep = $branchComponents[$index + 1];
+                            }
+                            break 3; // Exit all loops
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!$foundCurrent) {
+            // Handle case where current component is not found (e.g., error or end of workflow)
+            throw new \Exception("Current component with id $cleEvent not found in workflow data.");
+        }
+        return $nextStep;
+    }
+
 }

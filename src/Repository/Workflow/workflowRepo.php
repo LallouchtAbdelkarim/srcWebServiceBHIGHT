@@ -1,22 +1,29 @@
 <?php
 
 namespace App\Repository\Workflow;
+use App\Entity\DataWorkflow;
+use App\Entity\EvenementWorkflow;
+use App\Entity\EventAction;
 use App\Entity\EventBasedDecision;
 use App\Entity\EventSelect;
 use App\Entity\EventSelectChild;
 use App\Entity\IntermWorkflowSegmentation;
 use App\Entity\NoteWorkflow;
 use App\Entity\ObjectDetail;
+use App\Entity\QueueEvent;
 use App\Entity\ScenarioObjectMapping;
 use App\Entity\Segmentation;
 use App\Entity\ObjectWorkflow;
 use App\Entity\ObjectConnection;
+use App\Entity\StatusWorkflow;
 use App\Entity\Utilisateurs;
 use App\Entity\Scenario;
 use App\Entity\Workflow;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Entity\StatutQueueEvent;
+
 
 class workflowRepo extends ServiceEntityRepository
 {
@@ -105,8 +112,10 @@ class workflowRepo extends ServiceEntityRepository
         $resultList = $stmt->fetchAll();
         return $resultList;
     }
+
     public function getListeSegmentByType($type){
-        $query = $this->em->createQuery('SELECT d FROM App\Entity\Segmentation d WHERE d.id  IN (SELECT IDENTITY(cr.id_segmentaion) FROM App\Entity\IntermWorkflowSegmentation cr WHERE IDENTITY(cr.id_workflow) IS NULL)');
+        $query = $this->em->createQuery('SELECT d FROM App\Entity\Segmentation d WHERE d.id  IN (SELECT IDENTITY(cr.id_segmentaion) FROM App\Entity\IntermWorkflowSegmentation cr WHERE IDENTITY(cr.id_workflow) IS NULL )
+        AND d.id in (SELECT IDENTITY(q.id_segmentation) from App\Entity\Queue q where IDENTITY(q.id_status) = 3 )');
         $resultList = $query->getResult();
 
         if($resultList){
@@ -115,6 +124,7 @@ class workflowRepo extends ServiceEntityRepository
             return null;
         }
     }
+
     public function getModelByType($type){
         switch ($type) {
             case 'Courrier':
@@ -180,11 +190,12 @@ class workflowRepo extends ServiceEntityRepository
         }
     }
     public function createWorkflow($titre , $user , $type){
+        $statut = $this->em->getRepository(StatusWorkflow::class)->find(2);
         $model = new Workflow();
         $model->setTitre($titre);
-        $model->setEtat(0);
         $model->setType($type);
         $model->setIdUser($user);
+        $model->setIdStatus($statut);
         $model->setDateCreation(new \DateTime);
         $this->em->persist($model);
         $this->em->flush();
@@ -393,4 +404,223 @@ class workflowRepo extends ServiceEntityRepository
         $this->em->flush();
         return $entity;
     }
+    private function createEventAction($id_workflow , $cle , $idEvent , $name){
+        if($name != "Stop" && $name != "Start" ){
+            $id_workflow = $this->getWorkflow($id_workflow);
+            $entity = new EventAction();
+            $entity->setIdWorkflow($id_workflow);
+            $entity->setCle($cle);
+            $entity->setIdEvent($idEvent);
+            $this->em->persist($entity);
+            $this->em->flush();
+            return $entity;
+        }
+        return null;
+    }
+    private function getListeSegmentationByWorkflow($id_workflow ){
+        $sql2= "Select * from segmentation s where s.id in (
+            SELECT i.id_segmentaion_id FROM `interm_workflow_segmentation` i 
+            where i.id_workflow_id =  :id_workflow
+        )";
+        $stmt = $this->conn->prepare($sql2);
+        $stmt->bindParam('id_workflow', $id_workflow); 
+        $stmt = $stmt->executeQuery();
+        $resultList = $stmt->fetchAll();
+        return $resultList;
+    }
+    
+    
+    public function saveQueueWorkflow($id , $idEvent){
+        
+        $sql="select q.id from queue q where q.id_segmentation_id in 
+        (select i.id_segmentaion_id from interm_workflow_segmentation i where i.id_workflow_id =:id_workflow) ORDER by q.priority ASC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id_workflow', $id); 
+        $stmt = $stmt->executeQuery();
+        $resultList = $stmt->fetchAll();
+
+        for ($i=0; $i < count($resultList); $i++) { 
+            $idQueue = $resultList[$i]['id'];
+            $sql="select s.entities , s.id from segmentation s where s.id in (select q.id_segmentation_id from queue q where q.id = :idQueue)";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam('idQueue', $idQueue); 
+            $stmt = $stmt->executeQuery();
+            $entities = $stmt->fetchAssociative();
+
+            $listeEntities = json_decode($entities['entities']);
+
+            if(in_array('creance',$listeEntities)){dump('C');
+                $persistDetailQueue = "
+                    INSERT INTO queue_event (`id_event_action_id`,`id_statut_id`, `id_queue_detail`, `statut_workflow`,`type`) 
+                    SELECT 
+                        :idEvent , 2 , qc.id , 0 , 1
+                    FROM debt_force_seg.queue_creance qc where qc.id_queue = :id_queue";
+                $stmt = $this->conn->prepare($persistDetailQueue);
+                $stmt->bindParam('id_queue', $idQueue); 
+                $stmt->bindParam('idEvent', $idEvent); 
+                $stmt = $stmt->executeQuery();
+            }
+
+            if(in_array('dossier',$listeEntities)){
+                $persistDetailQueue = "
+                    INSERT INTO queue_event (`id_event_action_id`,`id_statut_id`, `id_queue_detail`, `statut_workflow`,`type`) 
+                    SELECT 
+                        :idEvent , 2 , qc.id , 0 , 2
+                    FROM debt_force_seg.queue_dossier qc where qc.id_queue = :id_queue";
+                $stmt = $this->conn->prepare($persistDetailQueue);
+                $stmt->bindParam('id_queue', $idQueue); 
+                $stmt->bindParam('idEvent', $idEvent); 
+                $stmt = $stmt->executeQuery();
+            }
+
+            if(in_array('telephone',$listeEntities)){
+                $persistDetailQueue = "
+                    INSERT INTO queue_event (`id_event_action_id`,`id_statut_id`, `id_queue_detail`, `statut_workflow`, `type`) 
+                    SELECT 
+                        :idEvent , 2 , qc.id , 0 , 3
+                    FROM debt_force_seg.queue_telephone qc where qc.id_queue = :id_queue";
+                $stmt = $this->conn->prepare($persistDetailQueue);
+                $stmt->bindParam('id_queue', $idQueue); 
+                $stmt->bindParam('idEvent', $idEvent); 
+                $stmt = $stmt->executeQuery();
+            }
+
+            if(in_array('adresse',$listeEntities)){
+                $persistDetailQueue = "
+                    INSERT INTO queue_event (`id_event_action_id`,`id_statut_id`, `id_queue_detail`, `statut_workflow`,`type`) 
+                    SELECT 
+                        :idEvent , 2 , qc.id , 0 , 4
+                    FROM debt_force_seg.queue_adresse qc where qc.id_queue = :id_queue";
+                $stmt = $this->conn->prepare($persistDetailQueue);
+                $stmt->bindParam('id_queue', $idQueue); 
+                $stmt->bindParam('idEvent', $idEvent); 
+                $stmt = $stmt->executeQuery();
+            }
+
+            if(in_array('debiteur',$listeEntities)){
+                $persistDetailQueue = "
+                    INSERT INTO queue_event (`id_event_action_id`,`id_statut_id`, `id_queue_detail`, `statut_workflow`,`type`) 
+                    SELECT 
+                        :idEvent , 2 , qc.id , 0 , 5
+                    FROM debt_force_seg.queue_debiteur qc where qc.id_queue = :id_queue";
+                $stmt = $this->conn->prepare($persistDetailQueue);
+                $stmt->bindParam('id_queue', $idQueue); 
+                $stmt->bindParam('idEvent', $idEvent); 
+                $stmt = $stmt->executeQuery();
+            }
+        }
+    }
+    public function getFirstEvent($id){dump($id);
+        $sql="select e.id from event_action e where e.id_workflow_id = :id ORDER BY e.id ASC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $id); 
+        $stmt = $stmt->executeQuery();
+        $resultList = $stmt->fetchOne();
+        return $resultList;
+    }
+
+    public function updateStatutWorkflow($id , $etat){
+        $statut = $this->em->getRepository(StatusWorkflow::class)->find(1);
+        $workflow = $this->getWorkflow($id);
+        $workflow->setIdStatus($statut);
+        $this->em->flush();
+    }
+    public function getWorkflowForProcess(){
+        $query = $this->em->createQuery(
+            'SELECT w from App\Entity\Workflow w where (w.id_status = 1 or w.id_status = 3) ORDER BY w.id ASC'
+        );
+        $workflow = $query->getResult();
+        return $workflow;
+    }
+    public function getQueueEvent($id){
+        $sql="SELECT * from queue_event w where (w.id_statut_id = 2) and w.id_event_action_id 
+        in (select e.id from event_action e where e.id_workflow_id = :idWorkflow ) Limit 0,10";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('idWorkflow', $id); 
+        $stmt = $stmt->executeQuery();
+        $workflow = $stmt->fetchAll();
+        return $workflow;
+    }
+    public function checkIfUserLibre(){
+        $sql="SELECT u.id 
+        FROM utilisateurs u 
+        WHERE u.id IN (
+            SELECT q.id_user_id 
+            FROM queue_event_user q 
+            GROUP BY q.id_user_id 
+            HAVING COUNT(q.id_status_id = 2) < 5
+        ) OR u.id not in (SELECT q.id_user_id 
+            FROM queue_event_user q );";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $workflow = $stmt->fetchOne();
+        return $workflow;
+    }
+    public function getUserLibre(){
+        $sql="SELECT u.id 
+        FROM utilisateurs u where id_type_user_id  != 1
+        AND u.id IN (
+            SELECT q.id_user_id 
+            FROM queue_event_user q 
+            GROUP BY q.id_user_id 
+            HAVING COUNT(q.id_status_id = 2) < 5
+        ) OR u.id not in (SELECT q.id_user_id 
+            FROM queue_event_user q );";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $workflow = $stmt->fetchOne();
+        return $workflow;
+    }
+
+    public function getEvenmentWorkflow($id){
+        $sql="SELECT * from evenement_workflow where id = :id ;";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $id); 
+        $stmt = $stmt->executeQuery();
+        $workflow = $stmt->fetchAssociative();
+        return $workflow;
+    }
+    public function addHistoriqueWorkflow($id , $histo){
+        $sql="INSERT INTO `historique_workflow`( `historique`, `id_workflow_id`) VALUES (:histo,:id)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $id); 
+        $stmt->bindParam('histo', $histo); 
+        $stmt = $stmt->executeQuery();
+    }
+    public function assignTask($idUser , $idEvent , $statut){
+        $sql="INSERT INTO `queue_event_user`(`id_queue_event_id`, `id_user_id`, `id_status_id`) VALUES (:idEvent,:idUser,:statut)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('idUser', $idUser); 
+        $stmt->bindParam('idEvent', $idEvent); 
+        $stmt->bindParam('statut', $statut); 
+        $stmt = $stmt->executeQuery();
+        return true;
+    }
+    public function updateStatutQueueEvent($idQueue , $statut){
+        $sql="UPDATE `queue_event` SET `id_statut_id` = :statut WHERE `queue_event`.`id` = :id;";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $idQueue); 
+        $stmt->bindParam('statut', $statut); 
+        $stmt = $stmt->executeQuery();
+        return true;
+    }
+    public function getDataWorkflow($idWorkflow){
+        $statut = $this->em->getRepository(DataWorkflow::class)->findOneBy(['id_workflow'=>$idWorkflow],["id"=>"DESC"]);
+        return $statut;
+    }
+    public function getEventByWorkflow($eventQueue){
+        $entity = $this->em->getRepository(QueueEvent::class)->findOneBy(['id'=>$eventQueue]);
+        return $entity;
+    }
+    public function getEvenmentWorkflow2($cle , $id_workflow){
+        $entity = $this->em->getRepository(EventAction::class)->findOneBy(['cle'=>$cle , 'id_workflow'=>$id_workflow]);
+        return $entity;
+    }
+
+    public function getStatutQueueEvent($idStatut){
+        $entity = $this->em->getRepository(StatutQueueEvent::class)->findOneBy(['id'=>$idStatut]);
+        return $entity;
+    }
+    
+    
 }

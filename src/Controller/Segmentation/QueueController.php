@@ -377,7 +377,6 @@ class QueueController extends AbstractController
             $this->AuthService->checkAuth(0,$request);
             $id_queue = $request->get("id");
             $data = json_decode($request->getContent(), true);
-            // dump($data);
             for ($i=0; $i < count($data) ; $i++) { 
                 # code...
                 $queueRepo->updatePriority($data[$i]["id"] , $data[$i]["priority"]);
@@ -434,10 +433,10 @@ class QueueController extends AbstractController
                         {
                             $sql="UPDATE `queue` SET `id_status_id`='3' WHERE  id = ".$id."";
                             $stmt = $this->conn->prepare($sql)->executeQuery(); 
-                            for ($r=0; $r < count($resultCreance); $r++) { dump($id_segment , $resultCreance[$r]["id"]);
+                            for ($r=0; $r < count($resultCreance); $r++) { 
                                 if($queueRepo->checkCreanceSegment($id_segment , $resultCreance[$r]["id"]) != null){
                                     $sql="insert into debt_force_seg.queue_creance(id_queue,id_creance,id_seg) 
-                                    values (".$id.",".$resultCreance[$r]["id"].",".$id_segment.")";dump($sql);
+                                    values (".$id.",".$resultCreance[$r]["id"].",".$id_segment.")";
                                     $stmt = $this->conn->prepare($sql)->executeQuery();
                                 }
                             }
@@ -473,7 +472,7 @@ class QueueController extends AbstractController
                     {
                         $sql="UPDATE `segmentation` SET `id_status_id`='3' WHERE  id = ".$id."";
                         $stmt = $this->conn->prepare($sql)->executeQuery(); 
-                        for ($r=0; $r < count($resultDossier); $r++) { dump("is");
+                        for ($r=0; $r < count($resultDossier); $r++) { 
                             // if($queueRepo->checkDossierSegment($id_segment , $resultDossier[$r]["id"]) != null){
                                 $sql="insert into `debt_force_seg`.`queue_dossier`(id_queue,id_dossier,id_seg) values(".$id.",".$resultDossier[$r]["id"].",".$id_segment.")";
                                 $stmt = $this->conn->prepare($sql)->executeQuery();
@@ -609,7 +608,7 @@ class QueueController extends AbstractController
                         $queryConditions = $this->getRequeteCreance($id , $groupe , $queryEntities,$queryConditions, $param)["queryConditions"];
                         $queryEntities = $this->getRequeteCreance($id , $groupe , $queryEntities,$queryConditions,$param)["queryEntities"];
                         $param = $this->getRequeteCreance($id , $groupe , $queryEntities,$queryConditions,$param)["param"];
-                        $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ; dump($rqCreance);
+                        $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ; 
 
                         $rqDeb = "SELECT debi.id FROM debt_force_seg.dt_Debiteur debi WHERE debi.id IN (
                             SELECT (t1.id_debiteur_id) 

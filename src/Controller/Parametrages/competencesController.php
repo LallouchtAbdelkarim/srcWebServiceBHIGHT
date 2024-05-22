@@ -2,8 +2,12 @@
 
 namespace App\Controller\Parametrages;
 
+use App\Entity\ActiviteParent;
+use App\Entity\Competence;
 use App\Entity\DetailCompetence;
 use App\Entity\DetailCompetenceFamilles;
+use App\Entity\DetailGroupeCompetence;
+use App\Entity\GroupeCompetence;
 use App\Repository\Parametrages\competenceRepo;
 use App\Service\AuthService;
 use App\Service\MessageService;
@@ -71,20 +75,16 @@ class competencesController extends AbstractController
         $data = json_decode($request->getContent() , true);
         $list_check = $data["data_check"];
         $list_check_famile = $data["data_check_famille"];
+        $dataGroupe = $data["data"];
         $codeStatut = "ERREUR";
-        if(count($list_check) >= 1 && count($list_check_famile) >= 1){
+        if(count($dataGroupe) >= 1 ){
             if(trim($titre) != ""  ){
                 $comp = $competenceRepo->createModel($titre  );
                 if($comp){
                     if($comp){
-                        for ($i=0; $i < count($list_check) ; $i++) { 
-                            $p = $activityRepo->getOneParam($list_check[$i]);
-                            $competenceRepo->createDetailModel($p , $comp); 
-                        }
-                        for ($j=0; $j < count($list_check_famile) ; $j++) { 
-                            # code...
-                            $famille = $activityRepo->getOneTypesOfSParametrages($list_check_famile[$j]["id"]);
-                            $competenceRepo->createDetailCompetenceFamille($famille , $comp); 
+                        for ($i=0; $i < count($dataGroupe) ; $i++) { 
+                            $p = $competenceRepo->getOneGroupeCompetence($dataGroupe[$i]);
+                            $competenceRepo->createDetailModel2($p , $comp); 
                         }
                         $codeStatut="OK";
                     }
@@ -170,20 +170,35 @@ class competencesController extends AbstractController
 
         $list_check = $data["data_check"];
         $list_check_famile = $data["data_check_famille"];
+        $dataGroupe = $data["data"];
         if($comp){
-            if(count($list_check) >= 1 && count($list_check_famile) >= 1){
-                $competenceRepo->resetComp($id);
-                for ($i=0; $i < count($list_check) ; $i++) { 
-                    $p = $activityRepo->getOneParam($list_check[$i]);
-                    $competenceRepo->createDetailModel($p , $comp); 
-                }
-                for ($j=0; $j < count($list_check_famile) ; $j++) { 
-                    # code...
-                    $famille = $activityRepo->getOneTypesOfSParametrages($list_check_famile[$j]["id"]);
-                    $competenceRepo->createDetailCompetenceFamille($famille , $comp); 
-                }
-                $codeStatut="OK";
+            $detailsCompetence = $this->em->getRepository(DetailCompetence::class)->findBy(['id_competence'=>$id]);
+            foreach ($detailsCompetence as $value) {
+                $this->em->remove($value);
             }
+            $this->em->flush();
+
+            for ($i=0; $i < count($dataGroupe) ; $i++) { 
+                $p = $competenceRepo->getOneGroupeCompetence($dataGroupe[$i]);
+                $competenceRepo->createDetailModel2($p , $comp); 
+            }
+                $codeStatut="OK";
+
+
+            
+            // if(count($list_check) >= 1 && count($list_check_famile) >= 1){
+            //     $competenceRepo->resetComp($id);
+            //     for ($i=0; $i < count($list_check) ; $i++) { 
+            //         $p = $activityRepo->getOneParam($list_check[$i]);
+            //         $competenceRepo->createDetailModel($p , $comp); 
+            //     }
+            //     for ($j=0; $j < count($list_check_famile) ; $j++) { 
+            //         # code...
+            //         $famille = $activityRepo->getOneTypesOfSParametrages($list_check_famile[$j]["id"]);
+            //         $competenceRepo->createDetailCompetenceFamille($famille , $comp); 
+            //     }
+            //     $codeStatut="OK";
+            // }
         }else{
             $codeStatut= "NOT_EXIST_M";
         }
@@ -226,32 +241,32 @@ class competencesController extends AbstractController
                 $respObjects["data"]["competence"] = $competence;
                 //Get list param
                 $param_activite = $activityRepo->getParamsActivity();
-                $param_list = array();
-                for($j = 0 ; $j < count($param_activite) ;$j++){
-                    $param_list[$j]["param"] = $param_activite[$j];
-                    $id_param = $param_list[$j]["param"]->getId();
-                    $id_competence = $competence->getId();
-                    $sql="select * from param_activite p where id =".$id_param." and  p.id in (SELECT interm.id_param_id  from detail_competence interm WHERE interm.id_competence_id = ".$id_competence."); ";
-                    $stmt = $this->conn->prepare($sql);
-                    $stmt = $stmt->executeQuery();
-                    $resulatList = $stmt->fetchAllAssociative();
-                    if($resulatList){
-                        $param_list[$j]["check"] =true;
-                    }else{
-                        $param_list[$j]["check"] =false;
-                    }
-                }
-                $familles = [];
-                $comp = $competenceRepo->getFamilles($id_competence);
-                for ($i=0; $i < count($comp); $i++) { 
-                    $familles[$i] = $comp[$i]->getIdFamille();
-                }
-                $respObjects["data"]["familles"] = $familles;
-                $respObjects["data"]["famillesNotSelected"] = $competenceRepo->getCompetencesNotSelected($id_competence);
-                $respObjects["data"]["sousFamillesSelected"] = $competenceRepo->getSousFamillesSelected($id_competence);
+                // $param_list = array();
+                // for($j = 0 ; $j < count($param_activite) ;$j++){
+                //     $param_list[$j]["param"] = $param_activite[$j];
+                //     $id_param = $param_list[$j]["param"]->getId();
+                //     $id_competence = $competence->getId();
+                //     $sql="select * from param_activite p where id =".$id_param." and  p.id in (SELECT interm.id_param_id  from detail_competence interm WHERE interm.id_competence_id = ".$id_competence."); ";
+                //     $stmt = $this->conn->prepare($sql);
+                //     $stmt = $stmt->executeQuery();
+                //     $resulatList = $stmt->fetchAllAssociative();
+                //     if($resulatList){
+                //         $param_list[$j]["check"] =true;
+                //     }else{
+                //         $param_list[$j]["check"] =false;
+                //     }
+                // }
+                // $familles = [];
+                // $comp = $competenceRepo->getFamilles($id_competence);
+                // for ($i=0; $i < count($comp); $i++) { 
+                //     $familles[$i] = $comp[$i]->getIdFamille();
+                // }
+                // $respObjects["data"]["familles"] = $familles;
+                // $respObjects["data"]["famillesNotSelected"] = $competenceRepo->getCompetencesNotSelected($id_competence);
+                // $respObjects["data"]["sousFamillesSelected"] = $competenceRepo->getSousFamillesSelected($id_competence);
                 
 
-                $respObjects["data"]["params"]= $param_list;
+                $respObjects["data"]["params"]= $this->em->getRepository(DetailCompetence::class)->findBy(['id_competence'=>$id]);;
             }else{
                 $codeStatut = "NOT_EXIST_M";
             }
@@ -259,6 +274,160 @@ class competencesController extends AbstractController
             $codeStatut = "EMPTY-DATA";
         }
         $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/competences/addGroupeCompetence',methods: ['POST'])]
+    public function addGroupeCompetence(competenceRepo $competenceRepo , Request $request ,activityRepo $activityRepo ): JsonResponse
+    {
+        $this->AuthService->checkAuth(0,$request);
+        $codeStatut = "ERROR";
+        $respObjects = array();
+        $listParams = $activityRepo->getParamsActivity();
+        $data = json_decode($request->getContent() , true);
+        $titre = $data["titre"];
+        $activites = $data["data"];
+
+        if($titre != '' && !empty($titre) && count($data) >= 1){
+            $competence = $competenceRepo->createGroupeConpetence($titre);
+            if($competence != null){
+                foreach ($activites as $value) {
+                    $activityRepo = $activityRepo->findParentActivity($value);
+                    if($activityRepo != null){
+                        $competenceRepo->createDetailGroupe($competence , $activityRepo);
+                    }
+                }
+                $codeStatut="OK";
+            }else{
+                $codeStatut = "ERROR";
+            }
+        }else{
+            $respObjects["codeStatut"] = "EMPTY-DATA";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/competences/getGroupeCompetence')]
+    public function getCompetence(competenceRepo $competenceRepo , Request $request ,activityRepo $activityRepo ): JsonResponse
+    {
+        $this->AuthService->checkAuth(0,$request);
+        $codeStatut = "ERROR";
+        $respObjects = array();
+        try {
+
+            $data = $competenceRepo->getGroupeCompetence();
+            $respObjects["data"] = $data;
+            $codeStatut = "OK";
+
+        } catch (\Exception $e) {
+            $codeStatut = "ERROR";
+        }
+       
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/competences/deleteGroupeCompetence' , methods: ['POST'])]
+    public function deleteGroupeCompetence(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data = json_decode($request->getContent(), true);
+            $id = $request->get('id');
+            $groupe =  $this->em->getRepository(GroupeCompetence::class)->find($id);
+
+            if($groupe)
+            {
+                $sousGroupe =  $this->em->getRepository(DetailGroupeCompetence::class)->findBy(['id_groupe'=>$groupe->getId()]);
+                foreach ($sousGroupe as $sous) {
+                    $this->em->remove($sous);
+                }
+                $this->em->remove($groupe);
+                $this->em->flush();
+                $codeStatut='OK';
+            }
+            
+        }catch(\Exception $e){
+        $respObjects["error"] = $e->getMessage();
+            $codeStatut="ERROR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/competences/getOneGroupeCompetence')]
+    public function getOneGroupeCompetence(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        // try{
+            $this->AuthService->checkAuth(0,$request);
+            $id = $request->get('id');
+            $result =  $this->em->getRepository(GroupeCompetence::class)->find($id);
+            $sousEtap =  $this->em->getRepository(DetailGroupeCompetence::class)->findBy(['id_groupe'=>$result->getId()]);
+            $data = [
+                "titre"=>$result->getTitre(),
+                "detailGroupeCompetence"=>$sousEtap,
+            ];
+            $respObjects["data"] = $data;
+            $codeStatut="OK";
+        // }catch(\Exception $e){
+        //     $codeStatut="ERROR";
+        // }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/competences/updateGroupeCompetence' , methods: ['POST'])]
+    public function updateGroupeCompetence(activityRepo $activityRepo ,competenceRepo $competenceRepo, SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data = json_decode($request->getContent(), true);
+            $id = $data['id'];
+            $etapSelected =  $this->em->getRepository(GroupeCompetence::class)->find($id);
+            if($etapSelected)
+            {
+                if(isset($data['titre'])  && isset($data['data']))
+                {
+                        
+                    $etapSelected->setTitre($data['titre']);
+                    $sousEtap =  $this->em->getRepository(DetailGroupeCompetence::class)->findBy(['id_groupe'=>$etapSelected->getId()]);
+
+                    foreach ($sousEtap as $sous) {
+                        $this->em->remove($sous);
+                    }
+                    $this->em->flush();
+                    $activites = $data['data'];
+                    foreach ($activites as $value) {
+                        $error=$value;
+                        // $activityRepo = $activityRepo->findParentActivity($value);
+                        $activityRepo = $this->em->getRepository(ActiviteParent::class)->findOneBy(["id"=>$value]);
+                        if($activityRepo != null){
+                            $competenceRepo->createDetailGroupe($etapSelected , $activityRepo);
+                        }
+                    }
+
+                    $codeStatut='OK';
+                   
+                }else{
+                    $codeStatut="EMPTY-DATA";
+                }
+            }
+            
+        }catch(\Exception $e){
+        $respObjects["error"] = $error;
+            $codeStatut="ERROR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["error"] = $error;
+
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }

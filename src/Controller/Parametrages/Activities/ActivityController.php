@@ -6,8 +6,10 @@ use App\Entity\Activite;
 use App\Entity\Etap;
 use App\Entity\EtapActivite;
 use App\Entity\IntermResultatActivite;
+use App\Entity\ParamActivite;
 use App\Entity\ResultatActivite;
 use App\Entity\SousEtap;
+use App\Entity\TypeParametrage;
 use App\Service\AuthService;
 use App\Service\MessageService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -45,7 +47,6 @@ class ActivityController extends AbstractController
         $this->MessageService = $MessageService;
         $this->AuthService = $AuthService;
     }
-   
     
     #[Route('/activities/createParentActivity', methods: ['POST'])]
     public function createParentActivity(activityRepo $activityRepo , Request $request): JsonResponse
@@ -479,29 +480,29 @@ class ActivityController extends AbstractController
     }
     private function buildActiviteTree($activite  ,$id)
     {
-            $activiteNode = [
-                'parent' => $activite,
-                'children' => [],
-            ];
+        $activiteNode = [
+            'parent' => $activite,
+            'children' => [],
+        ];
 
-            if($activite){
-                $interm = $this->em->getRepository(ResultatActivite::class)->findBy(["id_activite"=>$activite->getId()]);
-                
-                foreach ($interm as $intermResultatActivite) {
-                    $resultat = $intermResultatActivite;
-                    $activites =  $this->em->getRepository(IntermResultatActivite::class)->findBy(['id_resultat'=>$intermResultatActivite->getId()]);
-                    $resultatNode = [
-                        'parent' => $resultat,
-                        'children' => []
-                    ];
-                    //Check id activite
-                    for ($i=0; $i < count($activites); $i++) { 
-                        $resultatNode['children'][] = $this->buildActiviteTree($activites[$i]->getIdActivite() ,$id);
-                    }
-                    $activiteNode['children'][] = $resultatNode;
-                }   
+        if($activite){
+            $interm = $this->em->getRepository(ResultatActivite::class)->findBy(["id_activite"=>$activite->getId()]);
+            
+            foreach ($interm as $intermResultatActivite) {
+                $resultat = $intermResultatActivite;
+                $activites =  $this->em->getRepository(IntermResultatActivite::class)->findBy(['id_resultat'=>$intermResultatActivite->getId()]);
+                $resultatNode = [
+                    'parent' => $resultat,
+                    'children' => []
+                ];
+                //Check id activite
+                for ($i=0; $i < count($activites); $i++) { 
+                    $resultatNode['children'][] = $this->buildActiviteTree($activites[$i]->getIdActivite() ,$id);
+                }
+                $activiteNode['children'][] = $resultatNode;
             }   
-            return $activiteNode;
+        }   
+        return $activiteNode;
     }
     private function buildActiviteTreeOld($activite  ,$id)
     {
@@ -794,6 +795,168 @@ class ActivityController extends AbstractController
             
         }catch(\Exception $e){
         $respObjects["error"] = $e->getMessage();
+            $codeStatut="ERROR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/activities/getParametreByFamilles' )]
+    public function getParametreByFamilles(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $id = $request->get('id');
+            $params =  $this->em->getRepository(ParamActivite::class)->findBy(['id_branche'=>$id , 'typeActivite'=>1]);
+            $respObjects['data'] = $params;
+            $codeStatut = "OK";            
+        }catch(\Exception $e){
+            $codeStatut = "ERROR";
+        $respObjects["err"] = $e->getMessage();
+
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects );
+    }
+    #[Route('/activities/saveParametre' ,methods: ['POST'])]
+    public function saveParametre(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data = json_decode($request->getContent(), true);
+
+            $famille =  $this->em->getRepository(TypeParametrage::class)->find($data['famille']);
+            $typeText = $data["typeText"];
+            $codeType = $data["codeType"];
+            $type_select = $data["type_select"];
+            $parametrageSelected = $data['parametrageSelected'];
+            if($famille && $typeText != ""){
+                
+                if($type_select == 1){
+                    $activite_p = $this->em->getRepository(ParamActivite::class)->find($parametrageSelected);
+                    if($activite_p){
+                        $activityRepo->createParam($activite_p->getId() , $codeType , $typeText , $famille , $type_select);
+                        $codeStatut='OK';
+                    }else{
+                        $codeStatut='EMPTY-DATA';
+                    }
+                }else{
+                    $activityRepo->createParam(null , $codeType , $typeText , $famille , $type_select);
+                    $codeStatut='OK';
+                }
+            }else{
+                $codeStatut='EMPTY-DATA';
+            }
+        }catch(\Exception $e){
+            $codeStatut = "ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects );
+    }
+    #[Route('/activities/geltListeParametrages')]
+    public function getListeParametre(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $id = $request->get('id');
+            $id = 1;
+            $result =  $this->em->getRepository(ParamActivite::class)->findBy(['id_branche'=>$id]);
+            $respObjects["data"] = $result;
+            $codeStatut="OK";
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/activities/deleteParametre' , methods: ['POST'])]
+    public function deleteParametre(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $id = $request->get('id');
+            $result =  $this->em->getRepository(ParamActivite::class)->find($id);
+            $this->em->remove($result);
+            $this->em->flush();
+            $codeStatut="OK";
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/activities/updateParametre' , methods: ['POST'])]
+    public function updateParametre(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data = json_decode($request->getContent(), true);
+            $id = $data["id"];
+            $result =  $this->em->getRepository(ParamActivite::class)->find($id);
+            if($result){
+                $codeStatut="OK";
+                $famille =  $this->em->getRepository(TypeParametrage::class)->find($data['famille']);
+                $typeText = $data["typeText"];
+                $codeType = $data["codeType"];
+                $type_select = $data["type_select"];
+                $parametrageSelected = $data['parametrageSelected'];
+                if($famille && $typeText != ""){
+                    if($type_select == 1){
+                        $activite_p = $this->em->getRepository(ParamActivite::class)->find($parametrageSelected);
+                        if($activite_p){
+                            $activityRepo->updateParam($id , $activite_p->getId() , $codeType , $typeText , $famille , $type_select);
+                            $codeStatut='OK';
+                        }else{
+                            $codeStatut='EMPTY-DATA';
+                        }
+                    }else{
+                        $activityRepo->updateParam($id,null , $codeType , $typeText , $famille , $type_select);
+                        $codeStatut='OK';
+                    }
+                }else{
+                    $codeStatut='EMPTY-DATA';
+                }
+            }else{
+                $codeStatut="NOT_EXIST_ELEMENT";
+            }
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+        $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/activities/getOneParametre' )]
+    public function getOneParametre(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $id = $request->get('id');
+            $result =  $this->em->getRepository(ParamActivite::class)->find($id);
+            $respObjects['data'] = $result;
+            
+            $codeStatut="OK";
+        }catch(\Exception $e){
             $codeStatut="ERROR";
         }
         $respObjects["codeStatut"] = $codeStatut;

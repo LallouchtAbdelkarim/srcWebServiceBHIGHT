@@ -19,7 +19,11 @@ class DetailCompetence
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
-    private ?ParamActivite $id_param = null;
+    private ?GroupeCompetence $id_groupe = null;
+
+    // #[ORM\ManyToOne]
+    // #[ORM\JoinColumn(nullable: false)]
+    // private ?ParamActivite $id_param = null;
 
     public function getId(): ?int
     {
@@ -38,14 +42,14 @@ class DetailCompetence
         return $this;
     }
 
-    public function getIdParam(): ?ParamActivite
+    public function getIdGroupe(): ?GroupeCompetence
     {
-        return $this->id_param;
+        return $this->id_groupe;
     }
 
-    public function setIdParam(?ParamActivite $id_param): self
+    public function setIdGroupe(?GroupeCompetence $id_groupe): static
     {
-        $this->id_param = $id_param;
+        $this->id_groupe = $id_groupe;
 
         return $this;
     }

@@ -22,9 +22,6 @@ class Workflow
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $date_creation = null;
 
-    #[ORM\Column]
-    private ?int $etat = null;
-
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     private ?Utilisateurs $id_user = null;
@@ -37,6 +34,9 @@ class Workflow
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $date_start = null;
+
+    #[ORM\ManyToOne]
+    private ?StatusWorkflow $id_status = null;
 
     public function __construct()
     {
@@ -68,18 +68,6 @@ class Workflow
     public function setDateCreation(\DateTimeInterface $date_creation): static
     {
         $this->date_creation = $date_creation;
-
-        return $this;
-    }
-
-    public function getEtat(): ?int
-    {
-        return $this->etat;
-    }
-
-    public function setEtat(int $etat): static
-    {
-        $this->etat = $etat;
 
         return $this;
     }
@@ -117,6 +105,18 @@ class Workflow
     public function setDateStart(?\DateTimeInterface $date_start): static
     {
         $this->date_start = $date_start;
+
+        return $this;
+    }
+
+    public function getIdStatus(): ?StatusWorkflow
+    {
+        return $this->id_status;
+    }
+
+    public function setIdStatus(?StatusWorkflow $id_status): static
+    {
+        $this->id_status = $id_status;
 
         return $this;
     }

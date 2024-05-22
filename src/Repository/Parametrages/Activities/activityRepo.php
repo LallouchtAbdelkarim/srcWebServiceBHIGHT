@@ -4,6 +4,7 @@ namespace App\Repository\Parametrages\Activities;
 
 use App\Entity\Activite;
 use App\Entity\ActiviteParent;
+use App\Entity\DetailGroupeCompetence;
 use App\Entity\Etap;
 use App\Entity\EtapActivite;
 use App\Entity\IntermResultatActivite;
@@ -289,4 +290,26 @@ class activityRepo extends ServiceEntityRepository
             return $etapSelected;
         }
     }
+    public function createParam($activite_p , $code_type , $type , $famille , $typeActivite){
+        $etap = new ParamActivite();
+        $etap->setActiviteP($activite_p);
+        $etap->setType($type);
+        $etap->setCodeType($code_type);
+        $etap->setIdBranche($famille);
+        $etap->setTypeActivite($typeActivite);
+        $this->em->persist($etap);
+        $this->em->flush();
+        return $etap;
+    }
+    public function updateParam($id,$activite_p , $code_type , $type , $famille , $typeActivite){
+        $etap =  $this->em->getRepository(ParamActivite::class)->fin($id);
+        $etap->setActiviteP($activite_p);
+        $etap->setType($type);
+        $etap->setCodeType($code_type);
+        $etap->setIdBranche($famille);
+        $etap->setTypeActivite($typeActivite);
+        $this->em->flush();
+        return $etap;
+    }
+    
 }

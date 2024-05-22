@@ -72,7 +72,7 @@ class SegmentationController extends AbstractController
         $respObjects =array();
         $codeStatut = "ERROR";
         // try{
-            $this->AuthService->checkAuth(0,$request);
+            // $this->AuthService->checkAuth(0,$request);
             $data = json_decode($request->getContent(), true);
             $titre = $data["titre"];
             $description = $data["description"];
@@ -180,9 +180,7 @@ class SegmentationController extends AbstractController
                             // }else{
                             //     $codeStatut = "ERROR-EMPTY-PARAMS";
                             // }
-                            if($codeStatut == "OK"){
                                 $this->sauvguardeSegementation($request , $segementationRepo);
-                            }
                         }
                         else{
                             $codeStatut = "ERROR";
@@ -208,13 +206,13 @@ class SegmentationController extends AbstractController
         $codeStatut = "ERROR";
         $data = json_decode($request->getContent(), true);
         $segment = $segementationRepo->getListeSgementByStatus(1);
-        try {
+        // try {
             for ($s=0; $s < count($segment) ; $s++) {
                 $entities = json_decode($segment[$s]['entities']);
                 
                 if(in_array('creance',$entities))
                 {
-                    $queryEntities = "debt_force_seg.dt_Debiteur deb,debt_force_seg.dt_Creance c";
+                    $queryEntities = "debt_force_seg.dt_debiteur deb,debt_force_seg.dt_creance c";
                     $queryConditions = " ";
                     $param = array();
                     $id = $segment[$s]["id"];
@@ -224,8 +222,9 @@ class SegmentationController extends AbstractController
                     $queryConditions = $requetOutput["queryConditions"];
                     $queryEntities = $requetOutput["queryEntities"];
                     $param = $requetOutput["param"];
-                    
                     if($queryConditions != " "){
+                        $queryEntities = strtolower($queryEntities);
+
                         $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ; 
                         $stmt = $this->conn->prepare($rqCreance);
                         foreach ($param as $key => $value) {
@@ -233,8 +232,7 @@ class SegmentationController extends AbstractController
                         }
                         $stmt = $stmt->executeQuery();
                         $resultCreance = $stmt->fetchAll();
-                        // dump($rqCreance);
-                        // dump($rqCreance);=
+                        
                         if(count($resultCreance) >= 1)
                         {
                             $sql="UPDATE `segmentation` SET `id_status_id`='3' WHERE  id = ".$id."";
@@ -251,7 +249,7 @@ class SegmentationController extends AbstractController
                 }
                 if(in_array('dossier',$entities))
                 {
-                    $queryEntities = "debt_force_seg.dt_Debiteur deb,debt_force_seg.dt_Creance c";
+                    $queryEntities = "debt_force_seg.dt_debiteur deb,debt_force_seg.dt_creance c";
                     $queryConditions = " ";
                     $param = array();
                     $id = $segment[$s]["id"];
@@ -261,6 +259,8 @@ class SegmentationController extends AbstractController
                     $queryConditions = $requetOutput["queryConditions"];
                     $queryEntities = $requetOutput["queryEntities"];
                     $param = $requetOutput["param"];
+                    $queryEntities = strtolower($queryEntities);
+                    
                     $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ; 
 
                     $rqDossier = "SELECT doss.id FROM debt_force_seg.dt_Dossier doss WHERE doss.id IN (
@@ -289,7 +289,7 @@ class SegmentationController extends AbstractController
                 }
                 if(in_array('telephone',$entities))
                 {
-                    $queryEntities = "debt_force_seg.dt_Debiteur deb,debt_force_seg.dt_Creance c";
+                    $queryEntities = "debt_force_seg.dt_debiteur deb,debt_force_seg.dt_creance c";
                     $queryConditions = " ";
                     $param = array();
                     $id = $segment[$s]["id"];
@@ -299,6 +299,8 @@ class SegmentationController extends AbstractController
                     $queryConditions = $requetOutput["queryConditions"];
                     $queryEntities = $requetOutput["queryEntities"];
                     $param = $requetOutput["param"];
+                    $queryEntities = strtolower($queryEntities);
+
                     $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ; 
 
                     $rqTelephone = "SELECT tel1.id FROM debt_force_seg.dt_Telephone tel1 WHERE (tel1.id_debiteur_id) IN (
@@ -332,7 +334,7 @@ class SegmentationController extends AbstractController
                 }
                 if(in_array('adresse',$entities))
                 {
-                    $queryEntities = "Debiteur deb,Creance c";
+                    $queryEntities = "debiteur deb,creance c";
                     $queryConditions = " ";
                     $param = array();
                     $id = $segment[$s]["id"];
@@ -342,9 +344,11 @@ class SegmentationController extends AbstractController
                     $queryConditions = $requetOutput["queryConditions"];
                     $queryEntities = $requetOutput["queryEntities"];
                     $param = $requetOutput["param"];
+                    $queryEntities = strtolower($queryEntities);
+
                     $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ; 
 
-                    $rqAdresse = "SELECT tel1.id FROM Adresse tel1 WHERE (tel1.id_debiteur_id) IN (
+                    $rqAdresse = "SELECT tel1.id FROM adresse tel1 WHERE (tel1.id_debiteur_id) IN (
                         SELECT debi.id FROM Debiteur debi WHERE debi.id IN (
                         SELECT (t1.id_debiteur_id) 
                         FROM Type_Debiteur t1 
@@ -374,7 +378,7 @@ class SegmentationController extends AbstractController
                 {
                     if(in_array('creance',$entities))
                     {
-                        $rqDeb = "SELECT debi.id FROM debt_force_seg.dt_Debiteur debi WHERE debi.id IN (
+                        $rqDeb = "SELECT debi.id FROM debt_force_seg.dt_debiteur debi WHERE debi.id IN (
                             SELECT (t1.id_debiteur) 
                             FROM Type_Debiteur t1 
                             WHERE t1.id_creance IN (".$rqCreance.")
@@ -401,7 +405,7 @@ class SegmentationController extends AbstractController
                         }
                     }
                     else{
-                        $queryEntities = "debt_force_seg.dt_Debiteur deb,debt_force_seg.dt_Creance c";
+                        $queryEntities = "debt_force_seg.dt_debiteur deb,debt_force_seg.dt_creance c";
                         $queryConditions = " ";
                         $param = array();
                         $id = $segment[$s]["id"];
@@ -411,9 +415,10 @@ class SegmentationController extends AbstractController
                         $queryConditions = $requetOutput["queryConditions"];
                         $queryEntities = $requetOutput["queryEntities"];
                         $param = $requetOutput["param"];
-                        $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ; dump($rqCreance);
+                        $queryEntities = strtolower($queryEntities);
+                        $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ; 
 
-                        $rqDeb = "SELECT debi.id FROM Debiteur debi WHERE debi.id IN (
+                        $rqDeb = "SELECT debi.id FROM debiteur debi WHERE debi.id IN (
                             SELECT (t1.id_debiteur_id) 
                             FROM Type_Debiteur t1 
                             WHERE t1.id_creance IN (".$rqCreance.")
@@ -439,9 +444,9 @@ class SegmentationController extends AbstractController
                     }   
                 }
             }
-        } catch (\Exception $e) {
-            $respObjects["err"] = $e->getMessage();
-        }
+        // } catch (\Exception $e) {
+        //     $respObjects["err"] = $e->getMessage();
+        // }
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
@@ -574,7 +579,6 @@ class SegmentationController extends AbstractController
                                 $param['total_restant1' . $k . '_' . $i] = $details[$i]["value1"];
                                 $param['total_restant2' . $k . '_' . $i] = $details[$i]["value2"];
                             }
-
                         }
                     }
                     
@@ -602,13 +606,13 @@ class SegmentationController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Garantie_creance gc") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_garantie_creance gc") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Garantie_creance gc";
+                                $queryEntities .= ",debt_force_seg.dt_garantie_creance gc";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Garantie g") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_garantie g") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Garantie g";
+                                $queryEntities .= ",debt_force_seg.dt_garantie g";
                             } 
 
                             $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." (  c.id = (gc.id_creance_id) and (gc.id_garantie_id) = g.id and  g.type_garantie LIKE :type_garantie".$k."_".$i.") ";
@@ -626,13 +630,13 @@ class SegmentationController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Garantie_creance gc") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_garantie_creance gc") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Garantie_creance gc";
+                                $queryEntities .= ",debt_force_seg.dt_garantie_creance gc";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Garantie g") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_garantie g") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Garantie g";
+                                $queryEntities .= ",debt_force_seg.dt_garantie g";
                             }
 
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
@@ -672,13 +676,13 @@ class SegmentationController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Portefeuille p") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_portefeuille p") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Portefeuille p";
+                                $queryEntities .= ",debt_force_seg.dt_portefeuille p";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Donneur_Ordre dn") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_ponneur_Ordre dn") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Donneur_Ordre dn";
+                                $queryEntities .= ",debt_force_seg.dt_donneur_Ordre dn";
                             }
                             $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." ".$operateur[$k]." ".$operateur1[$i]." (  p.id = (c.id_ptf_id) and (p.id_donneur_ordre_id) = dn.id and  (dn.id_type_id) = :type_donneur".$k."_".$i.") ";
                             $param['type_donneur'.$k.'_'.$i] = $details[$i]["value1"];
@@ -709,13 +713,13 @@ class SegmentationController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Portefeuille p") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_portefeuille p") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Portefeuille p";
+                                $queryEntities .= ",debt_force_seg.dt_portefeuille p";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Donneur_Ordre dn") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_donneur_Ordre dn") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Donneur_Ordre dn";
+                                $queryEntities .= ",debt_force_seg.dt_donneur_Ordre dn";
                             }
                             
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
@@ -748,13 +752,13 @@ class SegmentationController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Portefeuille p") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_portefeuille p") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Portefeuille p";
+                                $queryEntities .= ",debt_force_seg.dt_portefeuille p";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Donneur_Ordre dn") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_donneur_Ordre dn") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Donneur_Ordre dn";
+                                $queryEntities .= ",debt_force_seg.dt_donneur_Ordre dn";
                             }
 
                             // $start = $this->GeneralService->dateStart($details[$i]["value1"]);
@@ -805,9 +809,9 @@ class SegmentationController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Detail_Creance dc") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_detail_Creance dc") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Detail_Creance dc";
+                                $queryEntities .= ",debt_force_seg.dt_detail_Creance dc";
                             }
                             /*$queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = identity(dc.id_creance) and   dc.principale between :VALUE1".$k."_".$i." and :VALUE2".$k."_".$i.") ";
                             $param['VALUE1'.$k.'_'.$i] = $details[$i]["value1"];
@@ -835,9 +839,9 @@ class SegmentationController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Detail_Creance dc") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_detail_Creance dc") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Detail_Creance dc";
+                                $queryEntities .= ",debt_force_seg.dt_detail_Creance dc";
                             }
                             // $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = identity(dc.id_creance) and   dc.frais between :VALUE1".$k."_".$i." and :VALUE2".$k."_".$i.") ";
                             // $param['VALUE1'.$k.'_'.$i] = $details[$i]["value1"];
@@ -866,9 +870,9 @@ class SegmentationController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Detail_Creance dc") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_detail_creance dc") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Detail_Creance dc";
+                                $queryEntities .= ",debt_force_seg.dt_detail_creance dc";
                             }
                             // $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = identity(dc.id_creance) and   dc.interet between :VALUE1".$k."_".$i." and :VALUE2".$k."_".$i.") ";
                             // $param['VALUE1'.$k.'_'.$i] = $details[$i]["value1"];
@@ -909,9 +913,9 @@ class SegmentationController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
                             if(strpos($queryEntities,",debt_force_seg.dt_Telephone tel") == false)
                             {
@@ -2235,6 +2239,5 @@ class SegmentationController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
-    
 }
 

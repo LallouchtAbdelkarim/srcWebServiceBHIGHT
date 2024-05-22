@@ -99,7 +99,7 @@ class AuthentificationController extends AbstractController
         
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
-        // $respObjects["message"] = "OK";
+        
         return $this->json($respObjects);
     }
 

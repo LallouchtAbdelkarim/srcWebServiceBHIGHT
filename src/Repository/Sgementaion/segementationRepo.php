@@ -292,9 +292,7 @@ class segementationRepo extends ServiceEntityRepository
         $stmt = $stmt->executeQuery();
         $resulat = $stmt->fetchAll();
         for ($i=0; $i < count($resulat); $i++) { 
-            # code...
             $array[$i]=$resulat[$i];
-
             $sql="SELECT * FROM seg_critere v WHERE v.id = ".$resulat[$i]["id_critere_id"]."";
             $stmt = $this->conn->prepare($sql);
             $stmt = $stmt->executeQuery();
@@ -305,7 +303,7 @@ class segementationRepo extends ServiceEntityRepository
     }
     public function getMaxSEG(){
         $array = array();
-        $sql="SELECT d.id FROM segmentation d";
+        $sql="SELECT MAX(d.id) FROM segmentation d";
         $stmt = $this->conn->prepare($sql);
         $stmt = $stmt->executeQuery();
         $resulat = $stmt->fetchOne();

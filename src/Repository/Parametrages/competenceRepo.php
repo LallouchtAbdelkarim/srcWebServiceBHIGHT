@@ -11,6 +11,8 @@ use App\Entity\RegleModelFacturation;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Proxies\__CG__\App\Entity\DetailGroupeCompetence;
+use Proxies\__CG__\App\Entity\GroupeCompetence;
 
 class competenceRepo extends ServiceEntityRepository
 {
@@ -121,7 +123,14 @@ class competenceRepo extends ServiceEntityRepository
 
     public function createDetailModel( $p , $comp){
         $interm_param = new DetailCompetence();
-        $interm_param->setIdParam($p);
+        $interm_param->setIdGroupe($p);
+        $interm_param->setIdCompetence($comp);
+        $this->em->persist($interm_param);
+        $this->em->flush();
+    }
+    public function createDetailModel2( $p , $comp){
+        $interm_param = new DetailCompetence();
+        $interm_param->setIdGroupe($p);
         $interm_param->setIdCompetence($comp);
         $this->em->persist($interm_param);
         $this->em->flush();
@@ -133,5 +142,46 @@ class competenceRepo extends ServiceEntityRepository
         $this->em->persist($interm_param);
         $this->em->flush();
         return $interm_param;
+    }
+    public function createGroupeConpetence($titre  ){
+        $data = new GroupeCompetence();
+        $data->setTitre($titre);
+        $data->setDateCreation(new \DateTime);
+        $this->em->persist($data);
+        $this->em->flush();
+        if($data){
+            return $data;
+        }else{
+            return null;
+        }
+    }
+    public function createDetailGroupe($groupe  ,$act){
+        try{
+            $act_res = new DetailGroupeCompetence();
+            $act_res ->setIdGroupe($groupe);
+            $act_res ->setIdActivite($act);
+            $this->em->persist($act_res);
+            $this->em->flush();
+            return $act_res;
+        }catch (\Exception $e){
+            $codeStatut = "ERREUR";
+			return $codeStatut;
+        }
+    }
+    public function getGroupeCompetence(){
+        $model = $this->em->getRepository(GroupeCompetence::class)->findAll();
+        if($model){
+            return $model;
+        }else{
+            return [];
+        }
+    }
+    public function getOneGroupeCompetence($id){
+        $model = $this->em->getRepository(GroupeCompetence::class)->find($id);
+        if($model){
+            return $model;
+        }else{
+            return null;
+        }
     }
 }

@@ -19,6 +19,9 @@ class EvenementWorkflow
     #[ORM\Column(length: 255)]
     private ?string $titre = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $isSystem = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -44,6 +47,18 @@ class EvenementWorkflow
     public function setTitre(string $titre): static
     {
         $this->titre = $titre;
+
+        return $this;
+    }
+
+    public function getIsSystem(): ?int
+    {
+        return $this->isSystem;
+    }
+
+    public function setIsSystem(?int $isSystem): static
+    {
+        $this->isSystem = $isSystem;
 
         return $this;
     }
