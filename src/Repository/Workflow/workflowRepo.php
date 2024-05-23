@@ -431,7 +431,7 @@ class workflowRepo extends ServiceEntityRepository
     
     
     public function saveQueueWorkflow($id , $idEvent){
-        
+        //Select queue of workflow
         $sql="select q.id from queue q where q.id_segmentation_id in 
         (select i.id_segmentaion_id from interm_workflow_segmentation i where i.id_workflow_id =:id_workflow) ORDER by q.priority ASC";
         $stmt = $this->conn->prepare($sql);
@@ -532,6 +532,13 @@ class workflowRepo extends ServiceEntityRepository
         $workflow = $query->getResult();
         return $workflow;
     }
+    public function getWorkflowInProcess(){
+        $query = $this->em->createQuery(
+            'SELECT w from App\Entity\Workflow w where (w.id_status = 1) ORDER BY w.id ASC'
+        );
+        $workflow = $query->getResult();
+        return $workflow;
+    }
     public function getQueueEvent($id){
         $sql="SELECT * from queue_event w where (w.id_statut_id = 2) and w.id_event_action_id 
         in (select e.id from event_action e where e.id_workflow_id = :idWorkflow ) Limit 0,10";
@@ -622,5 +629,56 @@ class workflowRepo extends ServiceEntityRepository
         return $entity;
     }
     
+    public function addHistoriqueQueueEvent($id_queue_event_id , $note  , $etat ,$cle){
+        $sql="INSERT INTO `historique_queue_event`(`id_queue_event_id`, `note`, `date_action`, `etat`) VALUES (:id_queue_event_id, :note, now(), :etat , :cle)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id_queue_event_id', $id_queue_event_id); 
+        $stmt->bindParam('note', $note); 
+        $stmt->bindParam('etat', $etat); 
+        $stmt->bindParam('cle', $cle); 
+        $stmt = $stmt->executeQuery();
+    }
+
+    public function getAllQueueInDelay($idWorkflow){
+        $sql="SELECT * FROM `queue_event` q where q.id_event_action_id  in (select a.id from event_action a where a.type = 3 and a.id_workflow_id = :id)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $idWorkflow); 
+        $stmt = $stmt->executeQuery();
+        $entity = $stmt->fetchAll();
+        return $entity;
+    }
+    public function getDateOfApprovEvent($cle){
+        $sql="SELECT h.id , h.date_action from historique_queue_event h where h.etat = 1 and  h.cle =  :cle  order by h.id desc";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('cle', $cle); 
+        $stmt = $stmt->executeQuery();
+        $entity = $stmt->fetchAssociative();
+        return $entity;
+    }
+    public function addQueueSplit($idEvent , $name , $cle){
+        $sql="INSERT INTO `queue_split`(`id_event_action_id`, `name`, `cle`) VALUES (:idEvent, :name, :cle)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('idEvent', $idEvent); 
+        $stmt->bindParam('name', $name); 
+        $stmt->bindParam('cle', $cle); 
+        $stmt = $stmt->executeQuery();
+
+        $sql="SELECT max(id) from queue_split ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $entity = $stmt->fetchOne();
+        return $entity;
+    }
+
+    public function addSplitQueueDetail($idQueueSplit){
+        $sql="INSERT INTO `queue_split`(`id_event_action_id`, `name`, `cle`) VALUES (:idEvent, :name, :cle)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('idEvent', $idEvent); 
+        $stmt->bindParam('name', $name); 
+        $stmt->bindParam('cle', $cle); 
+        $stmt = $stmt->executeQuery();
+    }
     
+ 
+     
 }
