@@ -283,6 +283,41 @@ class workflowRepo extends ServiceEntityRepository
         $stmt = $this->conn->prepare($sql2);
         $stmt = $stmt->executeQuery();
         $result = $stmt->fetchAssociative();
+        
+        $status = "select * from status_workflow where id = ".$result['id_status_id']."";
+        $stmt = $this->conn->prepare($status);
+        $stmt = $stmt->executeQuery();
+        $resultStatuts = $stmt->fetchAssociative();
+        $result['id_status_id'] = $resultStatuts;
+
+        $sql = "select * from utilisateurs where id = ".$result['id_user_id'];
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $user = $stmt->fetchAssociative();
+
+        $sql = "select * from type_workflow_segmentation where id in (select id_type_id from interm_workflow_segmentation where id_workflow_id =".$result['id'].");";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $interm = $stmt->fetchAssociative();
+
+        $sql = "select * from queue q where q.id_segmentation_id in (select i.id_segmentaion_id from interm_workflow_segmentation i where i.id_workflow_id = ".$result['id'].");";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $queue = $stmt->fetchAll();
+        
+        $resultList["workflow"] = $result;
+        $resultList["user"] = $user;
+        $resultList["interm"] = $interm;
+        $resultList["queue"] = $queue;
+
+        return $resultList;
+    }
+    public function getWorkflowDetails( $id ){
+        $sql2 = "select * from workflow where id = ".$id."";
+        $stmt = $this->conn->prepare($sql2);
+        $stmt = $stmt->executeQuery();
+        $result = $stmt->fetchAssociative();
+        
         $sql = "select * from utilisateurs where id = ".$result['id_user_id'];
         $stmt = $this->conn->prepare($sql);
         $stmt = $stmt->executeQuery();

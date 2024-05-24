@@ -170,17 +170,20 @@ class WorkflowController extends AbstractController
                 }
 
                 if($checkSg){
+
                     $workflow = $workflowRepo->createWorkflow($titre ,$user,$type_select);
                     for ($i=0; $i < count($data['arraySegmentation']); $i++) { 
                         $intermSegWork = $this->em->getRepository(IntermWorkflowSegmentation::class)->findOneBy(["id_workflow"=>null , "id_segmentaion"=>$data['arraySegmentation'] , "id_type" =>$type_select]);
                         $intermSegWork->setIdWorkflow($workflow);
                         $this->em->flush();
                     }
+
                     if($notes != ""){
                         $workflowRepo->createNoteWorkflow($workflow , $notes);
                     }
                     $respObjects["data"]["id"] = $workflow->getId();
                     $codeStatut = "OK";
+
                 }else{
                     $codeStatut="ERROR-SEG1";
                 }
@@ -200,10 +203,35 @@ class WorkflowController extends AbstractController
         $respObjects =array();
         $codeStatut = "ERROR";
         try{
-            $this->AuthService->checkAuth(0,$request);
+            // $this->AuthService->checkAuth(0,$request);
             $data = json_decode($request->getContent(), true);
 
             $workflow = $workflowRepo->getWorkflow2($id);
+            if($workflow)
+            {
+                $respObjects['data'] = $workflow;
+                $codeStatut="OK";
+            }else{
+                $codeStatut="NOT_EXIST";
+            }
+        }catch(\Exception $e){
+            $codeStatut = "ERREUR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    public function getWorkflowDetails(Request $request ,$id, workflowRepo $workflowRepo ,segementationRepo $segementationRepo ): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data = json_decode($request->getContent(), true);
+
+            $workflow = $workflowRepo->getWorkflowDetails($id);
             if($workflow)
             {
                 $respObjects['data'] = $workflow;
@@ -967,6 +995,32 @@ class WorkflowController extends AbstractController
     
                 $codeStatut="OK";
             }
+        }catch(\Exception $e){
+            $codeStatut = "ERREUR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    
+    #[Route('/approbationDecision',methods : ["POST"])]
+    public function approbationDecision(Request $request , workflowRepo $workflowRepo ): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR"; 
+        try{
+            //Abrovation step 
+            $this->AuthService->checkAuth(0,$request);
+            $idEventQueue = $request->get('idEventQueue');
+            $idWorkflow =  $request->get('idWorkflow');
+            //$idEtap =  $request->get('idEtap');
+            $eventQueue = $workflowRepo->getEventByWorkflow($idEventQueue);
+            // I wil save any add result or etap 
+            
+
+            $codeStatut="OK";
+
         }catch(\Exception $e){
             $codeStatut = "ERREUR";
             $respObjects["err"] = $e->getMessage();
