@@ -7,9 +7,12 @@ use App\Entity\DetailCritereSegment;
 use App\Entity\DetailsSeg;
 use App\Entity\GroupeCritere;
 use App\Entity\IntermGroupeCritere;
+use App\Entity\QueueSplit;
 use App\Entity\SegCritere;
 use App\Entity\Segmentation;
 use App\Entity\SegGroupeCritere;
+use App\Entity\SplitCritere;
+use App\Entity\SplitGroupeCritere;
 use App\Entity\StatusSeg;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Connection;
@@ -100,6 +103,7 @@ class segementationRepo extends ServiceEntityRepository
         $this->em->flush();
         return $model;
     }
+
     public function getCritereMultiple(){
         $sql="SELECT id FROM `param_critere` where type='multiple_check' ";
         $stmt = $this->conn->prepare($sql);
@@ -313,5 +317,35 @@ class segementationRepo extends ServiceEntityRepository
         return 0;
     }
     
+    public function createGroupeCritereRepoSplit($groupe , $id_seg , $priority){
+        $seg = $this->em->getRepository(QueueSplit::class)->findOneBy(["id"=>$id_seg]);
+        $model = new SplitGroupeCritere();
+        $model->setGroupe($groupe);
+        $model->setIdQueueSplit($seg);
+        // $model->setPriority($priority);
+        $this->em->persist($model);
+        $this->em->flush();
+        return $model;
+    }
+    public function createCritereSplit($critere , $id_groupe , $type){
+        $model = new SplitCritere();
+        $model->setCritere($critere);
+        $model->setIdGroupe($id_groupe);
+        $model->setType($type);
+        $this->em->persist($model);
+        $this->em->flush();
+        return $model;
+    }
 
+    public function createValuesSplit($value1 ,$value2 ,$id_critere,$action,$value_view){
+        $sql="INSERT INTO `split_values_critere`( `value1`, `value2`, `id_split_critere_id`,`action`,`value`) VALUES (:value1,:value2,:id_critere,:action,:value_view)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(":value1",$value1);
+        $stmt->bindValue(":value2",$value2);
+        $stmt->bindValue(":id_critere",$id_critere);
+        $stmt->bindValue(":action",$action);
+        $stmt->bindValue(":value_view",$value_view);
+        $stmt = $stmt->executeQuery();   
+        return $stmt;     
+    }
 }

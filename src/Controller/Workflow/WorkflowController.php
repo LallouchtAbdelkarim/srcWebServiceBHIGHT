@@ -31,6 +31,8 @@ class WorkflowController extends AbstractController
     private $conn;
     public $em;
 
+    public $segementationRepo;
+
 
     public function __construct(
         AuthService $AuthService,
@@ -398,9 +400,11 @@ class WorkflowController extends AbstractController
     
                     $detialId = $data[$i]["event_select"];
                     $detailObjet = $this->workflowRepo->getDeailObject($detialId);
+
                     if($detailObjet){
                         $this->workflowRepo->createEventBasedSelect($event_based , $detailObjet);
                     }
+
                     $detailsCheck = $data[$i]["event_check"];
                     for ($j=0; $j < count($detailsCheck) ; $j++) { 
                         $detailObjet = $this->workflowRepo->getDeailObject($detailsCheck[$j]);
@@ -585,20 +589,20 @@ class WorkflowController extends AbstractController
     {
         $respObjects =array();
         $codeStatut = "ERROR"; 
-        try{
+        // try{
             $this->AuthService->checkAuth(0,$request);
             $array = array();
-            $data = json_decode($request->getContent(), true);
+            $dataRequest = json_decode($request->getContent(), true);
             $id = $request->get('id');
             $workflow = $workflowRepo->getWorkflow($id);
             if(!$workflow){
                 $codeStatut="NOT_EXIST";
             }else{
-                $data = $data["data"];
-                $fact = new DataWorkflow();
-                $fact->setData($data);
-                $fact->setIdWorkflow($workflow);
-                $this->em->persist($fact);
+                $data = $dataRequest["data"];
+                $dateWorkflow = new DataWorkflow();
+                $dateWorkflow->setData($data);
+                $dateWorkflow->setIdWorkflow($workflow);
+                $this->em->persist($dateWorkflow);
                 $this->em->flush();
                 //Save events
                 $this->processWorkflowData($data , $id);
@@ -607,14 +611,16 @@ class WorkflowController extends AbstractController
                 //Save detail queue
                 $this->workflowRepo->saveQueueWorkflow($id , $idEvent);
                 // $this->saveSplitQueue($data,$id);
+                
+                $this->saveSplitQueue($dataRequest["data"], $id , $dataRequest["dataSplit"]);
 
-                $workflow = $this->workflowRepo->updateStatutWorkflow($id, 2);
+                // $workflow = $this->workflowRepo->updateStatutWorkflow($id, 2);
                 $codeStatut="OK";
             }
-        }catch(\Exception $e){
-            $codeStatut = "ERREUR";
-            $respObjects["err"] = $e->getMessage();
-        }
+        // }catch(\Exception $e){
+        //     $codeStatut = "ERREUR";
+        //     $respObjects["err"] = $e->getMessage();
+        // }
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
@@ -623,7 +629,7 @@ class WorkflowController extends AbstractController
     {
         foreach ($components as $component) {
             if($component['name'] != "Stop" && $component['name'] != "Start" ){
-                $this->createEventAction($component , $id);
+                $this->createEventAction($component , $id );
             }
             $this->processComponent($component , $id);
         }
@@ -635,7 +641,7 @@ class WorkflowController extends AbstractController
             foreach ($component['branches'] as $branchName => $branchComponents) {
                 foreach ($branchComponents as $branchComponent) {
                     if($branchComponent['name'] != "Stop" && $branchComponent['name'] != "Start" ){
-                        $this->createEventAction($branchComponent , $id);
+                        $this->createEventAction($branchComponent , $id );
                     }
                     $this->processComponent($branchComponent , $id);
                 }
@@ -659,7 +665,7 @@ class WorkflowController extends AbstractController
             }else{
                 $data = $workflowRepo->getDataWorkflow($id);
                 $workflowData = $data->getData();
-                $this->saveSplitQueue($workflowData , $id);
+               // $this->saveSplitQueue($workflowData , $id);
                 $codeStatut="OK";
             }
         }catch(\Exception $e){
@@ -670,7 +676,8 @@ class WorkflowController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
-    private function saveSplitQueue(array $components, $id)
+
+    private function saveSplitQueue(array $components, $id , $dataSplit)
     {
         foreach ($components as $component) {
             if ($component['id_element'] == "Split flow step") {
@@ -680,11 +687,23 @@ class WorkflowController extends AbstractController
                             dump($component['branches'][$key][0]['id']);
                             /* Save queue from data */
                             //Code **
+                            
                         } else {
                             $split = $this->workflowRepo->getEvenmentWorkflow2($component['id'], $id);
                             $QueSplit = $this->workflowRepo->addQueueSplit($split->getId(), $key, $component['id']);
                             /* Save queue from origine data */
                             //Code **
+                            // dump($branchComponent);
+                            // dump($dataSplit[]);
+                            $result = null;
+                            
+                            foreach ($dataSplit as $item) {
+                                if ($item['id'] === $component['id']) {
+                                    $result = $item;
+                                    break;
+                                }
+                            }
+                            $this->addDataCritere($QueSplit , $result['data'][0]['data']);
                         }
                     }
                 }
@@ -718,6 +737,96 @@ class WorkflowController extends AbstractController
             }
         }
     }
+
+    private function saveQueueDataFromOrigin(){
+
+    }
+    
+    private function saveQueueDataFromSplit(){
+        
+    }
+
+    private function addDataCritere($splitQueueId,$data_critere){
+        $codeStatut = "ERROR";
+        for ($i=0; $i < count($data_critere); $i++) { 
+            $titre_groupe = $data_critere[$i]["groupe"]["titre_groupe"];
+            $createGroupeQueue = $this->segementationRepo->createGroupeCritereRepoSplit($titre_groupe,$splitQueueId , null);
+            $critere = $data_critere[$i]["critere"];
+            for ($j=0; $j < count($critere); $j++) { 
+                $createQueueCritere = $this->segementationRepo->createCritereSplit($critere[$j]["critere"] , $createGroupeQueue , $critere[$j]["type"]);
+                if($critere[$j]["type"] == 'multiple_check'){
+                    $values = $critere[$j]['values'];
+                    for ($v=0; $v < count($values) ; $v++) {
+                        if(isset($values[$v]["selected"]) && $values[$v]["selected"] == true ){
+                            /*$inArray = false;
+                            for ($a=0; $a < count($arrayMultiple); $a++) {
+                                if($arrayMultiple[$a]['id'] == 888){
+                                        $inArray = true;
+                                        break;
+                                }
+                            }*/
+                            //Si pour il value n'exist ce forme string like type_persone il faut suvguarde value not id_champ
+                            if( $values[$v]["id_critere_id"] == 1 || 
+                                $values[$v]["id_critere_id"] == 17 || 
+                                $values[$v]["id_critere_id"] == 6 || 
+                                $values[$v]["id_critere_id"] == 7 || 
+                                $values[$v]["id_critere_id"] == 11 || 
+                                $values[$v]["id_critere_id"] == 12 || 
+                                $values[$v]["id_critere_id"] == 14 || 
+                                $values[$v]["id_critere_id"] == 15 ||
+                                $values[$v]["id_critere_id"] == 3 ||
+                                $values[$v]["id_critere_id"] == 17 ||
+                                $values[$v]["id_critere_id"] == 20 ||
+                                $values[$v]["id_critere_id"] == 22 ||
+                                $values[$v]["id_critere_id"] == 25 ||
+                                $values[$v]["id_critere_id"] == 26 ||
+                                $values[$v]["id_critere_id"] == 27 ||
+                                $values[$v]["id_critere_id"] == 32 ||
+                                $values[$v]["id_critere_id"] == 35  ||
+                                $values[$v]["id_critere_id"] == 38 || 
+                                $values[$v]["id_critere_id"] == 41 ||
+                                $values[$v]["id_critere_id"] == 42 ||
+                                $values[$v]["id_critere_id"] == 44 
+                                )
+                            {
+                                $value1 =  $values[$v]["id_champ"];
+                                $this->segementationRepo->createValuesSplit($value1 , '' , $createQueueCritere->getId(),null , $values[$v]["value"]);
+                            }
+                            else
+                            {
+                                $value1 =  $values[$v]["value"];
+                                $this->segementationRepo->createValuesSplit($value1 , '' , $createQueueCritere->getId(),null , $values[$v]["value"]);
+                            }
+                        }
+                    }
+                }
+                 
+                if(isset($critere[$j]) && isset($critere[$j]["type"]) && ($critere[$j]["type"] == 'montant' || $critere[$j]["type"] == 'drop_down' )) {
+                    $values = $critere[$j]['values'];
+                    $action = $critere[$j]['action'] ;
+                    for ($q=0; $q < count($values) ; $q++) {
+                        $value1 =  $values["value1"];
+                        $value2 =  $values["value2"] ?? "";
+                    }
+                    $this->segementationRepo->createSegValues($value1 , $value2 , $createQueueCritere->getId(),$action,null);
+                }
+
+                if(isset($critere[$j]) && isset($critere[$j]["type"]) && $critere[$j]["type"] == 'date') {
+                    $values = $critere[$j]['values'];
+                    $action = $critere[$j]['action'] ;
+                    for ($q=0; $q < count($values) ; $q++) {
+                        $value1 =  $values["value1"];
+                        $value2 =  $values["value2"] ?? "";
+                    }
+                    $this->segementationRepo->createSegValues($value1 , $value2 , $createQueueCritere->getId(),$action,null);
+                }
+
+            }
+            // $priority ++;
+            $codeStatut="OK";
+        }
+        return $codeStatut = "OK";
+    }
     
     private function isSplitStep(array $components, $componentId)
     {
@@ -729,7 +838,7 @@ class WorkflowController extends AbstractController
         return false;
     }
 
-    public function createEventAction($branchComponent , $id){
+    public function createEventAction($branchComponent , $id ){
         $id_workflow = $this->em->getRepository(Workflow::class)->findOneBy(array("id"=>$id));
         $entity = new EventAction();
         $entity->setIdWorkflow($id_workflow);
@@ -748,7 +857,12 @@ class WorkflowController extends AbstractController
             $type = 2;
         }else if($branchComponent['id_element'] == 'Decision step'){
             $type = 4;
+            $entity->setIdActivityP($branchComponent['activityDecision']);
+
+            
+
         }
+
         $entity->setType($type);
         $event_workflow = null;
         if($type == 1){
@@ -758,6 +872,12 @@ class WorkflowController extends AbstractController
         $entity->setDelayAction($delay);
         $this->em->persist($entity);
         $this->em->flush();
+        if($type == 4){
+            $getResultsByParent = $this->workflowRepo->getResultsByParent($branchComponent['activityDecision']);
+            for ($i=0; $i < count($getResultsByParent); $i++) { 
+                $this->workflowRepo->saveDetailAction($entity->getId() , $getResultsByParent[$i]['id'] );
+            }
+        }
     }
     
     #[Route('/workflowProccess',methods : ["POST"])]

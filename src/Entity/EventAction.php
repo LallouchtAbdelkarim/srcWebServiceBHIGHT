@@ -30,6 +30,9 @@ class EventAction
     #[ORM\Column(nullable: true)]
     private ?int $delayAction = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $id_activity_p = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -91,6 +94,18 @@ class EventAction
     public function setDelayAction(?int $delayAction): static
     {
         $this->delayAction = $delayAction;
+
+        return $this;
+    }
+
+    public function getIdActivityP(): ?int
+    {
+        return $this->id_activity_p;
+    }
+
+    public function setIdActivityP(?int $id_activity_p): static
+    {
+        $this->id_activity_p = $id_activity_p;
 
         return $this;
     }

@@ -19,6 +19,16 @@ class SplitValuesCritere
     #[ORM\Column(length: 255)]
     private ?string $value2 = null;
 
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?SplitCritere $id_split_critere = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $action = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $value = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -44,6 +54,42 @@ class SplitValuesCritere
     public function setValue2(string $value2): static
     {
         $this->value2 = $value2;
+
+        return $this;
+    }
+
+    public function getIdSplitCritere(): ?SplitCritere
+    {
+        return $this->id_split_critere;
+    }
+
+    public function setIdSplitCritere(?SplitCritere $id_split_critere): static
+    {
+        $this->id_split_critere = $id_split_critere;
+
+        return $this;
+    }
+
+    public function getAction(): ?int
+    {
+        return $this->action;
+    }
+
+    public function setAction(?int $action): static
+    {
+        $this->action = $action;
+
+        return $this;
+    }
+
+    public function getValue(): ?string
+    {
+        return $this->value;
+    }
+
+    public function setValue(?string $value): static
+    {
+        $this->value = $value;
 
         return $this;
     }

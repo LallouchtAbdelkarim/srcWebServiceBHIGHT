@@ -837,7 +837,6 @@ class ActivityController extends AbstractController
             $type_select = $data["type_select"];
             $parametrageSelected = $data['parametrageSelected'];
             if($famille && $typeText != ""){
-                
                 if($type_select == 1){
                     $activite_p = $this->em->getRepository(ParamActivite::class)->find($parametrageSelected);
                     if($activite_p){
@@ -862,6 +861,7 @@ class ActivityController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects );
     }
+
     #[Route('/activities/geltListeParametrages')]
     public function getListeParametre(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
     {
@@ -881,6 +881,7 @@ class ActivityController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+    
     #[Route('/activities/deleteParametre' , methods: ['POST'])]
     public function deleteParametre(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
     {

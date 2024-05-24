@@ -679,6 +679,20 @@ class workflowRepo extends ServiceEntityRepository
         $stmt = $stmt->executeQuery();
     }
     
- 
-     
+    public function getResultsByParent($id){
+        $sql="select r.* from resultat_activite r where r.id_activite_id in (select a.id from activite a where a.id_parent_activite_id = :id);";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $id); 
+        $stmt = $stmt->executeQuery();
+        $entity = $stmt->fetchAll();
+        return $entity;
+    }
+
+    public function saveDetailAction($idEvent , $decisionId){
+        $sql="INSERT INTO `detail_event_action`(`id_event_action_id`, `id_decision_step`) VALUES (:idEvent,:decisionId)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('idEvent', $idEvent); 
+        $stmt->bindParam('decisionId', $decisionId); 
+        $stmt = $stmt->executeQuery();
+    }
 }
