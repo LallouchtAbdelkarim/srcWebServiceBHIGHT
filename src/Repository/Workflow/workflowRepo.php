@@ -11,6 +11,7 @@ use App\Entity\IntermWorkflowSegmentation;
 use App\Entity\NoteWorkflow;
 use App\Entity\ObjectDetail;
 use App\Entity\QueueEvent;
+use App\Entity\QueueSplit;
 use App\Entity\ScenarioObjectMapping;
 use App\Entity\Segmentation;
 use App\Entity\ObjectWorkflow;
@@ -484,7 +485,7 @@ class workflowRepo extends ServiceEntityRepository
 
             $listeEntities = json_decode($entities['entities']);
 
-            if(in_array('creance',$listeEntities)){dump('C');
+            if(in_array('creance',$listeEntities)){
                 $persistDetailQueue = "
                     INSERT INTO queue_event (`id_event_action_id`,`id_statut_id`, `id_queue_detail`, `statut_workflow`,`type`) 
                     SELECT 
@@ -545,7 +546,7 @@ class workflowRepo extends ServiceEntityRepository
             }
         }
     }
-    public function getFirstEvent($id){dump($id);
+    public function getFirstEvent($id){
         $sql="select e.id from event_action e where e.id_workflow_id = :id ORDER BY e.id ASC";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam('id', $id); 
@@ -690,12 +691,13 @@ class workflowRepo extends ServiceEntityRepository
         $entity = $stmt->fetchAssociative();
         return $entity;
     }
-    public function addQueueSplit($idEvent , $name , $cle){
-        $sql="INSERT INTO `queue_split`(`id_event_action_id`, `name`, `cle`) VALUES (:idEvent, :name, :cle)";
+    public function addQueueSplit($idEvent , $name , $cle,$isChild){dump($isChild);
+        $sql="INSERT INTO `queue_split`(`id_event_action_id`, `name`, `cle`,`is_child`) VALUES (:idEvent, :name, :cle,".$isChild.")";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam('idEvent', $idEvent); 
         $stmt->bindParam('name', $name); 
         $stmt->bindParam('cle', $cle); 
+        // $stmt->bindParam('ischild', $ischild); 
         $stmt = $stmt->executeQuery();
 
         $sql="SELECT max(id) from queue_split ";
@@ -730,4 +732,44 @@ class workflowRepo extends ServiceEntityRepository
         $stmt->bindParam('decisionId', $decisionId); 
         $stmt = $stmt->executeQuery();
     }
+    public function getCritereSplit($id){
+        $sql2 = "select * from split_groupe_critere where id_queue_split_id = :id ORDER BY priority ASC";
+        $stmt = $this->conn->prepare($sql2);
+        $stmt->bindValue(":id",$id);
+        $stmt = $stmt->executeQuery();
+        $liste_groupe = $stmt->fetchAll();
+        $array_data = [];
+        for ($i=0; $i < count($liste_groupe); $i++) { 
+            $array_data[$i] = $liste_groupe[$i];
+            $groupID = $liste_groupe[$i]["id"];
+            $sql2 = "select * from split_critere where id_groupe_id = " . $groupID;
+            $stmt = $this->conn->prepare($sql2);
+            $stmt = $stmt->executeQuery();
+            $criteria = $stmt->fetchAll();
+            $array_data[$i]["criteres"] = $criteria;
+            for ($j=0; $j < count($array_data[$i]["criteres"]); $j++) { 
+                $critereId = $array_data[$i]["criteres"][$j]["id"];
+                $sql2 = "select * from split_values_critere where id_critere_id = " . $critereId;
+                $stmt = $this->conn->prepare($sql2);
+                $stmt = $stmt->executeQuery();
+                $details = $stmt->fetchAll();
+                $array_data[$i]["criteres"][$j]["details"] = $details;
+            }
+        }
+        return $array_data;
+    }
+    public function getListeSplitQueueById($id){
+        $sql="SELECT * FROM `queue_split` s WHERE s.id = :id";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(":id",$id);
+        $stmt = $stmt->executeQuery();
+        $statut = $stmt->fetchAll();
+        return $statut;
+    }
+    public function getSplitQueueByCle($cle ,$name){
+        $entity = $this->em->getRepository(QueueSplit::class)->findOneBy(['cle'=>$cle , 'name'=>$name ],["cle"=>"DESC"]);
+        return $entity;
+    }
+
 }

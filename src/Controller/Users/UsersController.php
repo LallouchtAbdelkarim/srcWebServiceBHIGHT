@@ -204,7 +204,6 @@ class UsersController extends AbstractController
     #[Route('/delete_profile/{id}', name: 'delete_profile')]
     public function deleteProfile(EntityManagerInterface $entityManager, Request $request, ValidationService $validator, $id): Response
     {
-        
         $respObjects =array();
         $codeStatut="ERROR";
         try {
@@ -551,11 +550,11 @@ class UsersController extends AbstractController
             $response = "Ce profile n'existe pas !";
         } else {
 
-            $existingImagePath = $this->getParameter('kernel.project_dir') . '/public' . $user->getImg();
+            // $existingImagePath = $this->getParameter('kernel.project_dir') . '/public' . $user->getImg();
 
-            if ($existingImagePath !== null && file_exists($existingImagePath)) {
-                unlink($existingImagePath);
-            }
+            // if ($existingImagePath !== null && file_exists($existingImagePath)) {
+            //     unlink($existingImagePath);
+            // }
 
             $entityManager->remove($user);
             $entityManager->flush();

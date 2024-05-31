@@ -649,8 +649,8 @@ class ActivityController extends AbstractController
             if(isset($data['titre'])  && isset($data['arrayEtapApproval']) && isset($data['arrayEtapSuivi']))
             {
                 if(!empty($data['titre']) != "" && count($data['arrayEtapApproval']) == 1 && count($data['arrayEtapSuivi']) >= 1 ){
-                    
-                    $etap = $activityRepo->createEtapParam($data['titre']);
+                    $familles = $data['familles'];
+                    $etap = $activityRepo->createEtapParam($data['titre'],$familles);
                     $arrayEtapApproval = $data['arrayEtapApproval'];
                     $arrayEtapSuivi = $data['arrayEtapSuivi'];
                     for ($i=0; $i < count($arrayEtapApproval); $i++) { 
@@ -696,6 +696,25 @@ class ActivityController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+    #[Route('/activities/getListeEtapByFamille')]
+    public function getListeEtapByFamille(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $famille = $request->get('id');
+            $this->AuthService->checkAuth(0,$request);
+            $result =  $this->em->getRepository(Etap::class)->findBy(['id_famille'=>$famille]);
+            $respObjects["data"] = $result;
+            $codeStatut="OK";
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    
     #[Route('/activities/getOneEtap')]
     public function getOneEtap(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
     {
@@ -708,6 +727,7 @@ class ActivityController extends AbstractController
             $sousEtap =  $this->em->getRepository(SousEtap::class)->findBy(['id_etap'=>$result->getId()]);
             $data = [
                 "titre"=>$result->getTitre(),
+                "familles"=>$result->getIdFamille(),
                 "arrayEtap"=>$sousEtap,
             ];
             $respObjects["data"] = $data;
@@ -736,6 +756,7 @@ class ActivityController extends AbstractController
                     if(!empty($data['titre']) != "" && count($data['arrayEtapApproval']) == 1 && count($data['arrayEtapSuivi']) >= 1 ){
                         
                         $etapSelected->setTitre($data['titre']);
+                        $etapSelected->setIdFamille($data['familles']);
                         $sousEtap =  $this->em->getRepository(SousEtap::class)->findBy(['id_etap'=>$etapSelected->getId()]);
 
                         foreach ($sousEtap as $sous) {

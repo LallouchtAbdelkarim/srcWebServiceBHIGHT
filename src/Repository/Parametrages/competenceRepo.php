@@ -11,8 +11,8 @@ use App\Entity\RegleModelFacturation;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Proxies\__CG__\App\Entity\DetailGroupeCompetence;
-use Proxies\__CG__\App\Entity\GroupeCompetence;
+use App\Entity\DetailGroupeCompetence;
+use App\Entity\GroupeCompetence;
 
 class competenceRepo extends ServiceEntityRepository
 {
@@ -156,17 +156,14 @@ class competenceRepo extends ServiceEntityRepository
         }
     }
     public function createDetailGroupe($groupe  ,$act){
-        try{
-            $act_res = new DetailGroupeCompetence();
-            $act_res ->setIdGroupe($groupe);
-            $act_res ->setIdActivite($act);
-            $this->em->persist($act_res);
-            $this->em->flush();
-            return $act_res;
-        }catch (\Exception $e){
-            $codeStatut = "ERREUR";
-			return $codeStatut;
-        }
+        $act_res = new DetailGroupeCompetence();
+        $act_res ->setIdGroupe($groupe);
+        // $act_res ->setIdActivite($act);
+        $act_res ->setIdFamille($act);
+        $this->em->persist($act_res);
+        $this->em->flush();
+        return $act_res;
+        
     }
     public function getGroupeCompetence(){
         $model = $this->em->getRepository(GroupeCompetence::class)->findAll();

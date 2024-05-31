@@ -242,10 +242,10 @@ class activityRepo extends ServiceEntityRepository
 			return $codeStatut;
         }
     }
-    public function createEtapParam($titre){
+    public function createEtapParam($titre , $familles){
         $etap = new Etap();
         $etap->setTitre($titre);
-        $etap->setIdFamille(0);
+        $etap->setIdFamille($familles);
         $etap->setDateCreation(new \DateTime());
         $this->em->persist($etap);
         $this->em->flush();

@@ -348,4 +348,1433 @@ class segementationRepo extends ServiceEntityRepository
         $stmt = $stmt->executeQuery();   
         return $stmt;     
     }
+    public function getRequeteCreance($id , $groupe,$queryEntities,$queryConditions,$param){
+        for ($j=0; $j < count($groupe) ; $j++) {
+            if(0 == $j)
+            {
+                $operateur0[$j] =" ";
+            }
+            else
+            {
+                $operateur0[$j] = " and ";
+            }
+            
+            if($groupe[$j]['groupe'] == "Creance"){
+                $criteres = $groupe[$j]["criteres"];
+                for ($k= 0; $k < count($criteres);$k++){
+                    if($k==0)
+                    {
+                        $operateur[$k]="";
+                    }
+                    else
+                    {
+                        $operateur[$k]=" and ";
+                    }
+                    if($criteres[$k]["critere"] == "type créance"){
+                        # code...
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            # code...
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( (c.id_type_creance_id) LIKE :type_creance".$k."_".$i.") ";
+                            $param['type_creance'.$k.'_'.$i] = $details[$i]["value1"];
+                        }
+                    }
+                    if($criteres[$k]["critere"] == "date écheance"){
+                        # code...
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            # code...
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            $start = $this->GeneralService->dateStart($details[$i]["value1"]);
+                            $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
+
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $start = $this->GeneralService->dateStart($details[$i]["value1"]);
+                            
+                                // Check if it's "supérieur" or "inférieur" and assign the appropriate operator
+                                $operator = $details[$i]["action"] === "2" ? ">" : "<";
+                                
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.date_echeance $operator :date_echeance" . $k . "_" . $i . ")";
+                                $param['date_echeance' . $k . '_' . $i] = $start;
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $start = $this->GeneralService->dateStart($details[$i]["value1"]);
+                                $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
+                            
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." " . $operateur[$k] . " " . $operateur1[$i] . " (c.date_echeance BETWEEN :date_echeance1" . $k . "_" . $i . " AND :date_echeance2" . $k . "_" . $i . ")";
+                                $param['date_echeance1' . $k . '_' . $i] = $start;
+                                $param['date_echeance2' . $k . '_' . $i] = $end;
+                            }
+                        }
+                    }
+                    if($criteres[$k]["critere"] == "total creance"){
+                        # code...
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            # code...
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            // $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.total_creance between :total_creance1".$k."_".$i." and :total_creance2".$k."_".$i.") ";
+                            // $param['total_creance1'.$k.'_'.$i] = $details[$i]["value1"];
+                            // $param['total_creance2'.$k.'_'.$i] = $details[$i]["value2"];
+
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." " . $operateur[$k] . " " . $operateur1[$i] . " (c.total_creance " . ($details[$i]["action"] === "2" ? ">" : "<") . " :total_creance" . $k . "_" . $i . ")";
+                                $param['total_creance' . $k . '_' . $i] = $details[$i]["value1"];
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.total_creance BETWEEN :total_creance1" . $k . "_" . $i . " AND :total_creance2" . $k . "_" . $i . ")";
+                                $param['total_creance1' . $k . '_' . $i] = $details[$i]["value1"];
+                                $param['total_creance2' . $k . '_' . $i] = $details[$i]["value2"];
+                            }
+                        }
+                    }
+                    if($criteres[$k]["critere"] == "total restant"){
+                        # code...
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            # code...
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.total_restant " . ($details[$i]["action"] === "2" ? ">" : "<") . " :total_restant" . $k . "_" . $i . ")";
+                                $param['total_restant' . $k . '_' . $i] = $details[$i]["value1"];
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.total_restant BETWEEN :total_restant1" . $k . "_" . $i . " AND :total_restant2" . $k . "_" . $i . ")";
+                                $param['total_restant1' . $k . '_' . $i] = $details[$i]["value1"];
+                                $param['total_restant2' . $k . '_' . $i] = $details[$i]["value2"];
+                            }
+                        }
+                    }
+                    
+                }
+            }
+            if($groupe[$j]['groupe'] == "Garantie"){
+                $criteres = $groupe[$j]["criteres"];
+                for ($k= 0; $k < count($criteres);$k++){
+                    if($k==0)
+                    {
+                        $operateur[$k]="";
+                    }
+                    else
+                    {
+                        $operateur[$k]=" and ";
+                    }
+                    if($criteres[$k]["critere"] == "type garantie"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_garantie_creance gc") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_garantie_creance gc";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_garantie g") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_garantie g";
+                            } 
+
+                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." (  c.id = (gc.id_creance_id) and (gc.id_garantie_id) = g.id and  g.type_garantie LIKE :type_garantie".$k."_".$i.") ";
+                            $param['type_garantie'.$k.'_'.$i] = $details[$i]["value1"]; 
+                        }
+                    }
+                    if($criteres[$k]["critere"] == "Taux"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_garantie_creance gc") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_garantie_creance gc";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_garantie g") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_garantie g";
+                            }
+
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ") ." " . $operateur[$k] . " " . $operateur1[$i] . " ( c.id = (gc.id_creance_id) and (gc.id_garantie_id) = g.id and  g.taux " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (gc.id_creance_id) and (gc.id_garantie_id) = g.id and  g.taux BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
+                                $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
+                                $param['value2_' . $k . '_' . $i] = $details[$i]["value2"];
+                            }
+                        }
+                    }
+                    
+                }
+            }
+            if($groupe[$j]['groupe'] == "Donneur ordre"){
+                $criteres = $groupe[$j]["criteres"];
+                for ($k= 0; $k < count($criteres);$k++){
+                    if($k==0)
+                    {
+                        $operateur[$k]="";
+                    }
+                    else
+                    {
+                        $operateur[$k]=" and ";
+                    }
+                    if($criteres[$k]["critere"] == "type donneur ordre"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_portefeuille p") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_portefeuille p";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_ponneur_Ordre dn") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_donneur_Ordre dn";
+                            }
+                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." ".$operateur[$k]." ".$operateur1[$i]." (  p.id = (c.id_ptf_id) and (p.id_donneur_ordre_id) = dn.id and  (dn.id_type_id) = :type_donneur".$k."_".$i.") ";
+                            $param['type_donneur'.$k.'_'.$i] = $details[$i]["value1"];
+                        }
+                    }
+                }
+            }
+            if($groupe[$j]['groupe'] == "Porte feuille"){
+                $criteres = $groupe[$j]["criteres"];
+                for ($k= 0; $k < count($criteres);$k++){
+                    if($k==0)
+                    {
+                        $operateur[$k]="";
+                    }
+                    else
+                    {
+                        $operateur[$k]=" and ";
+                    }
+
+                    if($criteres[$k]["critere"] == "Date début gestion"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_portefeuille p") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_portefeuille p";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_donneur_Ordre dn") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_donneur_Ordre dn";
+                            }
+                            
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $start = $this->GeneralService->dateStart($details[$i]["value1"]);
+                            
+                                // Check if it's "supérieur" or "inférieur" and assign the appropriate operator
+                                $operator = $details[$i]["action"] === "2" ? ">" : "<";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (   p.id = (c.id_ptf_id) and p.date_debut_gestion $operator :date_debut_gestion" . $k . "_" . $i . ")";
+                                $param['date_debut_gestion' . $k . '_' . $i] = $start;
+
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $start = $this->GeneralService->dateStart($details[$i]["value1"]);
+                                $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (    p.id = (c.id_ptf_id) and p.date_debut_gestion BETWEEN :date_debut_gestion1" . $k . "_" . $i . " AND :date_debut_gestion2" . $k . "_" . $i . ")";
+                                $param['date_debut_gestion1' . $k . '_' . $i] = $start;
+                                $param['date_debut_gestion2' . $k . '_' . $i] = $end;
+                            }
+                        }
+                    }
+                    if($criteres[$k]["critere"] == "Date fin gestion"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_portefeuille p") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_portefeuille p";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_donneur_Ordre dn") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_donneur_Ordre dn";
+                            }
+
+                            // $start = $this->GeneralService->dateStart($details[$i]["value1"]);
+                            // $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
+
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $start = $this->GeneralService->dateStart($details[$i]["value1"]);
+                            
+                                // Check if it's "supérieur" or "inférieur" and assign the appropriate operator
+                                $operator = $details[$i]["action"] === "2" ? ">" : "<";
+                                
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " ( p.id = (d.id_ptf_id) and p.date_fin_gestion $operator :date_fin_gestion" . $k . "_" . $i . ")";
+                                $param['date_fin_gestion' . $k . '_' . $i] = $start;
+
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $start = $this->GeneralService->dateStart($details[$i]["value1"]);
+                                $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
+                            
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (  p.id = (d.id_ptf_id) and p.date_fin_gestion BETWEEN :date_fin_gestion1" . $k . "_" . $i . " AND :date_fin_gestion2" . $k . "_" . $i . ")";
+                                $param['date_fin_gestion1' . $k . '_' . $i] = $start;
+                                $param['date_fin_gestion2' . $k . '_' . $i] = $end;
+                            }
+                        }
+                    }
+                }
+            }
+            if($groupe[$j]['groupe'] == "Detail créance"){
+                $criteres = $groupe[$j]["criteres"];
+                for ($k= 0; $k < count($criteres);$k++){
+                    if($k==0)
+                    {
+                        $operateur[$k]="";
+                    }
+                    else
+                    {
+                        $operateur[$k]=" and ";
+                    }
+                    if($criteres[$k]["critere"] == "principale"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_detail_Creance dc") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_detail_Creance dc";
+                            }
+                            /*$queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = identity(dc.id_creance) and   dc.principale between :VALUE1".$k."_".$i." and :VALUE2".$k."_".$i.") ";
+                            $param['VALUE1'.$k.'_'.$i] = $details[$i]["value1"];
+                            $param['VALUE2'.$k.'_'.$i] = $details[$i]["value2"];*/
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.principale " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.principale BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
+                                $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
+                                $param['value2_' . $k . '_' . $i] = $details[$i]["value2"];
+                            }
+                        }
+                    }
+                    if($criteres[$k]["critere"] == "frais"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_detail_Creance dc") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_detail_Creance dc";
+                            }
+                            // $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = identity(dc.id_creance) and   dc.frais between :VALUE1".$k."_".$i." and :VALUE2".$k."_".$i.") ";
+                            // $param['VALUE1'.$k.'_'.$i] = $details[$i]["value1"];
+                            // $param['VALUE2'.$k.'_'.$i] = $details[$i]["value2"];
+
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.frais " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.frais BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
+                                $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
+                                $param['value2_' . $k . '_' . $i] = $details[$i]["value2"];
+                            }
+                        }
+                    }
+                    if($criteres[$k]["critere"] == "interet"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_detail_creance dc") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_detail_creance dc";
+                            }
+                            // $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = identity(dc.id_creance) and   dc.interet between :VALUE1".$k."_".$i." and :VALUE2".$k."_".$i.") ";
+                            // $param['VALUE1'.$k.'_'.$i] = $details[$i]["value1"];
+                            // $param['VALUE2'.$k.'_'.$i] = $details[$i]["value2"];
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.interet " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.interet BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
+                                $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
+                                $param['value2_' . $k . '_' . $i] = $details[$i]["value2"];
+                            }
+                        }
+                    }
+                }
+            }
+            if($groupe[$j]['groupe'] == "Téléphone"){
+                $criteres = $groupe[$j]["criteres"];
+                for ($k= 0; $k < count($criteres);$k++){
+                    if($k==0)
+                    {
+                        $operateur[$k]="";
+                    }
+                    else
+                    {
+                        $operateur[$k]=" and ";
+                    }
+                    if($criteres[$k]["critere"] == "Type téléphone"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Telephone tel") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Telephone tel";
+                            }
+                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)  and (tel.id_debiteur)=deb.id  and  (tel.id_type_tel_id) like :typeTel".$k."_".$i." ) ";
+                            $param['typeTel'.$k.'_'.$i] = $details[$i]["value1"];
+                        }
+                    }
+                    if($criteres[$k]["critere"] == "Status téléphone"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Telephone tel") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Telephone tel";
+                            }
+                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)  and (tel.id_debiteur)=deb.id  and  (tel.id_status_id) like :statusTel".$k."_".$i." ) ";
+                            $param['statusTel'.$k.'_'.$i] = $details[$i]["value1"];
+                        }
+                    }
+                }
+            }
+            if($groupe[$j]['groupe'] == "Adresse"){
+                $criteres = $groupe[$j]["criteres"];
+                for ($k= 0; $k < count($criteres);$k++){
+                    if($k==0)
+                    {
+                        $operateur[$k]="";
+                    }
+                    else
+                    {
+                        $operateur[$k]=" and ";
+                    }
+                    if($criteres[$k]["critere"] == "Type adresse"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Adresse ad") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Adresse ad";
+                            }
+                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)  and (ad.id_debiteur)=deb.id  and  (ad.id_type_adresse_id) like :typeAdresse".$k."_".$i." ) ";
+                            $param['typeAdresse'.$k.'_'.$i] = $details[$i]["value1"];
+                        }
+                    }
+                    if($criteres[$k]["critere"] == "Status adresse"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Adresse ad") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Adresse ad";
+                            }
+                            $queryConditions .=  (0 == $k ? $operateur0[$j] : " ")." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)  and (ad.id_debiteur)=deb.id  and  (ad.id_status_id) like :statusAdr".$k."_".$i." ) ";
+                            $param['statusAdr'.$k.'_'.$i] = $details[$i]["value1"];
+                        }
+                    }
+                }
+            }
+            if($groupe[$j]['groupe'] == "Débiteur"){
+                $criteres = $groupe[$j]["criteres"];
+                for ($k= 0; $k < count($criteres);$k++){
+                    if($k==0)
+                    {
+                        $operateur[$k]="";
+                    }
+                    else
+                    {
+                        $operateur[$k]=" and ";
+                    }
+                    if($criteres[$k]["critere"] == "Personne"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                            }
+                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)  and  deb.type_personne like :VALUE1".$k."_".$i." ) ";
+                            $param['VALUE1'.$k.'_'.$i] = $details[$i]["value1"];
+                        }
+                    }
+                    if($criteres[$k]["critere"] == "Type débiteur"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                            }
+
+                            $start = $this->GeneralService->dateStart($details[$i]["value1"]);
+                            $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
+
+                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)   and  (t.id_type_id) like :VALUE1".$k."_".$i." ) ";
+                            $param['VALUE1'.$k.'_'.$i] = $details[$i]["value1"];
+                        }
+                    }
+                }
+            }
+
+            if($groupe[$j]['groupe'] == "Procédure judiciaire"){
+                $criteres = $groupe[$j]["criteres"];
+                for ($k= 0; $k < count($criteres);$k++){
+                    if($k==0)
+                    {
+                        $operateur[$k]="";
+                    }
+                    else
+                    {
+                        $operateur[$k]=" and ";
+                    }
+                    if($criteres[$k]["critere"] == "Type procédure"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Proc_Creance pc") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Proc_Creance pc";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Proc_Judicaire pj") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Proc_Judicaire pj";
+                            }
+                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (pc.id_creance_id) and (pc.id_proc_id) = pj.id and  pj.type_proc_judicaire LIKE :type_proc_judicaire".$k."_".$i.") ";
+                            $param['type_proc_judicaire'.$k.'_'.$i] = $details[$i]["value1"]; 
+                        }
+                    }
+                }
+            }
+
+            if($groupe[$j]['groupe'] == "Emploi"){
+                $criteres = $groupe[$j]["criteres"];
+                for ($k= 0; $k < count($criteres);$k++){
+                    if($k==0)
+                    {
+                        $operateur[$k]="";
+                    }
+                    else
+                    {
+                        $operateur[$k]=" and ";
+                    }
+                    if($criteres[$k]["critere"] == "Status emploi"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Emploi em") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Emploi em";
+                            }
+                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id) and t.id_debiteur = (em.id_debiteur_id) and (em.id_status_id) like :status_emploi".$k."_".$i." ) ";
+                            $param['status_emploi'.$k.'_'.$i] = $details[$i]["value1"]; 
+                        }
+                    }
+                    if($criteres[$k]["critere"] == "Date début"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Emploi em") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Emploi em";
+                            }
+
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (t.id_creance_id) AND t.id_debiteur = (em.id_debiteur_id) AND (em.id_status_id) AND em.dateDebut " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (t.id_creance_id) AND t.id_debiteur = (em.id_debiteur_id) AND (em.id_status_id) AND em.dateDebut BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
+                                $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
+                                $param['value2_' . $k . '_' . $i] = $details[$i]["value2"];
+                            }
+                            
+                        }
+                    }
+
+                    if($criteres[$k]["critere"] == "Date fin"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Emploi em") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Emploi em";
+                            }
+
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (t.id_creance_id) AND t.id_debiteur = (em.id_debiteur_id) AND (em.id_status_id) AND em.dateFin " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (t.id_creance_id) AND t.id_debiteur = (em.id_debiteur_id) AND (em.id_status_id) AND em.dateFin BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
+                                $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
+                                $param['value2_' . $k . '_' . $i] = $details[$i]["value2"];
+                            }
+                        }
+                    }
+                }
+            }
+
+            if($groupe[$j]['groupe'] == "Employeur"){
+                $criteres = $groupe[$j]["criteres"];
+                for ($k= 0; $k < count($criteres);$k++){
+                    if($k==0)
+                    {
+                        $operateur[$k]="";
+                    }
+                    else
+                    {
+                        $operateur[$k]=" and ";
+                    }
+                    if($criteres[$k]["critere"] == "Status employeur"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Employeur emp") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Employeur emp";
+                            }
+                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id) and t.id_debiteur = (emp.id_debiteur_id) and (emp.id_status_id) like :status_employeur".$k."_".$i." ) ";
+                            $param['status_employeur'.$k.'_'.$i] = $details[$i]["value1"]; 
+                        }
+                    }
+                    
+                }
+            }
+            if($groupe[$j]['groupe'] == "Accord"){
+                $criteres = $groupe[$j]["criteres"];
+                for ($k= 0; $k < count($criteres);$k++){
+                    if($k==0)
+                    {
+                        $operateur[$k]="";
+                    }
+                    else
+                    {
+                        $operateur[$k]=" and ";
+                    }
+                    if($criteres[$k]["critere"] == "Status accord"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Accord ac") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Accord ac";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Creance_Accord ca") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Creance_Accord ca";
+                            }
+                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." (  c.id = (ca.id_creance_id) and (ac.id_status_id) like :status_accord".$k."_".$i." ) ";
+                            $param['status_accord'.$k.'_'.$i] = $details[$i]["value1"]; 
+                        }
+                    }
+                    if($criteres[$k]["critere"] == "Date création"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Accord ac") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Accord ac";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Creance_Accord ca") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Creance_Accord ca";
+                            }
+
+                            $start = $this->GeneralService->dateStart($details[$i]["value1"]);
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.dateCreation " . ($details[$i]["action"] === "2" ? ">" : "<") . " :dateStart_" . $k . "_" . $i . ")";
+                                $param['dateStart_' . $k . '_' . $i] = $start;
+                            } elseif ($details[$i]["action"] === "1") {
+                                $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
+                                // If "between"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.dateCreation BETWEEN :dateStart_" . $k . "_" . $i . " AND :dateFin_" . $k . "_" . $i . ")";
+                                $param['dateStart_' . $k . '_' . $i] = $start;
+                                $param['dateFin_' . $k . '_' . $i] = $end;
+                            }
+                        }
+                    }
+
+                    if($criteres[$k]["critere"] == "Montant"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Accord ac") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Accord ac";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Creance_Accord ca") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Creance_Accord ca";
+                            }
+
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.montant " . ($details[$i]["action"] === "2" ? ">" : "<") . " :valueMontant1_" . $k . "_" . $i . ")";
+                                $param['valueMontant1_' . $k . '_' . $i] = $details[$i]["value1"];
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.montant BETWEEN :valueMontant1_" . $k . "_" . $i . " AND :valueMontant2_" . $k . "_" . $i . ")";
+                                $param['valueMontant1_' . $k . '_' . $i] =  $details[$i]["value1"];
+                                $param['valueMontant2_' . $k . '_' . $i] =  $details[$i]["value2"];
+                            }
+                        }
+                    }
+
+                    if($criteres[$k]["critere"] == "Montant à payer"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Accord ac") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Accord ac";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Creance_Accord ca") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Creance_Accord ca";
+                            }
+
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.montant_a_payer " . ($details[$i]["action"] === "2" ? ">" : "<") . " :valueMontant1_" . $k . "_" . $i . ")";
+                                $param['valueMontant1_' . $k . '_' . $i] = $details[$i]["value1"];
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.montant_a_payer BETWEEN :valueMontant1_" . $k . "_" . $i . " AND :valueMontant2_" . $k . "_" . $i . ")";
+                                $param['valueMontant1_' . $k . '_' . $i] =  $details[$i]["value1"];
+                                $param['valueMontant2_' . $k . '_' . $i] =  $details[$i]["value2"];
+                            }
+                        }
+                    }
+                }
+            }
+            if($groupe[$j]['groupe'] == "Paiement"){
+                $criteres = $groupe[$j]["criteres"];
+                for ($k= 0; $k < count($criteres);$k++){
+                    if($k==0)
+                    {
+                        $operateur[$k]="";
+                    }
+                    else
+                    {
+                        $operateur[$k]=" and ";
+                    }
+                    if($criteres[$k]["critere"] == "Type paiement"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Accord ac") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Accord ac";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Paiement pm") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Paiement pm";
+                            }
+                            
+                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." (  c.id = (pm.id_creance_id) and (pm.id_type_paiement_id) like :typeP".$k."_".$i." ) ";
+                            $param['typeP'.$k.'_'.$i] = $details[$i]["value1"]; 
+                        }
+                    }
+
+                    if($criteres[$k]["critere"] == "Date paiement"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Accord ac") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Accord ac";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Paiement pm") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Paiement pm";
+                            }
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $start = $this->GeneralService->dateStart($details[$i]["value1"]);
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (pm.id_creance_id) AND pm.date_paiement " . ($details[$i]["action"] === "2" ? ">" : "<") . " :dateStart_" . $k . "_" . $i . ")";
+                                $param['dateStart_' . $k . '_' . $i] = $start;
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $start = $this->GeneralService->dateStart($details[$i]["value1"]);
+                                $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (pm.id_creance_id) AND pm.date_paiement BETWEEN :dateStart_" . $k . "_" . $i . " AND :dateFin_" . $k . "_" . $i . ")";
+                                $param['dateStart_' . $k . '_' . $i] = $start;
+                                $param['dateFin_' . $k . '_' . $i] = $end;
+                            }
+                        }
+                    }
+                    
+                    if($criteres[$k]["critere"] == "Montant de paiment"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Accord ac") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Accord ac";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Paiement pm") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Paiement pm";
+                            }
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (pm.id_creance_id) AND pm.montant " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $param['dateStart_' . $k . '_' . $i] = $details[$i]["value1"];
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (pm.id_creance_id) AND pm.montant BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
+                                $param['value1_' . $k . '_' . $i] =  $details[$i]["value1"];
+                                $param['value2_' . $k . '_' . $i] = $details[$i]["value2"];
+                            }
+                        }
+                    }
+                }
+            }
+            if($groupe[$j]['groupe'] == "Dossier"){
+                $criteres = $groupe[$j]["criteres"];
+                for ($k= 0; $k < count($criteres);$k++){
+                    if($k==0)
+                    {
+                        $operateur[$k]="";
+                    }
+                    else
+                    {
+                        $operateur[$k]=" and ";
+                    }
+                    if($criteres[$k]["critere"] == "Qualification dossier"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Dossier dss") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Dossier dss";
+                            }
+                            
+                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." (  dss.id = (c.id_dossier_id)  and  (dss.id_qualification_id) = :qualification".$k."_".$i.") ";
+                            $param['qualification'.$k.'_'.$i] = $details[$i]["value1"]; 
+                        }
+                    }
+                }
+            }
+            if($groupe[$j]['groupe'] == "Activités"){
+                $criteres = $groupe[$j]["criteres"];
+                for ($k= 0; $k < count($criteres);$k++){
+                    if($k==0)
+                    {
+                        $operateur[$k]="";
+                    }
+                    else
+                    {
+                        $operateur[$k]=" and ";
+                    }
+                    if($criteres[$k]["critere"] == "Familles d'activités"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Param_Critere pc") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Param_Critere pc";
+                            }
+                            
+                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( (c.id_activite_id) = :activite".$k."_".$i.") ";
+                            $param['activite'.$k.'_'.$i] = $details[$i]["value1"]; 
+                        }
+                    }
+                }
+            }
+            if($groupe[$j]['groupe'] == "Facture"){
+                $criteres = $groupe[$j]["criteres"];
+                for ($k= 0; $k < count($criteres);$k++){
+                    if($k==0)
+                    {
+                        $operateur[$k]="";
+                    }
+                    else
+                    {
+                        $operateur[$k]=" and ";
+                    }   
+                    if($criteres[$k]["critere"] == "Année"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Facture f") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Facture f";
+                            }
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $start = $this->GeneralService->yearStart($details[$i]["value1"]);
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (f.id_creance_id) AND f.date_creation " . ($details[$i]["action"] === "2" ? ">" : "<") . " :dateStart_" . $k . "_" . $i . ")";
+                                $param['dateStart_' . $k . '_' . $i] = $start;
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $start = $this->GeneralService->yearStart($details[$i]["value1"]);
+                                $end = $this->GeneralService->yearEnd($details[$i]["value2"]);
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (f.id_creance_id) AND f.date_creation BETWEEN :dateStart_" . $k . "_" . $i . " AND :dateFin_" . $k . "_" . $i . ")";
+                                $param['dateStart_' . $k . '_' . $i] = $start;
+                                $param['dateFin_' . $k . '_' . $i] = $end;
+                            }
+                        }
+                    }
+                    if($criteres[$k]["critere"] == "Total TTC"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Facture f") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Facture f";
+                            }
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $montant1 = $details[$i]["value1"];
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (f.id_creance_id) AND f.total_ttc " . ($details[$i]["action"] === "2" ? ">" : "<") . " :totalTtc_" . $k . "_" . $i . ")";
+                                $param['totalTtc_' . $k . '_' . $i] = $montant1;
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $montant1 =  $details[$i]["value1"];
+                                $montant2 =  $details[$i]["value2"];
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (f.id_creance_id) AND f.total_ttc BETWEEN :totalTtc_1" . $k . "_" . $i . " AND :totalTtc_2" . $k . "_" . $i . ")";
+                                $param['totalTtc_1' . $k . '_' . $i] = $montant1;
+                                $param['totalTtc_2' . $k . '_' . $i] = $montant2;
+                            }
+                        }
+                    }
+                    if($criteres[$k]["critere"] == "Type paiement"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Facture f") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Facture f";
+                            }
+                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." (  c.id = (f.id_creance_id) AND (f.id_type_paiement_id) like :typeP".$k."_".$i." ) ";
+                            $param['typeP'.$k.'_'.$i] = $details[$i]["value1"];  
+                        }
+                    }
+                    if($criteres[$k]["critere"] == "Status"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Facture f") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Facture f";
+                            }
+                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." (  c.id = (f.id_creance_id) AND (f.id_status_id) like :statusP".$k."_".$i." ) ";
+                            $param['statusP'.$k.'_'.$i] = $details[$i]["value1"];  
+                        }
+                    }
+                    if($criteres[$k]["critere"] == "Taux_honoraire"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Facture f") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Facture f";
+                            }
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $montant1 = $details[$i]["value1"];
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " ( c.taux_honoraire " . ($details[$i]["action"] === "2" ? ">" : "<") . " :taux_honoraire_" . $k . "_" . $i . ")";
+                                $param['taux_honoraire_' . $k . '_' . $i] = $montant1;
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $montant1 =  $details[$i]["value1"];
+                                $montant2 =  $details[$i]["value2"];
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " ( c.taux_honoraire BETWEEN :totalTtc_1" . $k . "_" . $i . " AND :totalTtc_2" . $k . "_" . $i . ")";
+                                $param['totalTtc_1' . $k . '_' . $i] = $montant1;
+                                $param['totalTtc_2' . $k . '_' . $i] = $montant2;
+                            }
+                        }
+                    }
+
+                    if($criteres[$k]["critere"] == "Honoraire_petentiel"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Facture f") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Facture f";
+                            }
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $montant1 = $details[$i]["value1"];
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (  c.honoraire_petentiel " . ($details[$i]["action"] === "2" ? ">" : "<") . " :honoraire_" . $k . "_" . $i . ")";
+                                $param['honoraire_' . $k . '_' . $i] = $montant1;
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $montant1 =  $details[$i]["value1"];
+                                $montant2 =  $details[$i]["value2"];
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (  c.honoraire_petentiel BETWEEN :honoraire__1" . $k . "_" . $i . " AND :honoraire__2" . $k . "_" . $i . ")";
+                                $param['honoraire__1' . $k . '_' . $i] = $montant1;
+                                $param['honoraire__2' . $k . '_' . $i] = $montant2;
+                            }
+                        }
+                    }
+                    if($criteres[$k]["critere"] == "Honoraire_facturé"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Facture f") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Facture f";
+                            }
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $montant1 = $details[$i]["value1"];
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " ( c.id = (f.id_creance_id) AND c.honoraire_facture " . ($details[$i]["action"] === "2" ? ">" : "<") . " :honoraire_" . $k . "_" . $i . ")";
+                                $param['honoraire_' . $k . '_' . $i] = $montant1;
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $montant1 =  $details[$i]["value1"];
+                                $montant2 =  $details[$i]["value2"];
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " ( c.id = (f.id_creance_id) AND c.honoraire_facture BETWEEN :honoraire__1" . $k . "_" . $i . " AND :honoraire__2" . $k . "_" . $i . ")";
+                                $param['honoraire__1' . $k . '_' . $i] = $montant1;
+                                $param['honoraire__2' . $k . '_' . $i] = $montant2;
+                            }
+                        }
+                    }
+                    if($criteres[$k]["critere"] == "Honoraire_petentiel_restant"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Facture f") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Facture f";
+                            }
+                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $montant1 = $details[$i]["value1"];
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (  c.honoraire_restant " . ($details[$i]["action"] === "2" ? ">" : "<") . " :honoraire_" . $k . "_" . $i . ")";
+                                $param['honoraire_' . $k . '_' . $i] = $montant1;
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $montant1 =  $details[$i]["value1"];
+                                $montant2 =  $details[$i]["value2"];
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (  c.honoraire_restant BETWEEN :honoraire__1" . $k . "_" . $i . " AND :honoraire__2" . $k . "_" . $i . ")";
+                                $param['honoraire__1' . $k . '_' . $i] = $montant1;
+                                $param['honoraire__2' . $k . '_' . $i] = $montant2;
+                            }
+                        }
+                    }
+
+                }
+            }
+            if($groupe[$j]['groupe'] == "Cadrages"){
+                $criteres = $groupe[$j]["criteres"];
+                for ($k= 0; $k < count($criteres);$k++){
+                    if($k==0)
+                    {
+                        $operateur[$k]="";
+                    }
+                    else
+                    {
+                        $operateur[$k]=" and ";
+                    }  
+                    if($criteres[$k]["critere"] == "Type de cadrages"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Cadrages cd") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Cadrages cd";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Cadrages_Creance cc") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Cadrages_Creance cc";
+                            }
+                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." (  c.id = (cc.id_creance_id) AND  cd.id = (cc.id_cadrage_id) AND cd.type like :typeCad".$k."_".$i." ) ";
+                            $param['typeCad'.$k.'_'.$i] = $details[$i]["value1"];  
+
+                        }
+                    }
+                    if($criteres[$k]["critere"] == "Date de retour"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Cadrages cd") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Cadrages cd";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Cadrages_Creance cc") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Cadrages_Creance cc";
+                            }
+                            if($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                                // If "supérieur" or "inférieur"
+                                $start = $this->GeneralService->dateStart($details[$i]["value1"]);
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (cc.id_creance_id) AND  cd.id = (cc.id_cadrage_id) AND cd.date_retour " . ($details[$i]["action"] === "2" ? ">" : "<") . " :dateRStart_" . $k . "_" . $i . ")";
+                                $param['dateRStart_' . $k . '_' . $i] = $start;
+                            } elseif ($details[$i]["action"] === "1") {
+                                // If "between"
+                                $start = $this->GeneralService->dateStart($details[$i]["value1"]);
+                                $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (cc.id_creance_id) AND  cd.id = (cc.id_cadrage_id) AND cd.date_retour BETWEEN :dateRStart_" . $k . "_" . $i . " AND :dateRFin_" . $k . "_" . $i . ")";
+                                $param['dateRStart_' . $k . '_' . $i] = $start;
+                                $param['dateRFin_' . $k . '_' . $i] = $end;
+                            }
+                        }
+                    }
+                    if($criteres[$k]["critere"] == "Status de cadrages"){
+                        $details = $criteres[$k]["details"];
+                        for ($i=0; $i < count($details ); $i++) { 
+                            if($i==0)
+                            {
+                                $operateur1[$i]="";
+                            }
+                            else
+                            {
+                                $operateur1[$i]=" or ";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Cadrages cd") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Cadrages cd";
+                            }
+                            if(strpos($queryEntities,",debt_force_seg.dt_Cadrages_Creance cc") == false)
+                            {
+                                $queryEntities .= ",debt_force_seg.dt_Cadrages_Creance cc";
+                            }
+                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." (  c.id = (cc.id_creance_id) AND  cd.id = (cc.id_cadrage_id) AND cd.etat like :etatCad".$k."_".$i." ) ";
+                            $param['etatCad'.$k.'_'.$i] = $details[$i]["value1"];  
+                        }
+                    }
+                    
+                   
+                }
+            }
+        }
+        return ["queryConditions"=>$queryConditions ,"queryEntities"=>$queryEntities , 'param'=>$param ];
+    }
 }

@@ -292,10 +292,15 @@ class competencesController extends AbstractController
             $competence = $competenceRepo->createGroupeConpetence($titre);
             if($competence != null){
                 foreach ($activites as $value) {
-                    $activityRepo = $activityRepo->findParentActivity($value);
-                    if($activityRepo != null){
-                        $competenceRepo->createDetailGroupe($competence , $activityRepo);
-                    }
+                    // $activityRepo = $activityRepo->findParentActivity($value);
+                    $typeParametrage = $activityRepo->getOneTypesOfSParametrages($value);
+                    dump($typeParametrage);
+                    // if($activityRepo != null){
+                    //     $competenceRepo->createDetailGroupe($competence , $activityRepo);
+                    // }
+                    // if($typeParametrage != null){
+                        $competenceRepo->createDetailGroupe($competence , $typeParametrage);
+                    // }
                 }
                 $codeStatut="OK";
             }else{
@@ -408,9 +413,11 @@ class competencesController extends AbstractController
                     foreach ($activites as $value) {
                         $error=$value;
                         // $activityRepo = $activityRepo->findParentActivity($value);
-                        $activityRepo = $this->em->getRepository(ActiviteParent::class)->findOneBy(["id"=>$value]);
-                        if($activityRepo != null){
-                            $competenceRepo->createDetailGroupe($etapSelected , $activityRepo);
+                        // $activityRepo = $this->em->getRepository(ActiviteParent::class)->findOneBy(["id"=>$value]);
+                        $typeParametrage = $activityRepo->getOneTypesOfSParametrages($value);
+                        
+                        if($typeParametrage != null){
+                            $competenceRepo->createDetailGroupe($etapSelected , $typeParametrage);
                         }
                     }
 

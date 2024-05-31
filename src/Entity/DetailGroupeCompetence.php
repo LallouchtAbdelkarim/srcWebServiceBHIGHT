@@ -18,8 +18,12 @@ class DetailGroupeCompetence
     private ?GroupeCompetence $id_groupe = null;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: true)]
     private ?ActiviteParent $id_activite = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?TypeParametrage $idFamille = null;
 
     public function getId(): ?int
     {
@@ -46,6 +50,18 @@ class DetailGroupeCompetence
     public function setIdActivite(?ActiviteParent $id_activite): static
     {
         $this->id_activite = $id_activite;
+
+        return $this;
+    }
+
+    public function getIdFamille(): ?TypeParametrage
+    {
+        return $this->idFamille;
+    }
+
+    public function setIdFamille(?TypeParametrage $idFamille): static
+    {
+        $this->idFamille = $idFamille;
 
         return $this;
     }

@@ -23,6 +23,9 @@ class QueueSplit
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $cle = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $isChild = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -60,6 +63,18 @@ class QueueSplit
     public function setCle(?string $cle): static
     {
         $this->cle = $cle;
+
+        return $this;
+    }
+
+    public function getIsChild(): ?int
+    {
+        return $this->isChild;
+    }
+
+    public function setIsChild(?int $isChild): static
+    {
+        $this->isChild = $isChild;
 
         return $this;
     }
