@@ -56,6 +56,7 @@ class IntegrationController extends AbstractController
     public  $em;
     private $conn;
     public $AuthService;
+    public $MessageService;
     public function __construct(
         integrationRepo $integrationRepo,
         affichageRepo $affichageRepo,
@@ -6702,5 +6703,28 @@ class IntegrationController extends AbstractController
                 $this->em->getConnection()->prepare($sql)->execute();
             }
         }
+    }
+
+    #[Route('/getListeModelExport')]
+    public function getListeModelExport(Request $request , integrationRepo $integrationRepo ): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            
+            $this->AuthService->checkAuth(0,$request);
+            $type = $request->get('type');
+            $model_export = $integrationRepo->getListeModelExport($type);
+            $objet['model_export'] = $model_export;
+            $respObjects["data"] = $objet;
+            $codeStatut="OK";
+
+        }catch(\Exception $e){
+            $codeStatut = "ERREUR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
     }
 }

@@ -1408,4 +1408,31 @@ class WorkflowController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+    #[Route('/getListeFournisseurs')]
+    public function getListeFournisseurs(Request $request , workflowRepo $workflowRepo ): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+          
+            $this->AuthService->checkAuth(0,$request);
+            $fournisseur = $workflowRepo->getListeFournisseurs();
+            $typeAssignation = $workflowRepo->getTypeAssignation();
+
+            $objet['fournisseur'] = $fournisseur;
+            $objet['typeAssignation'] = $typeAssignation;
+
+            $respObjects["data"] = $objet;
+            $codeStatut="OK";
+
+        }catch(\Exception $e){
+            $codeStatut = "ERREUR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+  
 }

@@ -7,7 +7,9 @@ use App\Entity\EventAction;
 use App\Entity\EventBasedDecision;
 use App\Entity\EventSelect;
 use App\Entity\EventSelectChild;
+use App\Entity\Fournisseur;
 use App\Entity\IntermWorkflowSegmentation;
+use App\Entity\ModelExport;
 use App\Entity\NoteWorkflow;
 use App\Entity\ObjectDetail;
 use App\Entity\QueueEvent;
@@ -771,5 +773,9 @@ class workflowRepo extends ServiceEntityRepository
         $entity = $this->em->getRepository(QueueSplit::class)->findOneBy(['cle'=>$cle , 'name'=>$name ],["cle"=>"DESC"]);
         return $entity;
     }
-
+    public function getListeFournisseurs(){
+        $entity = $this->em->getRepository(Fournisseur::class)->findAll();
+        return $entity;
+    }
+    
 }

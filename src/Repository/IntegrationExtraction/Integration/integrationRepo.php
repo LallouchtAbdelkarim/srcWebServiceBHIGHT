@@ -6,6 +6,7 @@ use App\Entity\CorresColu;
 use App\Entity\DetailModelAffichage;
 use App\Entity\ImportType;
 use App\Entity\Integration;
+use App\Entity\ModelExport;
 use App\Entity\ModelImport;
 use App\Entity\Import;
 
@@ -1224,5 +1225,9 @@ class integrationRepo extends ServiceEntityRepository
     public function sauvguardeData($sql){
         $stmt = $this->conn->prepare($sql); 
         $stmt = $stmt->executeQuery();
+    }
+    public function getListeModelExport($type){
+        $entity = $this->em->getRepository(ModelExport::class)->findBy(['type'=>$type]);
+        return $entity;
     }
 }
