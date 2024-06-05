@@ -629,14 +629,16 @@ class WorkflowController extends AbstractController
                 $codeStatut="NOT_EXIST";
             }else{
                 $data = $dataRequest["data"];
+                $dataAcivity = $dataRequest["dataActivitySplit"];
                 $dateWorkflow = new DataWorkflow();
                 $dateWorkflow->setData($data);
+                $dateWorkflow->setDataActivity($dataAcivity);
                 $dateWorkflow->setIdWorkflow($workflow);
                 $this->em->persist($dateWorkflow);
                 $this->em->flush();
                 //Save events
                 $this->processWorkflowData($data , $id);
-    
+                
                 $idEvent = $this->workflowRepo->getFirstEvent($id);
                 //Save detail queue
                 $this->workflowRepo->saveQueueWorkflow($id , $idEvent);
@@ -715,11 +717,9 @@ class WorkflowController extends AbstractController
                     foreach ($branch as $branchComponent) {
                         if ($branchComponent['id_element'] == "Split flow step" ) {
                             //TODO:dump($component['branches'][$key][0]['id']);
-                            dump($component['id']);
                             $splitParent = $this->workflowRepo->getSplitQueueByCle($component['id'],$key);
                             /* Save queue from data */
                             //Code **
-                            dump($component['branches'][$key][0]['id']);
                             $split = $this->workflowRepo->getEvenmentWorkflow2($branchComponent['id'], $id);
                             $QueSplit = $this->workflowRepo->addQueueSplit($split->getId(), $key, $branchComponent['id'] , $splitParent->getId());
                             /* Save queue from origine data */
@@ -739,7 +739,7 @@ class WorkflowController extends AbstractController
                             }
 
                             $this->addDataCritere($QueSplit , $result['data'][$i]['data']);
-                                dump("1");
+
                         } else {
                             $split = $this->workflowRepo->getEvenmentWorkflow2($component['id'], $id);
                             $QueSplit = $this->workflowRepo->addQueueSplit($split->getId(), $key, $component['id'] , 0);
@@ -758,7 +758,6 @@ class WorkflowController extends AbstractController
                                     break;
                                 }
                             }
-                            dump("2");
                             $this->addDataCritere($QueSplit , $result['data'][$i]['data']);
                         }
                     }
@@ -902,12 +901,12 @@ class WorkflowController extends AbstractController
         $entity->setIdWorkflow($id_workflow);
         $entity->setCle($branchComponent['id']);
         $type = 1;
-        
+        //TODO:Sauvguarde event
         $delay = 0;
+
         if($branchComponent['id_element'] == 'delay'){
             $type = 3;
             $number_of_days =  $branchComponent['name']; 
-            // Use a regular expression to extract the number
             preg_match('/\d+/', $number_of_days, $matches);
             $delay = intval($matches[0]);
         }
@@ -916,6 +915,8 @@ class WorkflowController extends AbstractController
         }else if($branchComponent['id_element'] == 'Decision step'){
             $type = 4;
             $entity->setIdActivityP($branchComponent['activityDecision']);
+        }else if($branchComponent['id_element'] == 'Split activity'){
+            $type = 5;
         }
 
         $entity->setType($type);
@@ -928,12 +929,33 @@ class WorkflowController extends AbstractController
         $entity->setDelayAction($delay);
         $this->em->persist($entity);
         $this->em->flush();
+
         if($type == 4){
+            //TODO:Save resulat id 
             $getResultsByParent = $this->workflowRepo->getResultsByParent($branchComponent['activityDecision']);
             for ($i=0; $i < count($getResultsByParent); $i++) { 
-                $this->workflowRepo->saveDetailAction($entity->getId() , $getResultsByParent[$i]['id'] );
+                $this->workflowRepo->saveDetailAction($entity->getId() , $getResultsByParent[$i]['id'] , null ,1 , null);
             }
         }
+
+        if($type == 5){
+            //TODO:Save resulat parametre
+            $data = $this->workflowRepo->getDataWorkflow($id);
+            $dateActivity = $data->getDataActivity();
+            for ($i=0; $i < count($dateActivity); $i++) { 
+                if($dateActivity[$i]['id'] == $branchComponent['id']){
+                    $allQualification = 0;
+                    $dateActivity[$i]['allQualification'] == '2' ?  $allQualification = 1 : $allQualification = 0;
+                    $detail = $this->workflowRepo->saveDetailAction($entity->getId() , null ,$dateActivity[$i]['titre'], 2 , $allQualification);
+                    if($allQualification != 1){
+                        for ($j=0; $j < count($dateActivity[$i]['data']); $j++) { 
+                            $this->workflowRepo->saveChildDetailAction($detail , $dateActivity[$i]['data'][$j]['id']);   
+                        }
+                    }
+                }
+            }
+        }
+
     }
     
     #[Route('/workflowProccess',methods : ["POST"])]
@@ -960,10 +982,14 @@ class WorkflowController extends AbstractController
                     //Récuperer les actions que il a aucune action 
                     $listQueue = $workflowRepo->getQueueEvent($id); 
                     $checkIfUserLibre = $workflowRepo->checkIfUserLibre(); 
-                    for ($i=0; $i < count($listQueue); $i++) {
+
+                    dump($listQueue);
+                    
+                    /*for ($i=0; $i < count($listQueue); $i++) {
                         $eventDetails = $workflowRepo->getEvenmentWorkflow($listQueue[$i]['id_event_action_id']);
                         if($eventDetails['is_system'] == 1){
                             //Sauvguarde d'une place pour  
+                            $workflowRepo->saveSystemQueueProcess($listQueue[$i]['id'] , $listQueue[$i]['id_event_action_id'] );
                         }else{
                             if(!$checkIfUserLibre){
                                 $workflowRepo->addHistoriqueWorkflow($id , "Aucun utilisateur disponible !");
@@ -974,7 +1000,8 @@ class WorkflowController extends AbstractController
                                 $workflowRepo->updateStatutQueueEvent( $listQueue[$i]['id'], 3);
                             }
                         }
-                    }
+                    }*/
+
                 }
             }
             $codeStatut="OK";
@@ -1004,7 +1031,6 @@ class WorkflowController extends AbstractController
         
                 $nextStep = $this->GeneralService->getNextStep($workflowData, $cleEvent);
     
-                // dump();
                 $evenmentWorkflow = $workflowRepo->getEvenmentWorkflow($eventQueue->getIdEventAction()->getIdEvent()->getId());
                 $cle=$eventQueue->getIdEventAction()->getCle();
                 $workflowRepo->addHistoriqueQueueEvent($eventQueue->getId() , "L'événement de ".$evenmentWorkflow['titre']." été appliqué." , 1 ,$cle);
@@ -1047,7 +1073,6 @@ class WorkflowController extends AbstractController
             // I wil save any add result or etap 
             
             $codeStatut="OK";
-
         }catch(\Exception $e){
             $codeStatut = "ERREUR";
             $respObjects["err"] = $e->getMessage();
@@ -1133,8 +1158,11 @@ class WorkflowController extends AbstractController
             $workflow = $workflowRepo->getWorkflow($dataRequest["id"]);
             if($workflow->getIdStatus()->getId() == 2 || $workflow->getIdStatus()->getId() == 3){
                 if($dateStart >= new \DateTime("now")){
-        
+                    $status = $workflowRepo->getStatusWorkflow(3);
+                    
                     $workflow->setDateStart($dateStart);
+                    $workflow->setIdStatus($status);
+
                     $this->em->flush();
                     $respObjects['data']= $dateStart;
                     $codeStatut="OK";
@@ -1408,6 +1436,7 @@ class WorkflowController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+    
     #[Route('/getListeFournisseurs')]
     public function getListeFournisseurs(Request $request , workflowRepo $workflowRepo ): JsonResponse
     {
@@ -1425,6 +1454,25 @@ class WorkflowController extends AbstractController
             $respObjects["data"] = $objet;
             $codeStatut="OK";
 
+        }catch(\Exception $e){
+            $codeStatut = "ERREUR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/getTypesOfSParametragesByEvenment')]
+    public function getListTypeParamsByWorkflow(Request $request , workflowRepo $workflowRepo ): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $event = $request->get('event');
+            $result = $workflowRepo->getTypesOfSParametragesByEvenment($event);
+            $respObjects["data"] = $result;
+            $codeStatut="OK";
         }catch(\Exception $e){
             $codeStatut = "ERREUR";
             $respObjects["err"] = $e->getMessage();

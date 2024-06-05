@@ -19,7 +19,7 @@ class Groupe
     #[ORM\Column(type: Types::DATE_MUTABLE)]
     private ?\DateTimeInterface $date_creation = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255 , nullable:true)]
     private ?string $status = null;
 
     #[ORM\Column(length: 255)]

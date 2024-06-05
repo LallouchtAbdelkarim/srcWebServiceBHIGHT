@@ -214,9 +214,14 @@ class competencesController extends AbstractController
             $id = $request->get("id");
             $data = $competenceRepo->findModel($id);
             if($data){
-                $competenceRepo->deleteModel($id);
-                $respObjects["message"] = "success";
-                $respObjects["codeStatut"] = "OK";
+                if($competenceRepo->checkCompetenceProfil($id)){
+                    $respObjects["message"] = "Votre compétence déjà existe dans un profil";
+                    $respObjects["codeStatut"] = "ERROR";
+                }else{
+                    $competenceRepo->deleteModel($id);
+                    $respObjects["message"] = "success";
+                    $respObjects["codeStatut"] = "OK";
+                }
             }else{
                 $respObjects["message"] = "Model n'existe pas";
                 $respObjects["codeStatut"] = "ERREUR";

@@ -53,6 +53,17 @@ class segementationRepo extends ServiceEntityRepository
         $statut = $stmt->fetchAll();
         return $statut;
     }
+    public function getListeSgementById($id){
+        $sql="SELECT * FROM `segmentation` s WHERE s.id = :id";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(":id",$id);
+        $stmt = $stmt->executeQuery();
+        $statut = $stmt->fetchAll();
+        return $statut;
+    }
+
+    
     
     public function getListeSgementationByGroupe($id_type,$id_groupe){
         $sql="SELECT * FROM `segmentation` s WHERE s.id in (SELECT q.id_segmentation_id from queue q WHERE q.id_type_id = '".$id_type."' and q.queue_groupe_id = '".$id_groupe."')";

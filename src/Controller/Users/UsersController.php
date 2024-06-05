@@ -5,6 +5,7 @@ namespace App\Controller\Users;
 use App\Entity\Competence;
 use App\Entity\CompetenceProfil;
 use App\Entity\DetailModelAffichage;
+use App\Entity\Token;
 use App\Entity\TypeUtilisateur;
 use App\Entity\Groupe;
 use App\Entity\GroupProfil;
@@ -12,6 +13,7 @@ use App\Entity\ListesRoles;
 use App\Entity\Profil;
 use App\Entity\Roles;
 use App\Entity\Utilisateurs;
+use App\Entity\Workflow;
 use App\Service\AuthService;
 use App\Service\MessageService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -59,8 +61,7 @@ class UsersController extends AbstractController
             $competences = $entityManager->getRepository(Competence::class)->findAll();
             $data = json_decode($request->getContent(), true);
             
-            if(isset($data['status']) && isset($data['status'] )){
-                if ($data['titre'] == null || $data['status'] == null) {
+                if ($data['titre'] == null ) {
                     $codeStatut="EMPTY-DATA";
                 } else {
                     $pr = $entityManager->getRepository(Profil::class)->findOneBy(['titre' => $data['titre']]);
@@ -69,7 +70,6 @@ class UsersController extends AbstractController
                     }else{
                         $profil = new Profil();
                         $profil->setTitre($data['titre']);
-                        $profil->setStatus($data['status']);
                         $profil->setDateCreation(new \DateTime());
                         $entityManager->persist($profil);
                         $entityManager->flush();
@@ -105,9 +105,6 @@ class UsersController extends AbstractController
                         $codeStatut = 'OK';
                     }
                 }
-            }else{
-                $codeStatut="EMPTY-DATA";
-            }
         } catch (\Exception $e) {
             $respObjects["err"] = $e->getMessage();
             $codeStatut="ERROR";
@@ -151,7 +148,6 @@ class UsersController extends AbstractController
                 $codeStatut='TITRE_DEJE_EXIST';
             }else{
                 $profil->setTitre($data['titre']);
-                $profil->setStatus($data['status']);
                 $profil->setDateCreation(new \DateTime());
                 $entityManager->persist($profil);
                 $entityManager->flush();
@@ -175,6 +171,7 @@ class UsersController extends AbstractController
                 $entityManager->flush();
     
                 foreach ($cp as $competence) {
+
                     $compObject = $entityManager->getRepository(CompetenceProfil::class)->findOneBy([
                         'id_profil' => $profil->getId(),
                         'id_competence' => $competence->getId(),
@@ -252,12 +249,12 @@ class UsersController extends AbstractController
 
             $data = json_decode($request->getContent(), true);
 
-            if ($data['titre'] == null || $data['status'] == null) {
+            if ($data['titre'] == null) {
                 $codeStatut="EMPTY-DATA";
             } else {
                 $group = new Groupe();
                 $group->setTitre($data['titre']);
-                $group->setStatus($data['status']);
+                // $group->setStatus($data['status']);
                 $group->setDateCreation(new \DateTime());
                 $entityManager->persist($group);
                 $entityManager->flush();
@@ -549,16 +546,22 @@ class UsersController extends AbstractController
         if (!$user) {
             $response = "Ce profile n'existe pas !";
         } else {
-
-            // $existingImagePath = $this->getParameter('kernel.project_dir') . '/public' . $user->getImg();
-
-            // if ($existingImagePath !== null && file_exists($existingImagePath)) {
-            //     unlink($existingImagePath);
-            // }
-
-            $entityManager->remove($user);
-            $entityManager->flush();
-            $response = "OK";
+            $workflow = $entityManager->getRepository(Workflow::class)->findOneBy(array('id_user' => $id));
+            if($workflow){
+                $response="Cet utilisateur est affecté à un workflow";
+            }else{
+                $token = $entityManager->getRepository(Token::class)->findOneBy(array('userIdent' => $id));
+                $entityManager->remove($token);
+                // $existingImagePath = $this->getParameter('kernel.project_dir') . '/public' . $user->getImg();
+    
+                // if ($existingImagePath !== null && file_exists($existingImagePath)) {
+                //     unlink($existingImagePath);
+                // }
+    
+                $entityManager->remove($user);
+                $entityManager->flush();
+                $response = "OK";
+            }
         }
         return new JsonResponse($response);
     }
@@ -613,7 +616,6 @@ class UsersController extends AbstractController
             $response = [
                 'id' => $profil->getId(),
                 'titre' => $profil->getTitre(),
-                'status' => $profil->getStatus(),
                 'date_creation' => $profil->getDateCreation()
             ];
             array_push($result, $response);
@@ -633,7 +635,7 @@ class UsersController extends AbstractController
         $response = [
             'id' => $profil->getId(),
             'titre' => $profil->getTitre(),
-            'status' => $profil->getStatus(),
+            // 'status' => $profil->getStatus(),
             'date_creation' => $profil->getDateCreation(),
         ];
 

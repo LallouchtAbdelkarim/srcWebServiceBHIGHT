@@ -56,6 +56,7 @@ class ActivityController extends AbstractController
         $titre = $request->get("titre");
         $note = $request->get("note");
         $this->AuthService->checkAuth(0,$request);
+
         $data = json_decode($request->getContent(), true);
         if(isset($data["resultArray"][0]['result_0'])){
             if( count($data["resultArray"][0]['result_0']) < 2){
@@ -87,6 +88,7 @@ class ActivityController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
     #[Route('/activities/updateParentActivity')]
     public function updateParentActivity(activityRepo $activityRepo , Request $request): JsonResponse
     {

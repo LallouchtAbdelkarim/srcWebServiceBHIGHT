@@ -2,6 +2,7 @@
 
 namespace App\Repository\Parametrages;
 
+use App\Entity\CompetenceProfil;
 use App\Entity\CritereModelFacturation;
 use App\Entity\Competence;
 use App\Entity\DetailCompetence;
@@ -61,6 +62,14 @@ class competenceRepo extends ServiceEntityRepository
             return null;
         }
     }
+    public function checkCompetenceProfil($id){
+        $model = $this->em->getRepository(CompetenceProfil::class)->findOneBy(["id_competence"=>$id]);
+        if($model){
+            return $model;
+        }else{
+            return null;
+        }
+    }
     public function getFamilles($id){
         $model = $this->em->getRepository(DetailCompetenceFamilles::class)->findBy(["id_competence"=>$id]);
         if($model){
@@ -105,7 +114,7 @@ class competenceRepo extends ServiceEntityRepository
     //     }
     // }
     public function deleteModel($id){
-        try{
+        // try{
             $model = $this->em->getRepository(Competence::class)->findOneBy(["id"=>$id]);
             $detail_model = $this->em->getRepository(DetailCompetence::class)->findBy(["id_competence"=>$id]);
             foreach ($detail_model as $item) {
@@ -115,10 +124,10 @@ class competenceRepo extends ServiceEntityRepository
             $this->em->flush();
             $statut = "OK";
             return $statut;
-        }catch(\Exception $e){
-            $statut = "NO";
-			return $statut;
-        }
+        // }catch(\Exception $e){
+        //     $statut = "NO";
+		// 	return $statut;
+        // }
     }
 
     public function createDetailModel( $p , $comp){

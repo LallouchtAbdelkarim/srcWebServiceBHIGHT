@@ -78,7 +78,7 @@ class SegmentationController extends AbstractController
             $description = $data["description"];
             $entity = $data["entity"];
             $cle = $data["cle"];
-            // $id_type_id = $data["id_type_id"]; 
+            // $id_type_id = $data["id_type_id"];
             // $queue_groupe_id = $data["queue_groupe_id"];
             // $active = $data["active"];
             $type = $data["type"];
@@ -100,11 +100,11 @@ class SegmentationController extends AbstractController
                                 $data_critere = $data["data"];
                                 $segId = $createSegment->getId();
                                 $priority = 1;
-                                for ($i=0; $i < count($data_critere); $i++) { 
+                                for ($i=0; $i < count($data_critere); $i++) {
                                     $titre_groupe = $data_critere[$i]["groupe"]["titre_groupe"];
                                     $createGroupeQueue = $segementationRepo->createGroupeCritereRepo($titre_groupe,$segId , $priority);
                                     $critere = $data_critere[$i]["critere"];
-                                    for ($j=0; $j < count($critere); $j++) { 
+                                    for ($j=0; $j < count($critere); $j++) {
                                         $createQueueCritere = $segementationRepo->createSegCritere($critere[$j]["critere"] , $createGroupeQueue , $critere[$j]["type"]);
                                         if($critere[$j]["type"] == 'multiple_check'){
                                             $values = $critere[$j]['values'];
@@ -118,13 +118,13 @@ class SegmentationController extends AbstractController
                                                         }
                                                     }*/
                                                     //Si pour il value n'exist ce forme string like type_persone il faut suvguarde value not id_champ
-                                                    if( $values[$v]["id_critere_id"] == 1 || 
-                                                        $values[$v]["id_critere_id"] == 17 || 
-                                                        $values[$v]["id_critere_id"] == 6 || 
-                                                        $values[$v]["id_critere_id"] == 7 || 
-                                                        $values[$v]["id_critere_id"] == 11 || 
-                                                        $values[$v]["id_critere_id"] == 12 || 
-                                                        $values[$v]["id_critere_id"] == 14 || 
+                                                    if( $values[$v]["id_critere_id"] == 1 ||
+                                                        $values[$v]["id_critere_id"] == 17 ||
+                                                        $values[$v]["id_critere_id"] == 6 ||
+                                                        $values[$v]["id_critere_id"] == 7 ||
+                                                        $values[$v]["id_critere_id"] == 11 ||
+                                                        $values[$v]["id_critere_id"] == 12 ||
+                                                        $values[$v]["id_critere_id"] == 14 ||
                                                         $values[$v]["id_critere_id"] == 15 ||
                                                         $values[$v]["id_critere_id"] == 3 ||
                                                         $values[$v]["id_critere_id"] == 17 ||
@@ -135,10 +135,10 @@ class SegmentationController extends AbstractController
                                                         $values[$v]["id_critere_id"] == 27 ||
                                                         $values[$v]["id_critere_id"] == 32 ||
                                                         $values[$v]["id_critere_id"] == 35  ||
-                                                        $values[$v]["id_critere_id"] == 38 || 
+                                                        $values[$v]["id_critere_id"] == 38 ||
                                                         $values[$v]["id_critere_id"] == 41 ||
                                                         $values[$v]["id_critere_id"] == 42 ||
-                                                        $values[$v]["id_critere_id"] == 44 
+                                                        $values[$v]["id_critere_id"] == 44
                                                         )
                                                     {
                                                         $value1 =  $values[$v]["id_champ"];
@@ -180,7 +180,7 @@ class SegmentationController extends AbstractController
                             // }else{
                             //     $codeStatut = "ERROR-EMPTY-PARAMS";
                             // }
-                                $this->sauvguardeSegementation($request , $segementationRepo);
+                                $this->sauvguardeSegementation($request , $segementationRepo,$segId);
                         }
                         else{
                             $codeStatut = "ERROR";
@@ -200,16 +200,16 @@ class SegmentationController extends AbstractController
     }
 
     #[Route('/sauvguardeSegementation', methods: ['POST'])]
-    public function sauvguardeSegementation(Request $request,segementationRepo $segementationRepo): JsonResponse
+    public function sauvguardeSegementation(Request $request,segementationRepo $segementationRepo , $idSeg): JsonResponse
     {
         $respObjects =array();
         $codeStatut = "ERROR";
-        $data = json_decode($request->getContent(), true);
-        $segment = $segementationRepo->getListeSgementByStatus(1);
+        //$segment = $segementationRepo->getListeSgementByStatus(1);
+        $segment = $segementationRepo->getListeSgementById($idSeg);
         // try {
             for ($s=0; $s < count($segment) ; $s++) {
                 $entities = json_decode($segment[$s]['entities']);
-                
+               
                 if(in_array('creance',$entities))
                 {
                     $queryEntities = "debt_force_seg.dt_debiteur deb,debt_force_seg.dt_creance c";
@@ -225,25 +225,25 @@ class SegmentationController extends AbstractController
                     if($queryConditions != " "){
                         $queryEntities = strtolower($queryEntities);
 
-                        $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ; 
+                        $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ;
                         $stmt = $this->conn->prepare($rqCreance);
                         foreach ($param as $key => $value) {
                             $stmt->bindValue($key, $value); // Assuming parameters are 1-indexed
                         }
                         $stmt = $stmt->executeQuery();
                         $resultCreance = $stmt->fetchAll();
-                        
+                       
                         if(count($resultCreance) >= 1)
                         {
                             $sql="UPDATE `segmentation` SET `id_status_id`='3' WHERE  id = ".$id."";
-                            $stmt = $this->conn->prepare($sql)->executeQuery(); 
-                            for ($r=0; $r < count($resultCreance); $r++) { 
+                            $stmt = $this->conn->prepare($sql)->executeQuery();
+                            for ($r=0; $r < count($resultCreance); $r++) {
                                 $sql="insert into `debt_force_seg`.`seg_creance`(id_seg,id_creance) values(".$id.",".$resultCreance[$r]["id"].")";
                                 $stmt = $this->conn->prepare($sql)->executeQuery();
                             }
                         }else{
                             $sql="UPDATE `segmentation` SET `id_status_id`='4' WHERE  id = ".$id."";
-                            $stmt = $this->conn->prepare($sql)->executeQuery(); 
+                            $stmt = $this->conn->prepare($sql)->executeQuery();
                         }
                     }
                 }
@@ -260,13 +260,13 @@ class SegmentationController extends AbstractController
                     $queryEntities = $requetOutput["queryEntities"];
                     $param = $requetOutput["param"];
                     $queryEntities = strtolower($queryEntities);
-                    
-                    $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ; 
+                   
+                    $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ;
 
                     $rqDossier = "SELECT doss.id FROM debt_force_seg.dt_Dossier doss WHERE doss.id IN (
                         SELECT (c1.id_dossier_id) from debt_force_seg.dt_Creance c1 where c1.id in (".$rqCreance.")
                     )";
-                    
+                   
                     $stmt = $this->conn->prepare($rqDossier);
                     foreach ($param as $key => $value) {
                         $stmt->bindValue($key, $value);
@@ -277,14 +277,14 @@ class SegmentationController extends AbstractController
                     if(count($resultDossier) >= 1)
                     {
                         $sql="UPDATE `segmentation` SET `id_status_id`='3' WHERE  id = ".$id."";
-                        $stmt = $this->conn->prepare($sql)->executeQuery(); 
-                        for ($r=0; $r < count($resultDossier); $r++) { 
+                        $stmt = $this->conn->prepare($sql)->executeQuery();
+                        for ($r=0; $r < count($resultDossier); $r++) {
                             $sql="insert into `debt_force_seg`.`seg_dossier`(id_seg,id_dossier) values(".$id.",".$resultDossier[$r]["id"].")";
                             $stmt = $this->conn->prepare($sql)->executeQuery();
                         }
                     }else{
                         $sql="UPDATE `segmentation` SET `id_status_id`='4' WHERE  id = ".$id."";
-                        $stmt = $this->conn->prepare($sql)->executeQuery(); 
+                        $stmt = $this->conn->prepare($sql)->executeQuery();
                     }
                 }
                 if(in_array('telephone',$entities))
@@ -301,12 +301,12 @@ class SegmentationController extends AbstractController
                     $param = $requetOutput["param"];
                     $queryEntities = strtolower($queryEntities);
 
-                    $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ; 
+                    $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ;
 
                     $rqTelephone = "SELECT tel1.id FROM debt_force_seg.dt_Telephone tel1 WHERE (tel1.id_debiteur_id) IN (
                         SELECT debi.id FROM debt_force_seg.dt_Debiteur debi WHERE debi.id IN (
-                        SELECT (t1.id_debiteur_id) 
-                        FROM Type_Debiteur t1 
+                        SELECT (t1.id_debiteur_id)
+                        FROM Type_Debiteur t1
                         WHERE t1.id_creance IN (".$rqCreance."))
                     )";
                     // $query = $this->em->createQuery($rqTelephone);
@@ -322,14 +322,14 @@ class SegmentationController extends AbstractController
                     if(count($resultTelephone) >= 1)
                     {
                         $sql="UPDATE `segmentation` SET `id_status_id`='3' WHERE  id = ".$id."";
-                        $stmt = $this->conn->prepare($sql)->executeQuery(); 
-                        for ($r=0; $r < count($resultTelephone); $r++) { 
+                        $stmt = $this->conn->prepare($sql)->executeQuery();
+                        for ($r=0; $r < count($resultTelephone); $r++) {
                             $sql="insert into `debt_force_seg`.`seg_telephone`(id_seg,id_telephone) values(".$id.",".$resultTelephone[$r]["id"].")";
                             $stmt = $this->conn->prepare($sql)->executeQuery();
                         }
                     }else{
                         $sql="UPDATE `segmentation` SET `id_status_id`='4' WHERE  id = ".$id."";
-                        $stmt = $this->conn->prepare($sql)->executeQuery(); 
+                        $stmt = $this->conn->prepare($sql)->executeQuery();
                     }
                 }
                 if(in_array('adresse',$entities))
@@ -346,12 +346,12 @@ class SegmentationController extends AbstractController
                     $param = $requetOutput["param"];
                     $queryEntities = strtolower($queryEntities);
 
-                    $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ; 
+                    $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ;
 
                     $rqAdresse = "SELECT tel1.id FROM adresse tel1 WHERE (tel1.id_debiteur_id) IN (
                         SELECT debi.id FROM Debiteur debi WHERE debi.id IN (
-                        SELECT (t1.id_debiteur_id) 
-                        FROM Type_Debiteur t1 
+                        SELECT (t1.id_debiteur_id)
+                        FROM Type_Debiteur t1
                         WHERE t1.id_creance IN (".$rqCreance."))
                     )";
                     $stmt = $this->conn->prepare($rqAdresse);
@@ -364,14 +364,14 @@ class SegmentationController extends AbstractController
                     if(count($resultAdresse) >= 1)
                     {
                         $sql="UPDATE `segmentation` SET `id_status_id`='3' WHERE  id = ".$id."";
-                        $stmt = $this->conn->prepare($sql)->executeQuery(); 
-                        for ($r=0; $r < count($resultAdresse); $r++) { 
+                        $stmt = $this->conn->prepare($sql)->executeQuery();
+                        for ($r=0; $r < count($resultAdresse); $r++) {
                             $sql="insert into `debt_force_seg`.`seg_adresse`(id_seg,id_adresse) values(".$id.",".$resultAdresse[$r]["id"].")";
                             $stmt = $this->conn->prepare($sql)->executeQuery();
                         }
                     }else{
                         $sql="UPDATE `segmentation` SET `id_status_id`='4' WHERE  id = ".$id."";
-                        $stmt = $this->conn->prepare($sql)->executeQuery(); 
+                        $stmt = $this->conn->prepare($sql)->executeQuery();
                     }
                 }
                 if(in_array('debiteur',$entities))
@@ -379,29 +379,29 @@ class SegmentationController extends AbstractController
                     if(in_array('creance',$entities))
                     {
                         $rqDeb = "SELECT debi.id FROM debt_force_seg.dt_debiteur debi WHERE debi.id IN (
-                            SELECT (t1.id_debiteur) 
-                            FROM Type_Debiteur t1 
+                            SELECT (t1.id_debiteur)
+                            FROM Type_Debiteur t1
                             WHERE t1.id_creance IN (".$rqCreance.")
                         )";
-                        
+                       
                         $stmt = $this->conn->prepare($rqDeb);
                         foreach ($param as $key => $value) {
                             $stmt->bindValue($key, $value);
                         }
                         $stmt = $stmt->executeQuery();
                         $resultDebi = $stmt->fetchAll();
-    
+   
                         if(count($resultDebi) >= 1)
                         {
                             $sql="UPDATE `segmentation` SET `id_status_id`='3' WHERE  id = ".$id."";
-                            $stmt = $this->conn->prepare($sql)->executeQuery(); 
-                            for ($r=0; $r < count($resultDebi); $r++) { 
+                            $stmt = $this->conn->prepare($sql)->executeQuery();
+                            for ($r=0; $r < count($resultDebi); $r++) {
                                 $sql="insert into `debt_force_seg`.`seg_debiteur`(id_seg,id_debiteur) values(".$id.",".$resultDebi[$r]["id"].")";
                                 $stmt = $this->conn->prepare($sql)->executeQuery();
                             }
                         }else{
                             $sql="UPDATE `segmentation` SET `id_status_id`='4' WHERE  id = ".$id."";
-                            $stmt = $this->conn->prepare($sql)->executeQuery(); 
+                            $stmt = $this->conn->prepare($sql)->executeQuery();
                         }
                     }
                     else{
@@ -416,11 +416,11 @@ class SegmentationController extends AbstractController
                         $queryEntities = $requetOutput["queryEntities"];
                         $param = $requetOutput["param"];
                         $queryEntities = strtolower($queryEntities);
-                        $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ; 
+                        $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ;
 
                         $rqDeb = "SELECT debi.id FROM debiteur debi WHERE debi.id IN (
-                            SELECT (t1.id_debiteur_id) 
-                            FROM Type_Debiteur t1 
+                            SELECT (t1.id_debiteur_id)
+                            FROM Type_Debiteur t1
                             WHERE t1.id_creance IN (".$rqCreance.")
                         )";
                         $stmt = $this->conn->prepare($rqDeb);
@@ -432,16 +432,16 @@ class SegmentationController extends AbstractController
                         if(count($resultDebi) >= 1)
                         {
                             $sql="UPDATE `segmentation` SET `id_status_id`='3' WHERE  id = ".$id."";
-                            $stmt = $this->conn->prepare($sql)->executeQuery(); 
-                            for ($r=0; $r < count($resultDebi); $r++) { 
+                            $stmt = $this->conn->prepare($sql)->executeQuery();
+                            for ($r=0; $r < count($resultDebi); $r++) {
                                 $sql="insert into `debt_force_seg`.`seg_debiteur`(id_seg,id_debiteur) values(".$id.",".$resultDebi[$r]["id"].")";
                                 $stmt = $this->conn->prepare($sql)->executeQuery();
                             }
                         }else{
                             $sql="UPDATE `segmentation` SET `id_status_id`='4' WHERE  id = ".$id."";
-                            $stmt = $this->conn->prepare($sql)->executeQuery(); 
+                            $stmt = $this->conn->prepare($sql)->executeQuery();
                         }
-                    }   
+                    }  
                 }
             }
         // } catch (\Exception $e) {
@@ -451,6 +451,7 @@ class SegmentationController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
     public function getRequeteCreance($id , $groupe,$queryEntities,$queryConditions,$param){
         for ($j=0; $j < count($groupe) ; $j++) {
             if(0 == $j)
@@ -921,7 +922,7 @@ class SegmentationController extends AbstractController
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Telephone tel";
                             }
-                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)  and (tel.id_debiteur)=deb.id  and  (tel.id_type_tel_id) like :typeTel".$k."_".$i." ) ";
+                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)  and (tel.id_debiteur_id)=deb.id  and  (tel.id_type_tel_id) like :typeTel".$k."_".$i." ) ";
                             $param['typeTel'.$k.'_'.$i] = $details[$i]["value1"];
                         }
                     }
@@ -2240,4 +2241,3 @@ class SegmentationController extends AbstractController
         return $this->json($respObjects);
     }
 }
-

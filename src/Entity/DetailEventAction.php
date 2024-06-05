@@ -18,7 +18,13 @@ class DetailEventAction
     private ?EventAction $id_event_action = null;
 
     #[ORM\Column(nullable: true)]
-    private ?int $id_decision_step = null;
+    private ?int $id_resultat = null;
+
+    #[ORM\Column(length: 255)]
+    private ?string $nomSplit = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $isAllQualification = null;
 
     public function getId(): ?int
     {
@@ -37,14 +43,37 @@ class DetailEventAction
         return $this;
     }
 
-    public function getIdDecisionStep(): ?int
+    public function getIdResultat(): ?int
     {
-        return $this->id_decision_step;
+        return $this->id_resultat;
     }
 
-    public function setIdDecisionStep(?int $id_decision_step): static
+    public function setIdResultat(?int $id_resultat): static
     {
-        $this->id_decision_step = $id_decision_step;
+        $this->id_resultat = $id_resultat;
+        return $this;
+    }
+
+    public function getNomSplit(): ?string
+    {
+        return $this->nomSplit;
+    }
+
+    public function setNomSplit(string $nomSplit): static
+    {
+        $this->nomSplit = $nomSplit;
+
+        return $this;
+    }
+
+    public function getIsAllQualification(): ?int
+    {
+        return $this->isAllQualification;
+    }
+
+    public function setIsAllQualification(?int $isAllQualification): static
+    {
+        $this->isAllQualification = $isAllQualification;
 
         return $this;
     }

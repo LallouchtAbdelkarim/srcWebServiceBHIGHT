@@ -22,8 +22,6 @@ class Profil
     #[ORM\Column(length: 255)]
     private ?string $titre = null;
 
-    #[ORM\Column(length: 255)]
-    private ?int $status = null;
 
     #[ORM\OneToMany(mappedBy: 'id_profil', targetEntity: Roles::class)]
     private Collection $roles;
@@ -69,19 +67,6 @@ class Profil
 
         return $this;
     }
-
-    public function getStatus(): ?string
-    {
-        return $this->status;
-    }
-
-    public function setStatus(string $status): self
-    {
-        $this->status = $status;
-
-        return $this;
-    }
-
     /**
      * @return Collection<int, Roles>
      */

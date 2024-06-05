@@ -16,6 +16,9 @@ class DataWorkflow
     #[ORM\Column]
     private array $data = [];
 
+    #[ORM\Column(type: 'json', nullable: true)]
+    private array $dataActivity = [];
+
     #[ORM\ManyToOne]
     private ?Workflow $id_workflow = null;
 
@@ -44,6 +47,17 @@ class DataWorkflow
     public function setIdWorkflow(?Workflow $id_workflow): static
     {
         $this->id_workflow = $id_workflow;
+
+        return $this;
+    }
+    public function getDataActivity(): array
+    {
+        return $this->dataActivity;
+    }
+
+    public function setDataActivity(array $dataActivity): static
+    {
+        $this->dataActivity = $dataActivity;
 
         return $this;
     }

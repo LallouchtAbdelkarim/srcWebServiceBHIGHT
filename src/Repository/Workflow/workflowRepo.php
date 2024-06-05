@@ -19,6 +19,7 @@ use App\Entity\Segmentation;
 use App\Entity\ObjectWorkflow;
 use App\Entity\ObjectConnection;
 use App\Entity\StatusWorkflow;
+use App\Entity\TypeParametrage;
 use App\Entity\Utilisateurs;
 use App\Entity\Scenario;
 use App\Entity\Workflow;
@@ -132,7 +133,7 @@ class workflowRepo extends ServiceEntityRepository
         switch ($type) {
             case 'Courrier':
                 // Check if $id matches 'revenu' type
-                $query = $this->em->createQuery('SELECT r FROM App\Entity\ModelCourier r ');
+                $query = $this->em->createQuery('SELECT r.id , r.titre FROM App\Entity\ModelCourier r ');
                 $resultList = $query->getResult();
                 if ($resultList) {
                     return $resultList;
@@ -140,7 +141,7 @@ class workflowRepo extends ServiceEntityRepository
                 break;
             case 'Email':
                 // Check if $id matches 'revenu' type
-                $query = $this->em->createQuery('SELECT r FROM App\Entity\ModelEmail r ');
+                $query = $this->em->createQuery('SELECT r.id , r.titre FROM App\Entity\ModelEmail r ');
                 $resultList = $query->getResult();
                 if ($resultList) {
                     return $resultList;
@@ -148,7 +149,7 @@ class workflowRepo extends ServiceEntityRepository
                 break;
             case 'SMS':
                 // Check if $id matches 'revenu' type
-                $query = $this->em->createQuery('SELECT r FROM App\Entity\ModelSMS r ');
+                $query = $this->em->createQuery('SELECT r.id , r.titre FROM App\Entity\ModelSMS r ');
                 $resultList = $query->getResult();
                 if ($resultList) {
                     return $resultList;
@@ -280,6 +281,10 @@ class workflowRepo extends ServiceEntityRepository
         }else{
             return null;
         }
+    }
+    public function getStatusWorkflow($id){
+        $resultList = $this->em->getRepository(StatusWorkflow::class)->findOneBy(array("id"=>$id));
+        return $resultList;
     }
     public function getWorkflow2( $id ){
         $sql2 = "select * from workflow where id = ".$id."";
@@ -558,11 +563,12 @@ class workflowRepo extends ServiceEntityRepository
     }
 
     public function updateStatutWorkflow($id , $etat){
-        $statut = $this->em->getRepository(StatusWorkflow::class)->find(1);
+        $statut = $this->em->getRepository(StatusWorkflow::class)->find($etat);
         $workflow = $this->getWorkflow($id);
         $workflow->setIdStatus($statut);
         $this->em->flush();
     }
+
     public function getWorkflowForProcess(){
         $query = $this->em->createQuery(
             'SELECT w from App\Entity\Workflow w where (w.id_status = 1 or w.id_status = 3) ORDER BY w.id ASC'
@@ -625,6 +631,7 @@ class workflowRepo extends ServiceEntityRepository
         $workflow = $stmt->fetchAssociative();
         return $workflow;
     }
+    
     public function addHistoriqueWorkflow($id , $histo){
         $sql="INSERT INTO `historique_workflow`( `historique`, `id_workflow_id`) VALUES (:histo,:id)";
         $stmt = $this->conn->prepare($sql);
@@ -693,7 +700,7 @@ class workflowRepo extends ServiceEntityRepository
         $entity = $stmt->fetchAssociative();
         return $entity;
     }
-    public function addQueueSplit($idEvent , $name , $cle,$isChild){dump($isChild);
+    public function addQueueSplit($idEvent , $name , $cle,$isChild){
         $sql="INSERT INTO `queue_split`(`id_event_action_id`, `name`, `cle`,`is_child`) VALUES (:idEvent, :name, :cle,".$isChild.")";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam('idEvent', $idEvent); 
@@ -710,12 +717,12 @@ class workflowRepo extends ServiceEntityRepository
     }
 
     public function addSplitQueueDetail($idQueueSplit){
-        $sql="INSERT INTO `queue_split`(`id_event_action_id`, `name`, `cle`) VALUES (:idEvent, :name, :cle)";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam('idEvent', $idEvent); 
-        $stmt->bindParam('name', $name); 
-        $stmt->bindParam('cle', $cle); 
-        $stmt = $stmt->executeQuery();
+        // $sql="INSERT INTO `queue_split`(`id_event_action_id`, `name`, `cle`) VALUES (:idEvent, :name, :cle)";
+        // $stmt = $this->conn->prepare($sql);
+        // $stmt->bindParam('idEvent', $idEvent); 
+        // $stmt->bindParam('name', $name); 
+        // $stmt->bindParam('cle', $cle); 
+        // $stmt = $stmt->executeQuery();
     }
     
     public function getResultsByParent($id){
@@ -727,19 +734,48 @@ class workflowRepo extends ServiceEntityRepository
         return $entity;
     }
 
-    public function saveDetailAction($idEvent , $decisionId){
-        $sql="INSERT INTO `detail_event_action`(`id_event_action_id`, `id_decision_step`) VALUES (:idEvent,:decisionId)";
+    public function saveDetailAction($idEvent , $resultatId , $nom ,$type , $isAllQualification){
+        $check = false;
+        if($type == 1){
+            $sql="INSERT INTO `detail_event_action`(`id_event_action_id`, `id_resultat`) VALUES (:idEvent,:resultatId)";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam('idEvent', $idEvent); 
+            $stmt->bindParam('resultatId', $resultatId); 
+            $stmt = $stmt->executeQuery();
+            $check = true;
+        }else if($type == 2){
+            $sql="INSERT INTO `detail_event_action`(`id_event_action_id`, `nom_split` , `is_all_qualification`) VALUES (:idEvent,:nom , :isAllQualification)";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam('idEvent', $idEvent); 
+            $stmt->bindParam('nom', $nom); 
+            $stmt->bindParam('isAllQualification', $isAllQualification);
+            $stmt = $stmt->executeQuery();
+            $check = true;
+        }
+
+        if($check == true){
+            $sql2 = "select MAX(id) from detail_event_action ";
+            $stmt = $this->conn->prepare($sql2);
+            $stmt = $stmt->executeQuery();
+            $detail = $stmt->fetchOne();
+            return $detail;
+        }
+    }
+
+    public function saveChildDetailAction($idDetail , $idParam){
+        $sql="INSERT INTO `child_detail_event_action`(`id_detail_id`, `id_param`) VALUES (:idDetail,:idParam)";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam('idEvent', $idEvent); 
-        $stmt->bindParam('decisionId', $decisionId); 
+        $stmt->bindParam('idDetail', $idDetail); 
+        $stmt->bindParam('idParam', $idParam);
         $stmt = $stmt->executeQuery();
     }
+
     public function getCritereSplit($id){
         $sql2 = "select * from split_groupe_critere where id_queue_split_id = :id ORDER BY priority ASC";
         $stmt = $this->conn->prepare($sql2);
         $stmt->bindValue(":id",$id);
         $stmt = $stmt->executeQuery();
-        $liste_groupe = $stmt->fetchAll();
+        $liste_groupe = $stmt->fetchAll();  
         $array_data = [];
         for ($i=0; $i < count($liste_groupe); $i++) { 
             $array_data[$i] = $liste_groupe[$i];
@@ -776,6 +812,30 @@ class workflowRepo extends ServiceEntityRepository
     public function getListeFournisseurs(){
         $entity = $this->em->getRepository(Fournisseur::class)->findAll();
         return $entity;
+    }
+    
+    public function getTypesOfSParametragesByEvenment(string $event ){
+
+        if($event == 'Call customer' ){
+            $query = $this->em->createQuery('SELECT d FROM App\Entity\TypeParametrage d WHERE d.id  = 2 ');
+        }else if ($event == 'Send communication' ){
+            $query = $this->em->createQuery('SELECT d FROM App\Entity\TypeParametrage d WHERE d.id  = 2 ');
+        }else if ($event == 'Multiple events' ){
+            $query = $this->em->createQuery('SELECT d FROM App\Entity\TypeParametrage d WHERE d.id  = 2 ');
+        }
+        else{
+            $query = $this->em->createQuery('SELECT d FROM App\Entity\TypeParametrage d ');
+        }
+        $resultList = $query->getResult();
+        return $resultList;
+    }
+    
+    public function saveSystemQueueProcess($idQueueEvent , $idEventAction){
+        $sql="INSERT INTO `historique_workflow`( `id_queue_event_id`, `id_event`) VALUES (:idQueueEvent,:idEventAction)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('idQueueEvent', $idQueueEvent); 
+        $stmt->bindParam('idEventAction', $idEventAction); 
+        $stmt = $stmt->executeQuery();
     }
     
 }

@@ -24,6 +24,9 @@ class ListesRoles
     #[ORM\OneToMany(mappedBy: 'id_role', targetEntity: Roles::class)]
     private Collection $roles;
 
+    #[ORM\Column(length: 255)]
+    private ?string $groupe = null;
+
     public function __construct()
     {
         $this->roles = new ArrayCollection();
@@ -84,6 +87,18 @@ class ListesRoles
                 $role->setIdRole(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getGroupe(): ?string
+    {
+        return $this->groupe;
+    }
+
+    public function setGroupe(string $groupe): static
+    {
+        $this->groupe = $groupe;
 
         return $this;
     }

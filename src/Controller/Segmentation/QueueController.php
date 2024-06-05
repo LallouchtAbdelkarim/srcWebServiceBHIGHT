@@ -197,7 +197,7 @@ class QueueController extends AbstractController
             $this->AuthService->checkAuth(0,$request);
             $data = json_decode($request->getContent(), true);
             $titre = $data["titre"];
-            $description = $data["description"];
+            $description = "";
             $id_type_id = $data["id_type_id"]; 
             $queue_groupe_id = $data["queue_groupe_id"];
             $active = $data["active"];
@@ -211,6 +211,9 @@ class QueueController extends AbstractController
                     // $createSegment = $segementationRepo->createSegment1($titre , 1);
                     if($id_type_id == 1 || $id_type_id == 2 || $queueRepo->findGroupe($queue_groupe_id))
                     {
+                        if(isset($data['description'])){
+                            $description = $data['description'];
+                        }
                         $createQueue = $queueRepo->createQueue($titre,$description,$queue_groupe_id ,$id_type_id , $seg ,$active );
                         if($createQueue){
                             $data_critere = $data["data"];
