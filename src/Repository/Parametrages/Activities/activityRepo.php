@@ -162,11 +162,7 @@ class activityRepo extends ServiceEntityRepository
     }
     public function getOneParam($id){
         $param =  $this->em->getRepository(ParamActivite::class)->findOneBy(["id"=>$id]);
-        if($param){
-            return $param;
-        }else{
-            return null;
-        }
+        return $param;
     }
     public function getParamsActivity(){
         $param =  $this->em->getRepository(ParamActivite::class)->findAll();

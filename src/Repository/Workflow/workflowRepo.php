@@ -12,7 +12,9 @@ use App\Entity\IntermWorkflowSegmentation;
 use App\Entity\ModelExport;
 use App\Entity\NoteWorkflow;
 use App\Entity\ObjectDetail;
+use App\Entity\ParamActivite;
 use App\Entity\QueueEvent;
+use App\Entity\QueueEventUser;
 use App\Entity\QueueSplit;
 use App\Entity\ScenarioObjectMapping;
 use App\Entity\Segmentation;
@@ -477,6 +479,7 @@ class workflowRepo extends ServiceEntityRepository
         //Select queue of workflow
         $sql="select q.id from queue q where q.id_segmentation_id in 
         (select i.id_segmentaion_id from interm_workflow_segmentation i where i.id_workflow_id =:id_workflow) ORDER by q.priority ASC";
+        
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam('id_workflow', $id); 
         $stmt = $stmt->executeQuery();
@@ -492,7 +495,7 @@ class workflowRepo extends ServiceEntityRepository
 
             $listeEntities = json_decode($entities['entities']);
 
-            if(in_array('creance',$listeEntities)){
+            /*if(in_array('creance',$listeEntities)){
                 $persistDetailQueue = "
                     INSERT INTO queue_event (`id_event_action_id`,`id_statut_id`, `id_queue_detail`, `statut_workflow`,`type`) 
                     SELECT 
@@ -502,7 +505,7 @@ class workflowRepo extends ServiceEntityRepository
                 $stmt->bindParam('id_queue', $idQueue); 
                 $stmt->bindParam('idEvent', $idEvent); 
                 $stmt = $stmt->executeQuery();
-            }
+            }*/
 
             if(in_array('dossier',$listeEntities)){
                 $persistDetailQueue = "
@@ -516,7 +519,7 @@ class workflowRepo extends ServiceEntityRepository
                 $stmt = $stmt->executeQuery();
             }
 
-            if(in_array('telephone',$listeEntities)){
+            /*if(in_array('telephone',$listeEntities)){
                 $persistDetailQueue = "
                     INSERT INTO queue_event (`id_event_action_id`,`id_statut_id`, `id_queue_detail`, `statut_workflow`, `type`) 
                     SELECT 
@@ -550,15 +553,15 @@ class workflowRepo extends ServiceEntityRepository
                 $stmt->bindParam('id_queue', $idQueue); 
                 $stmt->bindParam('idEvent', $idEvent); 
                 $stmt = $stmt->executeQuery();
-            }
+            }*/
         }
     }
     public function getFirstEvent($id){
-        $sql="select e.id from event_action e where e.id_workflow_id = :id ORDER BY e.id ASC";
+        $sql="select e.* from event_action e where e.id_workflow_id = :id ORDER BY e.id ASC";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam('id', $id); 
         $stmt = $stmt->executeQuery();
-        $resultList = $stmt->fetchOne();
+        $resultList = $stmt->fetchAssociative();
         return $resultList;
     }
 
@@ -631,6 +634,26 @@ class workflowRepo extends ServiceEntityRepository
         $workflow = $stmt->fetchAssociative();
         return $workflow;
     }
+    public function getEventAction($id){
+        $sql="SELECT * from event_action where id = :id ;";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $id); 
+        $stmt = $stmt->executeQuery();
+        $workflow = $stmt->fetchAssociative();
+        $event = $this->getEvenmentWorkflow($workflow['id_event_id']);
+        $workflow['eventWorkflow'] = $event;
+
+        return $workflow;
+    }
+
+    public function getEventActionByCle($cle){
+        $sql="SELECT * from event_action where cle = :cle ;";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('cle', $cle); 
+        $stmt = $stmt->executeQuery();
+        $workflow = $stmt->fetchAssociative();
+        return $workflow;
+    }
     
     public function addHistoriqueWorkflow($id , $histo){
         $sql="INSERT INTO `historique_workflow`( `historique`, `id_workflow_id`) VALUES (:histo,:id)";
@@ -644,6 +667,14 @@ class workflowRepo extends ServiceEntityRepository
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam('idUser', $idUser); 
         $stmt->bindParam('idEvent', $idEvent); 
+        $stmt->bindParam('statut', $statut); 
+        $stmt = $stmt->executeQuery();
+        return true;
+    }
+    public function updateStatutQueueEventUser($idEvent , $statut){
+        $sql="UPDATE `queue_event_user` SET `id_status_id` = :statut WHERE `queue_event_user`.`id` = :id;";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $idEvent); 
         $stmt->bindParam('statut', $statut); 
         $stmt = $stmt->executeQuery();
         return true;
@@ -675,7 +706,7 @@ class workflowRepo extends ServiceEntityRepository
     }
     
     public function addHistoriqueQueueEvent($id_queue_event_id , $note  , $etat ,$cle){
-        $sql="INSERT INTO `historique_queue_event`(`id_queue_event_id`, `note`, `date_action`, `etat`) VALUES (:id_queue_event_id, :note, now(), :etat , :cle)";
+        $sql="INSERT INTO `historique_queue_event`(`id_queue_event_id`, `note`, `date_action`, `etat` , `cle`) VALUES (:id_queue_event_id, :note, now(), :etat , :cle)";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam('id_queue_event_id', $id_queue_event_id); 
         $stmt->bindParam('note', $note); 
@@ -686,6 +717,14 @@ class workflowRepo extends ServiceEntityRepository
 
     public function getAllQueueInDelay($idWorkflow){
         $sql="SELECT * FROM `queue_event` q where q.id_event_action_id  in (select a.id from event_action a where a.type = 3 and a.id_workflow_id = :id)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $idWorkflow); 
+        $stmt = $stmt->executeQuery();
+        $entity = $stmt->fetchAll();
+        return $entity;
+    }
+    public function getAllQueueEventByWorkflow($idWorkflow){
+        $sql="SELECT * FROM `queue_event` q where q.id_event_action_id  in (select a.id from event_action a where a.id_workflow_id = :id)";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam('id', $idWorkflow); 
         $stmt = $stmt->executeQuery();
@@ -831,11 +870,67 @@ class workflowRepo extends ServiceEntityRepository
     }
     
     public function saveSystemQueueProcess($idQueueEvent , $idEventAction){
-        $sql="INSERT INTO `historique_workflow`( `id_queue_event_id`, `id_event`) VALUES (:idQueueEvent,:idEventAction)";
+        $sql="INSERT INTO `system_queue_process`( `id_queue_event_id`, `id_event`, `id_status_id`) VALUES (:idQueueEvent,:idEventAction , 2)";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam('idQueueEvent', $idQueueEvent); 
         $stmt->bindParam('idEventAction', $idEventAction); 
         $stmt = $stmt->executeQuery();
     }
+    public function getQueueSystemByEtat($status){
+        $sql="SELECT * FROM `system_queue_process` s WHERE s.id_status_id = :status";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue("status",$status);
+        $stmt = $stmt->executeQuery();
+        $statut = $stmt->fetchAll();
+        return $statut;
+    }
+    public function getStatusEvent($status){
+        $sql="SELECT * FROM `statut_queue_event` s WHERE s.id = :status";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue("status",$status);
+        $stmt = $stmt->executeQuery();
+        $statut = $stmt->fetchAssociative();
+        return $statut;
+    }
+    
+    public function updateStatusSystemQueueEvent($id,$status){
+        $sql="UPDATE `system_queue_process` SET `id_status_id`=:status WHERE `id` = :id;";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue("status",$status);
+        $stmt->bindValue("id",$id);
+        $stmt = $stmt->executeQuery();
+        return true;
+    }
+
+    public function updateQueueEventByIdEventAction($id,$id_event_action_id){
+        $sql="UPDATE `queue_event` SET `id_event_action_id`=:id_event_action_id WHERE `id` = :id;";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue("id_event_action_id",$id_event_action_id);
+        $stmt->bindValue("id",$id);
+        $stmt = $stmt->executeQuery();
+        return true;
+    }
+
+    public function getEventActionByCle2($cle){
+        $entity = $this->em->getRepository(EventAction::class)->findOneBy(['cle'=>$cle ]);
+        return $entity;
+    }
+
+
+    public function getQueueEventUser($id){
+        $entity = $this->em->getRepository(QueueEventUser::class)->findOneBy(['id'=>$id ]);
+        return $entity;
+    }
+
+    public function getOneParam($id){
+        $param =  $this->em->getRepository(ParamActivite::class)->findOneBy(["id"=>$id]);
+        return $param;
+    }
+
+
+
+    
     
 }

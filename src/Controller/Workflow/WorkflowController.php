@@ -3,6 +3,7 @@
 namespace App\Controller\Workflow;
 
 use App\Entity\EvenementWorkflow;
+use App\Entity\ParamActivite;
 use App\Entity\Workflow;
 use App\Repository\Workflow\workflowRepo;
 use App\Repository\Sgementaion\segementationRepo;
@@ -20,6 +21,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
 use App\Entity\Utilisateurs;
 use App\Entity\EventAction;
+use App\Repository\Parametrages\Activities\activityRepo;
 
 #[Route('/API/workflow')]
 class WorkflowController extends AbstractController
@@ -32,9 +34,10 @@ class WorkflowController extends AbstractController
     public $em;
 
     public $segementationRepo;
+    public $activiteRepo;
 
 
-
+    
     public function __construct(
         AuthService $AuthService,
         workflowRepo $workflowRepo,
@@ -44,6 +47,7 @@ class WorkflowController extends AbstractController
         Connection $conn,
         MessageService $MessageService,
         GeneralService $GeneralService,
+        activityRepo $activityRepo,
 
         )
         {
@@ -56,6 +60,7 @@ class WorkflowController extends AbstractController
         $this->MessageService = $MessageService;
         $this->conn = $conn;
         $this->GeneralService = $GeneralService;
+        $this->activityRepo = $activityRepo;
     }
     #[Route('/getListeWorkflow')]
     public function listeWorkflow(Request $request,workflowRepo $workflowRepo): JsonResponse
@@ -212,6 +217,13 @@ class WorkflowController extends AbstractController
             if($workflow)
             {
                 $respObjects['data'] = $workflow;
+                if($workflow['workflow']['id_status_id']['id'] == 1){
+                    $event = $workflowRepo->getAllQueueEventByWorkflow($id);
+                    for ($i=0; $i <count($event) ; $i++) { 
+                        $event[$i]['status'] = $workflowRepo->getStatusEvent($event[$i]['id_statut_id']);
+                    }
+                    $respObjects['event'] = $event;
+                }
                 $codeStatut="OK";
             }else{
                 $codeStatut="NOT_EXIST";
@@ -641,7 +653,7 @@ class WorkflowController extends AbstractController
                 
                 $idEvent = $this->workflowRepo->getFirstEvent($id);
                 //Save detail queue
-                $this->workflowRepo->saveQueueWorkflow($id , $idEvent);
+                $this->workflowRepo->saveQueueWorkflow($id , $idEvent['id']);
                 // $this->saveSplitQueue($data,$id);
                 
                 $this->saveSplitQueue($dataRequest["data"], $id , $dataRequest["dataSplit"]);
@@ -921,7 +933,11 @@ class WorkflowController extends AbstractController
 
         $entity->setType($type);
         $event_workflow = null;
-        if($type == 1){
+        if($type == 1 || $type == 5 || $type == 4){
+            $event_workflow = $this->em->getRepository(EvenementWorkflow::class)->findOneBy(array("event"=>$branchComponent['id_element']));
+        }
+
+        if($type == 5){
             $event_workflow = $this->em->getRepository(EvenementWorkflow::class)->findOneBy(array("event"=>$branchComponent['id_element']));
         }
         
@@ -955,7 +971,6 @@ class WorkflowController extends AbstractController
                 }
             }
         }
-
     }
     
     #[Route('/workflowProccess',methods : ["POST"])]
@@ -983,25 +998,25 @@ class WorkflowController extends AbstractController
                     $listQueue = $workflowRepo->getQueueEvent($id); 
                     $checkIfUserLibre = $workflowRepo->checkIfUserLibre(); 
 
-                    dump($listQueue);
                     
-                    /*for ($i=0; $i < count($listQueue); $i++) {
-                        $eventDetails = $workflowRepo->getEvenmentWorkflow($listQueue[$i]['id_event_action_id']);
+                    for ($i=0; $i < count($listQueue); $i++) {
+                        $eventAction = $workflowRepo->getEventAction($listQueue[$i]['id_event_action_id']);
+                        $eventDetails = $workflowRepo->getEvenmentWorkflow($eventAction['id_event_id']);
+
                         if($eventDetails['is_system'] == 1){
                             //Sauvguarde d'une place pour  
                             $workflowRepo->saveSystemQueueProcess($listQueue[$i]['id'] , $listQueue[$i]['id_event_action_id'] );
                         }else{
+
                             if(!$checkIfUserLibre){
                                 $workflowRepo->addHistoriqueWorkflow($id , "Aucun utilisateur disponible !");
                             }else{
                                 $userLibre = $workflowRepo->getUserLibre();
-
                                 $workflowRepo->assignTask($userLibre , $listQueue[$i]['id'] , 2);
                                 $workflowRepo->updateStatutQueueEvent( $listQueue[$i]['id'], 3);
                             }
                         }
-                    }*/
-
+                    }
                 }
             }
             $codeStatut="OK";
@@ -1046,7 +1061,7 @@ class WorkflowController extends AbstractController
                     $eventQueue->setIdStatut($statutEvent);
                     $this->em->flush();
                 }
-    
+
                 $codeStatut="OK";
             }
         }catch(\Exception $e){
@@ -1057,6 +1072,168 @@ class WorkflowController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
+    #[Route('/approbationEventSystem',methods : ["POST"])]
+    public function approbationEventSystem(Request $request , workflowRepo $workflowRepo ): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR"; 
+        try{
+            // $this->AuthService->checkAuth(0,$request);
+
+            //TODO:QueueSystem en pré de lenvoi
+            $listeQueueSystem = $workflowRepo->getQueueSystemByEtat(2);
+            foreach ($listeQueueSystem as $queueSystem ) {
+                $eventAction = $workflowRepo->getEventAction($queueSystem['id_event']);
+                $cle = $eventAction['cle'];
+
+                //TODO:Récuperer all event
+                $dataWorkflow = $workflowRepo->getDataWorkflow($eventAction['id_workflow_id']);
+                $dataWorkflowArray = $dataWorkflow->getData();
+
+                $step = $this->GeneralService->getStep($dataWorkflowArray, $cle);
+
+                if($eventAction['eventWorkflow']['event'] == 'Multiple events'){
+                    for ($i=0; $i < count($step['data']); $i++) { 
+                        //TODO: Process for data system
+                        /*Il faut saisez la functionnalité de renvoi du systém
+                        //TODO:code ..
+                        */
+                        $workflowRepo->addHistoriqueQueueEvent($queueSystem['id_event'] , "L'événement de ".$step['data'][$i]['evenement']." été appliqué." , 1 ,$cle);
+                    }
+                }else{
+                    $workflowRepo->addHistoriqueQueueEvent($queueSystem['id_event'] , "L'événement de ".$step['name']." été appliqué." , 1 ,$cle);
+                }
+                $workflowRepo->updateStatusSystemQueueEvent($queueSystem['id'] , 1);
+
+                //TODO: Update évenement  
+                $workflowRepo->updateStatutQueueEvent($queueSystem['id_queue_event_id'] , 4);
+
+                //TODO: Passer à l'étape suivante
+
+                $nextStep = $this->GeneralService->getNextStep($dataWorkflowArray, $cle);
+                if($nextStep['id_element'] == 'delay'){
+                    $eventActionDelay = $workflowRepo->getEventActionByCle($nextStep['id']);
+                    
+                    if($eventActionDelay['delay_action'] == '0'){
+                        $nextStepDelay = $this->GeneralService->getNextStep($dataWorkflowArray, $nextStep['id']);
+                        
+                        //TODO:Si delay action == 0 go to next event
+                        $eventActionAssigner = $workflowRepo->getEventActionByCle($nextStepDelay['id']);
+                        $workflowRepo->updateQueueEventByIdEventAction($queueSystem['id_queue_event_id'] , $eventActionAssigner['id']);
+
+                        //TODO:Assignatin d'acivité
+                        $checkEventAction = $workflowRepo->getEventActionByCle2($nextStepDelay['id']);
+                        //dump($checkEventAction);
+                        if($checkEventAction->getIdEvent()->getIsSystem() != 1){
+                            $checkIfUserLibre = $workflowRepo->checkIfUserLibre(); 
+
+                            if(!$checkIfUserLibre){
+                                $workflowRepo->addHistoriqueWorkflow($eventAction['id_workflow_id'] , "Aucun utilisateur disponible !");
+                            }else{
+                                $userLibre = $workflowRepo->getUserLibre();
+                                $workflowRepo->assignTask($userLibre , $queueSystem['id_queue_event_id'] , 2);
+                                $workflowRepo->updateStatutQueueEvent($queueSystem['id_queue_event_id'], 3);
+                            }
+                        }
+                        
+                    }else if ($eventActionDelay['delay_action'] != '0'){
+                        $eventActionDelay = $workflowRepo->getEventActionByCle($nextStep['id']);
+                        $workflowRepo->updateQueueEventByIdEventAction($queueSystem['id_queue_event_id'] , $eventActionDelay['id']);
+                    }
+                }
+            }
+            $codeStatut="OK";
+
+        }catch(\Exception $e){
+            $codeStatut = "ERREUR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/approbationSplitActivity',methods : ["POST"])]
+    public function approbationSplitActivity(Request $request , workflowRepo $workflowRepo ): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR"; 
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $idQueueEventUser = $request->get('idQueueEventUser');
+            $idQualification = $request->get('idQualification');
+
+            $qualification = $this->workflowRepo->getOneParam($idQualification);
+            $eventQueueUser = $workflowRepo->getQueueEventUser($idQueueEventUser);
+
+            if($eventQueueUser && $eventQueueUser->getIdStatus()->getId() == 2){
+                if($eventQueueUser->getIdQueueEvent()->getIdEventAction()->getIdEvent()->getEvent() == 'Split activity'){
+                    $idWorkflow = $eventQueueUser->getIdQueueEvent()->getIdEventAction()->getIdWorkflow();
+                    $data = $workflowRepo->getDataWorkflow($idWorkflow);
+                    $idCle = $eventQueueUser->getIdQueueEvent()->getIdEventAction()->getCle();
+                    $dataActivity = $data->getDataActivity();
+
+                    $isAllQualification = false;
+                    $array = [];
+                    $index = 0;
+                    $titreQualification = '';
+                    //TODO:Récuperer split activity consserne 
+                    for ($i=0; $i < count($dataActivity); $i++) { 
+                        if($dataActivity[$i]['id'] == $idCle){
+                            if($dataActivity[$i]['allQualification'] == 2){
+                                $isAllQualification = true;
+                                $titreQualification = $dataActivity[$i]['titre'];
+                            }
+                            $array[$index] = $dataActivity[$i];
+                            $index++;
+                        }
+                    }
+                    
+                    //TODO:Récuperer the key of qualification
+                    $isInAllQualification = true;
+                    if($isAllQualification){
+                        for ($i=0; $i < count($dataActivity); $i++) {
+                            for ($j=0; $j < count($dataActivity[$i]['data']); $j++) { 
+                                if($dataActivity[$i]['data'][$j]['id'] == $idQualification){
+                                    $isInAllQualification = false;
+                                    $titreQualification = $dataActivity[$i]['titre'];
+                                }
+                            }
+                        }
+                    }
+                    //TODO:Traitement after 
+                    $eventQueue = $eventQueueUser->getIdQueueEvent();
+                    $event = $this->getEventsAfterKey($data->getData() , $idCle , $titreQualification);
+                    
+                    if($event[0]['id_element'] == 'stop'){
+                        $eventQueue->setType(1);
+                    }else if($event[0]['id_element'] == 'End partial'){
+                        $eventQueue->setType(2);
+                    }else{
+                        $eventAction = $workflowRepo->getEventActionByCle2($event[0]['id']);
+                        $eventQueue->setIdEventAction($eventAction);
+                        $workflowRepo->updateStatutQueueEvent($eventQueue->getId() , 2);
+                    }
+
+                    $workflowRepo->updateStatutQueueEventUser($eventQueueUser->getId(),1);
+                    
+                    $workflowRepo->addHistoriqueQueueEvent($eventQueueUser->getIdQueueEvent()->getId() , 'L é\'venement a éte chargé par la qualification <b>'.$qualification->getIdBranche()->getTitre().'</b>:('.$qualification->getType().') ' , 1 , $idCle);
+                    $this->em->flush();
+                    $codeStatut="OK";   
+                }
+            }else{
+                $codeStatut="ERROR_EVENT";
+            }
+        }catch(\Exception $e){
+            $codeStatut = "ERREUR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    
     
     #[Route('/approbationDecision',methods : ["POST"])]
     public function approbationDecision(Request $request , workflowRepo $workflowRepo ): JsonResponse
@@ -1118,6 +1295,7 @@ class WorkflowController extends AbstractController
                                 if(isset($nextStep['id'])){
                                     $actionEvent = $workflowRepo->getEvenmentWorkflow2($nextStep['id'] , $workflow->getId());
                                     $eventQueue->setIdEventAction($actionEvent);
+                                    
                                     
                                     //Get statuts
                                     $statutEvent = $workflowRepo->getStatutQueueEvent(2);
@@ -1482,5 +1660,36 @@ class WorkflowController extends AbstractController
         return $this->json($respObjects);
     }
 
+    function getEventsAfterKey($data, $key, $title) {
+        // Helper function to search recursively
+        function searchBranches($item, $key, $title) {
+            if (isset($item['id']) && $item['id'] === $key) {
+                if (isset($item['branches']) && isset($item['branches'][$title])) {
+                    return $item['branches'][$title];
+                }
+            }
+            if (isset($item['branches'])) {
+                foreach ($item['branches'] as $branch) {
+                    foreach ($branch as $subItem) {
+                        $result = searchBranches($subItem, $key, $title);
+                        if ($result !== null) {
+                            return $result;
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+    
+        // Iterate over the main data array
+        foreach ($data as $item) {
+            $result = searchBranches($item, $key, $title);
+            if ($result !== null) {
+                return $result;
+            }
+        }
+        return null;
+    }
+    
   
 }

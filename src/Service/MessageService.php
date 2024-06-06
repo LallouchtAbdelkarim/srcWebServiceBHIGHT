@@ -73,7 +73,8 @@ class MessageService
          "REQUIRED_DOSSIER"=>"Veuillez remplir tous les champs de dossier !",
          "ERROR-SEG"=>"Veuillez vérifier la segmentation sélectionnée",
          "ERROR-SEG1"=>"Veuillez vérifier la segmentation sélectionnée",
-         "EMPTY-DATA-ACTIVITY"=>"Veuillez vérifier votre schéma !"
+         "EMPTY-DATA-ACTIVITY"=>"Veuillez vérifier votre schéma !",
+         "ERROR_EVENT"=>"Veuillez vérifier votre évenment !"
         );
         return $listMessage[$CODEERROR];
     }

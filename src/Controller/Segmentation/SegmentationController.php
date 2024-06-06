@@ -77,12 +77,12 @@ class SegmentationController extends AbstractController
             $titre = $data["titre"];
             $description = $data["description"];
             $entity = $data["entity"];
+            $entity = ['creance','debiteur','dossier','telephone','adresse'];
             $cle = $data["cle"];
             // $id_type_id = $data["id_type_id"];
             // $queue_groupe_id = $data["queue_groupe_id"];
             // $active = $data["active"];
             $type = $data["type"];
-
             if($titre == "" ){
                 $codeStatut = "ERROR-EMPTY-PARAMS";
             }else{
@@ -209,6 +209,7 @@ class SegmentationController extends AbstractController
         // try {
             for ($s=0; $s < count($segment) ; $s++) {
                 $entities = json_decode($segment[$s]['entities']);
+
                
                 if(in_array('creance',$entities))
                 {
@@ -266,6 +267,7 @@ class SegmentationController extends AbstractController
                     $rqDossier = "SELECT doss.id FROM debt_force_seg.dt_Dossier doss WHERE doss.id IN (
                         SELECT (c1.id_dossier_id) from debt_force_seg.dt_Creance c1 where c1.id in (".$rqCreance.")
                     )";
+
                    
                     $stmt = $this->conn->prepare($rqDossier);
                     foreach ($param as $key => $value) {
@@ -306,8 +308,8 @@ class SegmentationController extends AbstractController
                     $rqTelephone = "SELECT tel1.id FROM debt_force_seg.dt_Telephone tel1 WHERE (tel1.id_debiteur_id) IN (
                         SELECT debi.id FROM debt_force_seg.dt_Debiteur debi WHERE debi.id IN (
                         SELECT (t1.id_debiteur_id)
-                        FROM Type_Debiteur t1
-                        WHERE t1.id_creance IN (".$rqCreance."))
+                        FROM debt_force_seg.dt_type_debiteur t1
+                        WHERE t1.id_creance_id IN (".$rqCreance."))
                     )";
                     // $query = $this->em->createQuery($rqTelephone);
                     // $query->setParameters($param);
@@ -348,11 +350,11 @@ class SegmentationController extends AbstractController
 
                     $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ;
 
-                    $rqAdresse = "SELECT tel1.id FROM adresse tel1 WHERE (tel1.id_debiteur_id) IN (
-                        SELECT debi.id FROM Debiteur debi WHERE debi.id IN (
+                    $rqAdresse = "SELECT tel1.id FROM debt_force_seg.dt_adresse tel1 WHERE (tel1.id_debiteur_id) IN (
+                        SELECT debi.id FROM debt_force_seg.dt_Debiteur debi WHERE debi.id IN (
                         SELECT (t1.id_debiteur_id)
-                        FROM Type_Debiteur t1
-                        WHERE t1.id_creance IN (".$rqCreance."))
+                        FROM debt_force_seg.dt_Type_Debiteur t1
+                        WHERE t1.id_creance_id IN (".$rqCreance."))
                     )";
                     $stmt = $this->conn->prepare($rqAdresse);
                     foreach ($param as $key => $value) {
@@ -379,9 +381,9 @@ class SegmentationController extends AbstractController
                     if(in_array('creance',$entities))
                     {
                         $rqDeb = "SELECT debi.id FROM debt_force_seg.dt_debiteur debi WHERE debi.id IN (
-                            SELECT (t1.id_debiteur)
-                            FROM Type_Debiteur t1
-                            WHERE t1.id_creance IN (".$rqCreance.")
+                            SELECT (t1.id_debiteur_id)
+                            FROM debt_force_seg.dt_Type_Debiteur t1
+                            WHERE t1.id_creance_id IN (".$rqCreance.")
                         )";
                        
                         $stmt = $this->conn->prepare($rqDeb);
@@ -417,11 +419,10 @@ class SegmentationController extends AbstractController
                         $param = $requetOutput["param"];
                         $queryEntities = strtolower($queryEntities);
                         $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ;
-
-                        $rqDeb = "SELECT debi.id FROM debiteur debi WHERE debi.id IN (
+                        $rqDeb = "SELECT debi.id FROM debt_force_seg.dt_debiteur debi WHERE debi.id IN (
                             SELECT (t1.id_debiteur_id)
-                            FROM Type_Debiteur t1
-                            WHERE t1.id_creance IN (".$rqCreance.")
+                            FROM debt_force_seg.dt_Type_Debiteur t1
+                            WHERE t1.id_creance_id IN (".$rqCreance.")
                         )";
                         $stmt = $this->conn->prepare($rqDeb);
                         foreach ($param as $key => $value) {

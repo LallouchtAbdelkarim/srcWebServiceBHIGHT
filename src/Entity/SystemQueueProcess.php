@@ -20,6 +20,10 @@ class SystemQueueProcess
     #[ORM\Column]
     private ?int $id_event = null;
 
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?StatusSystemQueue $id_status = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -45,6 +49,18 @@ class SystemQueueProcess
     public function setIdEvent(int $id_event): static
     {
         $this->id_event = $id_event;
+
+        return $this;
+    }
+
+    public function getIdStatus(): ?StatusSystemQueue
+    {
+        return $this->id_status;
+    }
+
+    public function setIdStatus(?StatusSystemQueue $id_status): static
+    {
+        $this->id_status = $id_status;
 
         return $this;
     }

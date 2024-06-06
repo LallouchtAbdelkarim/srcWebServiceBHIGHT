@@ -503,7 +503,7 @@ class QueueController extends AbstractController
                         SELECT debi.id FROM debt_force_seg.dt_Debiteur debi WHERE debi.id IN (
                         SELECT (t1.id_debiteur_id) 
                         FROM debt_force_seg.dt_Type_Debiteur t1 
-                        WHERE t1.id_creance IN (".$rqCreance."))
+                        WHERE t1.id_creance_id IN (".$rqCreance."))
                     )";
 
                     $stmt = $this->conn->prepare($rqTelephone);
@@ -546,7 +546,7 @@ class QueueController extends AbstractController
                         SELECT debi.id FROM debt_force_seg.dt_Debiteur debi WHERE debi.id IN (
                         SELECT (t1.id_debiteur_id) 
                         FROM debt_force_seg.dt_type_debiteur t1 
-                        WHERE t1.id_creance IN (".$rqCreance."))
+                        WHERE t1.id_creance_id IN (".$rqCreance."))
                     )";
 
                     $stmt = $this->conn->prepare($rqAdresse);
@@ -577,7 +577,7 @@ class QueueController extends AbstractController
                         $rqDeb = "SELECT debi.id FROM debt_force_seg.dt_Debiteur debi WHERE debi.id IN (
                             SELECT (t1.id_debiteur_id) 
                             FROM debt_force_seg.dt_Type_Debiteur t1 
-                            WHERE t1.id_creance IN (".$rqCreance.")
+                            WHERE t1.id_creance_id IN (".$rqCreance.")
                         )";
                         $stmt = $this->conn->prepare($rqDeb);
                         foreach ($param as $key => $value) {
@@ -616,7 +616,7 @@ class QueueController extends AbstractController
                         $rqDeb = "SELECT debi.id FROM debt_force_seg.dt_Debiteur debi WHERE debi.id IN (
                             SELECT (t1.id_debiteur_id) 
                             FROM debt_force_seg.dt_type_debiteur t1 
-                            WHERE t1.id_creance IN (".$rqCreance.")
+                            WHERE t1.id_creance_id IN (".$rqCreance.")
                         )";
                         $stmt = $this->conn->prepare($rqDeb);
                         foreach ($param as $key => $value) {
@@ -2100,16 +2100,16 @@ class QueueController extends AbstractController
                         $entitiesValue[$i]['value'] = $queueRepo->getValueQueue($id, $entities[$i]);
                     }else if('dossier' == $entities[$i]) {
                         $entitiesValue[$i]['entities'] = $entities[$i];
-                        $entitiesValue[$i]['value'] = $queueRepo->getValueSegment($id, $entities[$i]);;
+                        $entitiesValue[$i]['value'] = $queueRepo->getValueQueue($id, $entities[$i]);;
                     }else if('debiteur' == $entities[$i]) {
                         $entitiesValue[$i]['entities'] = $entities[$i];
-                        $entitiesValue[$i]['value'] = $queueRepo->getValueSegment($id, $entities[$i]);;
+                        $entitiesValue[$i]['value'] = $queueRepo->getValueQueue($id, $entities[$i]);;
                     }else if('telephone' == $entities[$i]) {
                         $entitiesValue[$i]['entities'] = $entities[$i];
-                        $entitiesValue[$i]['value'] = $queueRepo->getValueSegment($id, $entities[$i]);;
+                        $entitiesValue[$i]['value'] = $queueRepo->getValueQueue($id, $entities[$i]);;
                     }else if('adresse' == $entities[$i]) {
                         $entitiesValue[$i]['entities'] = $entities[$i];
-                        $entitiesValue[$i]['value'] = $queueRepo->getValueSegment($id, $entities[$i]);;
+                        $entitiesValue[$i]['value'] = $queueRepo->getValueQueue($id, $entities[$i]);;
                     }
                 }
                 $respObjects["entities"] = $entitiesValue;

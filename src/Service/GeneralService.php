@@ -146,4 +146,45 @@ class GeneralService
         return $previousStep;
     }
 
+
+    public function getStep(array $workflowData, string $cleEvent)
+    {
+        $step = null;
+        $foundCurrent = false;
+
+        foreach ($workflowData as $index => $component) {
+            // Check if this is the current component
+            if ($component['id'] === $cleEvent) {
+                $foundCurrent = true;
+                // Check if there is a next component in the sequence
+                if (isset($workflowData[$index])) {
+                    $step = $workflowData[$index];
+                }
+                break;
+            }
+
+            // If the component is a switch, check its branches
+            if (isset($component['branches'])) {
+                foreach ($component['branches'] as $branchComponents) {
+                    foreach ($branchComponents as $branchComponent) {
+                        if ($branchComponent['id'] === $cleEvent) {
+                            $foundCurrent = true;
+                            // Check if there is a next component in the branch sequence
+                            if (isset($branchComponents[$index])) {
+                                $step = $branchComponents[$index];
+                            }
+                            break 3; // Exit all loops
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!$foundCurrent) {
+            // Handle case where current component is not found (e.g., error or end of workflow)
+            throw new \Exception("Current component with id $cleEvent not found in workflow data.");
+        }
+        return $step;
+    }
+
 }
