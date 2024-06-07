@@ -494,7 +494,6 @@ class workflowRepo extends ServiceEntityRepository
             $entities = $stmt->fetchAssociative();
 
             $listeEntities = json_decode($entities['entities']);
-
             /*if(in_array('creance',$listeEntities)){
                 $persistDetailQueue = "
                     INSERT INTO queue_event (`id_event_action_id`,`id_statut_id`, `id_queue_detail`, `statut_workflow`,`type`) 
@@ -507,11 +506,11 @@ class workflowRepo extends ServiceEntityRepository
                 $stmt = $stmt->executeQuery();
             }*/
 
-            if(in_array('dossier',$listeEntities)){
+            if(in_array('dossier',$listeEntities)){dump($idQueue);
                 $persistDetailQueue = "
-                    INSERT INTO queue_event (`id_event_action_id`,`id_statut_id`, `id_queue_detail`, `statut_workflow`,`type`) 
+                    INSERT INTO queue_event (`id_event_action_id`,`id_statut_id`, `id_queue_detail`, `statut_workflow`,`type`, `id_element`) 
                     SELECT 
-                        :idEvent , 2 , qc.id , 0 , 2
+                        :idEvent , 2 , qc.id , 0 , 2 , qc.id_dossier
                     FROM debt_force_seg.queue_dossier qc where qc.id_queue = :id_queue";
                 $stmt = $this->conn->prepare($persistDetailQueue);
                 $stmt->bindParam('id_queue', $idQueue); 
@@ -929,8 +928,32 @@ class workflowRepo extends ServiceEntityRepository
         return $param;
     }
 
+    public function getEvenementByQueueEvent($id){
+        $sql="select e.titre from evenement_workflow e where e.id in (select a.id_event_id from event_action a where a.id in (select q.id_event_action_id from queue_event q where q.id =:id))";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue("id",$id);
+        $stmt = $stmt->executeQuery();
+        $statut = $stmt->fetchAssociative();
+        return $statut;
+    }
 
+    public function getDetail($id){
+        $sql="select d.numero_dossier from dossier d where d.id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue("id",$id);
+        $stmt = $stmt->executeQuery();
+        $statut = $stmt->fetchAssociative();
+        return $statut;
+    }
+    public function getHistoriqueByQueue($id){
+        $sql="select d.* from historique_queue_event d where d.id_queue_event_id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue("id",$id);
+        $stmt = $stmt->executeQuery();
+        $statut = $stmt->fetchAll();
+        return $statut;
+    }
 
-    
     
 }

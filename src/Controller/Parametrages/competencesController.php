@@ -8,6 +8,7 @@ use App\Entity\DetailCompetence;
 use App\Entity\DetailCompetenceFamilles;
 use App\Entity\DetailGroupeCompetence;
 use App\Entity\GroupeCompetence;
+use App\Entity\SousDetailGroupeCompetence;
 use App\Repository\Parametrages\competenceRepo;
 use App\Service\AuthService;
 use App\Service\MessageService;
@@ -293,19 +294,29 @@ class competencesController extends AbstractController
         $titre = $data["titre"];
         $activites = $data["data"];
 
+        $dataDetails = $data["dataDetails"];
+
+        
         if($titre != '' && !empty($titre) && count($data) >= 1){
             $competence = $competenceRepo->createGroupeConpetence($titre);
             if($competence != null){
                 foreach ($activites as $value) {
                     // $activityRepo = $activityRepo->findParentActivity($value);
                     $typeParametrage = $activityRepo->getOneTypesOfSParametrages($value);
-                    dump($typeParametrage);
                     // if($activityRepo != null){
                     //     $competenceRepo->createDetailGroupe($competence , $activityRepo);
                     // }
                     // if($typeParametrage != null){
-                        $competenceRepo->createDetailGroupe($competence , $typeParametrage);
+                        $detailGroupe = $competenceRepo->createDetailGroupe($competence , $typeParametrage);
                     // }
+                    for ($i=0; $i < count($dataDetails) ; $i++) { 
+                        if($dataDetails[$i]['id'] == $value){
+                            for ($j=0; $j < count($dataDetails[$i]['params']); $j++) { 
+                                $param = $activityRepo->getOneParam($dataDetails[$i]['params'][$j]);
+                                $sousDetailGroupe = $competenceRepo->createSousDetailGroupe($detailGroupe , $param);
+                            }
+                        }
+                    }
                 }
                 $codeStatut="OK";
             }else{
@@ -354,10 +365,15 @@ class competencesController extends AbstractController
             {
                 $sousGroupe =  $this->em->getRepository(DetailGroupeCompetence::class)->findBy(['id_groupe'=>$groupe->getId()]);
                 foreach ($sousGroupe as $sous) {
+                    $sousSousGroupe =  $this->em->getRepository(SousDetailGroupeCompetence::class)->findBy(['id_detail_groupe_competence'=>$sous->getId()]);
+                    foreach ($sousSousGroupe as $sous1) {
+                        $this->em->remove($sous1);
+                    }
                     $this->em->remove($sous);
                 }
                 $this->em->remove($groupe);
                 $this->em->flush();
+
                 $codeStatut='OK';
             }
             
@@ -379,9 +395,23 @@ class competencesController extends AbstractController
             $id = $request->get('id');
             $result =  $this->em->getRepository(GroupeCompetence::class)->find($id);
             $sousEtap =  $this->em->getRepository(DetailGroupeCompetence::class)->findBy(['id_groupe'=>$result->getId()]);
+
+            $details = [];
+            $index = 0;
+            foreach ($sousEtap as $value) {
+                $details[$index]['id'] = $value->getIdFamille()->getId();
+                $details1 =  $this->em->getRepository(SousDetailGroupeCompetence::class)->findBy(['id_detail_groupe_competence'=>$value->getId()]);
+                for ($j=0; $j <count($details1); $j++) { 
+                    $details[$index]['params'][$j] = $details1[$j]->getIdParam()->getId();
+                    # code...
+                }
+                $index ++;
+            }
+            $sousEtap =  $this->em->getRepository(DetailGroupeCompetence::class)->findBy(['id_groupe'=>$result->getId()]);
             $data = [
                 "titre"=>$result->getTitre(),
                 "detailGroupeCompetence"=>$sousEtap,
+                "dataDetailGroupeCompetence"=>$details,
             ];
             $respObjects["data"] = $data;
             $codeStatut="OK";
@@ -411,6 +441,10 @@ class competencesController extends AbstractController
                     $sousEtap =  $this->em->getRepository(DetailGroupeCompetence::class)->findBy(['id_groupe'=>$etapSelected->getId()]);
 
                     foreach ($sousEtap as $sous) {
+                        $sousSousGroupe =  $this->em->getRepository(SousDetailGroupeCompetence::class)->findBy(['id_detail_groupe_competence'=>$sous->getId()]);
+                        foreach ($sousSousGroupe as $sous1) {
+                            $this->em->remove($sous1);
+                        }
                         $this->em->remove($sous);
                     }
                     $this->em->flush();

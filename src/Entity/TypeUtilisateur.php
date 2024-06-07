@@ -16,6 +16,9 @@ class TypeUtilisateur
     #[ORM\Column(length: 255)]
     private ?string $type = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $ordre = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -29,6 +32,18 @@ class TypeUtilisateur
     public function setType(string $type): static
     {
         $this->type = $type;
+
+        return $this;
+    }
+
+    public function getOrdre(): ?int
+    {
+        return $this->ordre;
+    }
+
+    public function setOrdre(?int $ordre): static
+    {
+        $this->ordre = $ordre;
 
         return $this;
     }

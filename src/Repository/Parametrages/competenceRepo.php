@@ -9,6 +9,7 @@ use App\Entity\DetailCompetence;
 use App\Entity\DetailCompetenceFamilles;
 use App\Entity\ModelFacturation;
 use App\Entity\RegleModelFacturation;
+use App\Entity\SousDetailGroupeCompetence;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -172,7 +173,15 @@ class competenceRepo extends ServiceEntityRepository
         $this->em->persist($act_res);
         $this->em->flush();
         return $act_res;
-        
+    }
+    public function createSousDetailGroupe($detailGroupe  ,$act){
+        $act_res = new SousDetailGroupeCompetence();
+        $act_res ->setIdDetailGroupeCompetence($detailGroupe);
+        // $act_res ->setIdActivite($act);
+        $act_res ->setIdParam($act);
+        $this->em->persist($act_res);
+        $this->em->flush();
+        return $act_res;
     }
     public function getGroupeCompetence(){
         $model = $this->em->getRepository(GroupeCompetence::class)->findAll();

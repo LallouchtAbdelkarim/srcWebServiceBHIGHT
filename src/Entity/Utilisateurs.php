@@ -65,6 +65,10 @@ class Utilisateurs
     #[ORM\ManyToOne]
     private ?TypeUtilisateur $id_type_user = null;
 
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?Competence $id_competence = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -270,6 +274,18 @@ class Utilisateurs
     public function setIdTypeUser(?TypeUtilisateur $id_type_user): static
     {
         $this->id_type_user = $id_type_user;
+
+        return $this;
+    }
+
+    public function getIdCompetence(): ?Competence
+    {
+        return $this->id_competence;
+    }
+
+    public function setIdCompetence(?Competence $id_competence): static
+    {
+        $this->id_competence = $id_competence;
 
         return $this;
     }

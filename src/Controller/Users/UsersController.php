@@ -370,6 +370,7 @@ class UsersController extends AbstractController
             $status = $request->request->get('status');
             $email = $request->request->get('email');
             $type = $request->request->get('type');
+            $competence = $request->request->get('competence');
             
     
             // Get the image file from the request
@@ -382,6 +383,7 @@ class UsersController extends AbstractController
                 } else {
                     $group = $entityManager->getRepository(Groupe::class)->findOneBy(['id' => $grpr]);
                     $typeUser = $entityManager->getRepository(TypeUtilisateur::class)->findOneBy(['id' => $type]);
+                    $competenceEntity = $entityManager->getRepository(Competence::class)->findOneBy(['id' => $competence]);
 
 
     
@@ -404,7 +406,8 @@ class UsersController extends AbstractController
                     $user->setIdTypeUser($typeUser);
                     $user->setEmail($email);
                     $user->setStatus(0);
-    
+                    $user->setIdCompetence($competenceEntity);
+                    
                     if ($img) {
                         $destination = $this->getParameter('kernel.project_dir') . '/public/profile_img';
                         $newFilename = uniqid() . '.' . $img->guessExtension();
@@ -580,7 +583,8 @@ class UsersController extends AbstractController
             $response = [
                 'id' => $role->getId(),
                 'code'  => $role->getCode(),
-                'titre' => $role->getTitre()
+                'titre' => $role->getTitre(),
+                'groupe' => $role->getGroupe()
             ];
             array_push($result, $response);
         }
@@ -724,7 +728,7 @@ class UsersController extends AbstractController
         try {
             // $this->AuthService->checkAuth(0,$request);
 
-            $user = "SELECT u.* FROM type_utilisateur u where u.id != 1 " ;
+            $user = "SELECT u.* FROM type_utilisateur u " ;
             $stmt = $this->connection->prepare($user);
             $stmt = $stmt->executeQuery();
             $resulatUser = $stmt->fetchAllAssociative();

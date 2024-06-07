@@ -838,8 +838,7 @@ class ActivityController extends AbstractController
             $codeStatut = "OK";            
         }catch(\Exception $e){
             $codeStatut = "ERROR";
-        $respObjects["err"] = $e->getMessage();
-
+            $respObjects["err"] = $e->getMessage();
         }
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);

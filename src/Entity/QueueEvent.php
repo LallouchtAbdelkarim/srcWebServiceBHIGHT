@@ -28,6 +28,9 @@ class QueueEvent
 
     #[ORM\Column]
     private ?int $type = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $idElement = null;
     /* Statut 0 : default
        Statut 1 : terminée
     */
@@ -93,6 +96,18 @@ class QueueEvent
     public function setType(int $type): static
     {
         $this->type = $type;
+
+        return $this;
+    }
+
+    public function getIdElement(): ?int
+    {
+        return $this->idElement;
+    }
+
+    public function setIdElement(?int $idElement): static
+    {
+        $this->idElement = $idElement;
 
         return $this;
     }
