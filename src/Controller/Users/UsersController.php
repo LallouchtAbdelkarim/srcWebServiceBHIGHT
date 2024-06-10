@@ -109,7 +109,6 @@ class UsersController extends AbstractController
             $respObjects["err"] = $e->getMessage();
             $codeStatut="ERROR";
         }
-       
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
@@ -123,7 +122,6 @@ class UsersController extends AbstractController
         $id
     ): Response {
         
-
         $respObjects =array();
         $codeStatut="ERROR";
         try {
@@ -371,59 +369,74 @@ class UsersController extends AbstractController
             $email = $request->request->get('email');
             $type = $request->request->get('type');
             $competence = $request->request->get('competence');
+            $responsable = $request->request->get('responsable');
             
     
             // Get the image file from the request
             $img = $request->files->get('img');
-            if(empty(trim($nom)) || empty(trim($prenom)) ||  empty(trim($this->formatPhoneNumber($tel))) ){
+            if(empty(trim($nom)) || empty(trim($prenom)) ||  empty(trim($this->formatPhoneNumber($tel))) || empty(trim($pass)) ){
                 $codeStatut = "EMPTY-DATA";
             }else{
                 if ($pass !== $pass1) {
                     $codeStatut="PASSWORD_MATCH";
                 } else {
-                    $group = $entityManager->getRepository(Groupe::class)->findOneBy(['id' => $grpr]);
-                    $typeUser = $entityManager->getRepository(TypeUtilisateur::class)->findOneBy(['id' => $type]);
-                    $competenceEntity = $entityManager->getRepository(Competence::class)->findOneBy(['id' => $competence]);
+                    $existUser = $entityManager->getRepository(Utilisateurs::class)->findOneBy(['nom' => $nom ,'prenom' => $prenom  ]);
 
+                    if($existUser){
+                        $codeStatut="ELEMENT_DEJE_EXIST";
+                    }else{
+                        $group = $entityManager->getRepository(Groupe::class)->findOneBy(['id' => $grpr]);
+                        $typeUser = $entityManager->getRepository(TypeUtilisateur::class)->findOneBy(['id' => $type]);
+                        $competenceEntity = $entityManager->getRepository(Competence::class)->findOneBy(['id' => $competence]);
+                        $responsableEntity = $entityManager->getRepository(TypeUtilisateur::class)->findOneBy(['id' => $responsable]);
+                        if($typeUser->getOrdre() < $responsableEntity->getOrdre()){
+                            $codeStatut="RESPONSABILITY_ERROR";
+                        }else{
+                            if($group != null && $typeUser != null){
+                                // Create a new user entity
+                                $user = new Utilisateurs();
+                                $hashedPassword = md5($pass);
+                                $user->setNom($nom);
+                                $user->setPrenom($prenom);
+                                $user->setPassword($hashedPassword);
+                                // $user->setStatus($status);
+                                $user->setTel($tel);
+                                $user->setImei($imei);
+                                $user->setMobile($mobile);
+                                $user->setAdresse($adresse);
+                                $user->setRayon($rayon);
+                                $user->setCin($cin);
+                                $user->setVille($ville);
+                                $user->setPays($pays);
+                                $user->setIdGroup($group);
+                                $user->setIdTypeUser($typeUser);
+                                $user->setEmail($email);
+                                $user->setStatus(0);
+                                $user->setIdCompetence($competenceEntity);
+                                $user->setResponsable($responsableEntity);
+                                
+                                if ($img) {
+                                    $destination = $this->getParameter('kernel.project_dir') . '/public/profile_img';
+                                    $newFilename = uniqid() . '.' . $img->guessExtension();
+                
+                                    try {
+                                        $img->move($destination, $newFilename);
+                                    } catch (FileException $e) {
+                                        // Handle the exception if necessary
+                                    }
+                                    $user->setImg('/profile_img/' . $newFilename);
+                                }
+                
+                                // Persist the user entity
+                                $entityManager->persist($user);
+                                $entityManager->flush();
+                                $codeStatut = "OK";
+                            }else{
+                                $codeStatut="EMPTY-DATA";
+                            }
 
-    
-                    // Create a new user entity
-                    $user = new Utilisateurs();
-                    $hashedPassword = md5($pass);
-                    $user->setNom($nom);
-                    $user->setPrenom($prenom);
-                    $user->setPassword($hashedPassword);
-                    // $user->setStatus($status);
-                    $user->setTel($tel);
-                    $user->setImei($imei);
-                    $user->setMobile($mobile);
-                    $user->setAdresse($adresse);
-                    $user->setRayon($rayon);
-                    $user->setCin($cin);
-                    $user->setVille($ville);
-                    $user->setPays($pays);
-                    $user->setIdGroup($group);
-                    $user->setIdTypeUser($typeUser);
-                    $user->setEmail($email);
-                    $user->setStatus(0);
-                    $user->setIdCompetence($competenceEntity);
-                    
-                    if ($img) {
-                        $destination = $this->getParameter('kernel.project_dir') . '/public/profile_img';
-                        $newFilename = uniqid() . '.' . $img->guessExtension();
-    
-                        try {
-                            $img->move($destination, $newFilename);
-                        } catch (FileException $e) {
-                            // Handle the exception if necessary
                         }
-                        $user->setImg('/profile_img/' . $newFilename);
                     }
-    
-                    // Persist the user entity
-                    $entityManager->persist($user);
-                    $entityManager->flush();
-                    $codeStatut = "OK";
                 }
             }
             } catch (\Exception $e) {
@@ -441,34 +454,12 @@ class UsersController extends AbstractController
     #[Route('/modifie_user/{id}', name: 'modifie_user',methods:['POST'])]
     public function Updateutilisateurs(Request $request, EntityManagerInterface $entityManager, $id): Response
     {
-
+        $codeStatut="EROOR";
         $user = $entityManager->getRepository(Utilisateurs::class)->findOneBy(array('id' => $id));;
         // $gpu = $entityManager->getRepository(GroupProfil::class)->findBy(array('id_group' =>$groupe_user->getId() ));
         if(!$user){
-            $response="ERROR User Not found";
-        }
-        $response = "";
-        // $nom = "";
-        // $prenom = "";
-        // $cin = "";
-        // $email = "";
-        // $tel = "";
-        // $mobile = "";
-        // $adresse = "";
-        // $ville = "";
-        // $pays = "";
-        // $grpr = "";
-        // $supp = "";
-        // $imei = "";
-        // $rayon = "";
-        // $pass = "";
-        // $pass1 = "";
-        // $img = "";
-
-
-        if ($request->getMethod() == "POST") {
-            // Retrieve form data
-            
+            $codeStatut="NOT_EXIST_ELEMENT";
+        }else{
             $nom = $request->request->get('nom');
             $prenom = $request->request->get('prenom');
             $cin = $request->request->get('cin');
@@ -484,60 +475,78 @@ class UsersController extends AbstractController
             $pass = $request->request->get('pass');
             $pass1 = $request->request->get('pass1');
             $status = $request->request->get('status');
-
+            $type = $request->request->get('type');
+            $competence = $request->request->get('competence');
+            $responsable = $request->request->get('responsable');
             // Get the image file from the request
             $img = $request->files->get('img');
-
-            if ($pass !== $pass1) {
-                $response = "Les mots de passe ne correspondent pas !";
-            } else {
-                if(empty(trim($nom)) or empty(trim($nom))){
-                    $response = "Veuillez vérifier vos informations !";
-                }else{
-                    $group = $entityManager->getRepository(Groupe::class)->findOneBy(['id' => $grpr]);
-                    $hashedPassword = md5($pass);
-                    $user->setNom($nom);
-                    $user->setPrenom($prenom);
-                    $user->setPassword($hashedPassword);
-                    $user->setStatus($status);
-                    $user->setTel($tel);
-                    $user->setImei($imei);
-                    $user->setMobile($mobile);
-                    $user->setAdresse($adresse);
-                    $user->setRayon($rayon);
-                    $user->setCin($cin);
-                    $user->setVille($ville);
-                    $user->setPays($pays);
-                    $user->setIdGroup($group);
-                    // Handle the image file upload
-                    if ($img) {
-                        // Remove the existing image file
-                        $existingImagePath = $this->getParameter('kernel.project_dir') . '/public' . $user->getImg();
-    
-                        if ($existingImagePath !== null && file_exists($existingImagePath)) {
-                            unlink($existingImagePath);
+            if(empty(trim($nom)) || empty(trim($prenom)) ||  empty(trim($this->formatPhoneNumber($tel)))  ){
+                $codeStatut = "EMPTY-DATA";
+            }else{
+                if ($pass !== $pass1) {
+                    $codeStatut="PASSWORD_MATCH";
+                } else {
+                    if(empty(trim($nom)) or empty(trim($nom))){
+                        $codeStatut = "EMPTY-DATA";
+                    }else{
+                        $group = $entityManager->getRepository(Groupe::class)->findOneBy(['id' => $grpr]);
+                        $typeUser = $entityManager->getRepository(TypeUtilisateur::class)->findOneBy(['id' => $type]);
+                        $competenceEntity = $entityManager->getRepository(Competence::class)->findOneBy(['id' => $competence]);
+                        $responsableEntity = $entityManager->getRepository(TypeUtilisateur::class)->findOneBy(['id' => $responsable]);
+                        if($typeUser->getOrdre() < $responsableEntity->getOrdre()){
+                            $codeStatut="RESPONSABILITY_ERROR";
+                        }else{
+                            $hashedPassword = md5($pass);
+                            $user->setNom($nom);
+                            $user->setPrenom($prenom);
+                            $user->setPassword($hashedPassword);
+                            $user->setTel($tel);
+                            $user->setImei($imei);
+                            $user->setMobile($mobile);
+                            $user->setAdresse($adresse);
+                            $user->setRayon($rayon);
+                            $user->setCin($cin);
+                            $user->setVille($ville);
+                            $user->setPays($pays);
+                            $user->setIdGroup($group);
+                            $user->setIdTypeUser($typeUser);
+                            $user->setIdCompetence($competenceEntity);
+                            $user->setResponsable($responsableEntity);
+                            // Handle the image file upload
+                            if ($img) {
+                                // Remove the existing image file
+                                $existingImagePath = $this->getParameter('kernel.project_dir') . '/public' . $user->getImg();
+        
+                                if ($existingImagePath !== null && file_exists($existingImagePath)) {
+                                    unlink($existingImagePath);
+                                }
+                                // Upload the new image file
+                                $destination = $this->getParameter('kernel.project_dir') . '/public/profile_img';
+                                $newFilename = uniqid() . '.' . $img->guessExtension();
+        
+                                try {
+                                    $img->move($destination, $newFilename);
+                                } catch (FileException $e) {
+                                    // Handle the exception if necessary
+                                }
+                                $user->setImg('/profile_img/' . $newFilename);
+                            }
+                            // Persist the user entity
+                            $entityManager->persist($user);
+                            $entityManager->flush();
+                            $codeStatut = "OK";
                         }
-                        // Upload the new image file
-                        $destination = $this->getParameter('kernel.project_dir') . '/public/profile_img';
-                        $newFilename = uniqid() . '.' . $img->guessExtension();
-    
-                        try {
-                            $img->move($destination, $newFilename);
-                        } catch (FileException $e) {
-                            // Handle the exception if necessary
-                        }
-    
-                        $user->setImg('/profile_img/' . $newFilename);
                     }
-                    // Persist the user entity
-                    $entityManager->persist($user);
-                    $entityManager->flush();
-                    $response = "Modifier avec success";
                 }
             }
+            // Retrieve form data
+            
         }
 
-        return new JsonResponse($response);
+       
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
     }
     #[Route('/delete_user/{id}', name: 'delete_user',methods:['DELETE'])]
     public function deleteUser(EntityManagerInterface $entityManager, Request $request, ValidationService $validator, $id): Response
@@ -554,6 +563,7 @@ class UsersController extends AbstractController
                 $response="Cet utilisateur est affecté à un workflow";
             }else{
                 $token = $entityManager->getRepository(Token::class)->findOneBy(array('userIdent' => $id));
+                if($token)
                 $entityManager->remove($token);
                 // $existingImagePath = $this->getParameter('kernel.project_dir') . '/public' . $user->getImg();
     

@@ -59,6 +59,9 @@ class Adresse
     #[ORM\Column(nullable: true)]
     private ?int $etat = null;
 
+    #[ORM\ManyToOne]
+    private ?TypeSource $id_type_source = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -227,6 +230,18 @@ class Adresse
     public function setEtat(?int $etat): static
     {
         $this->etat = $etat;
+
+        return $this;
+    }
+
+    public function getIdTypeSource(): ?TypeSource
+    {
+        return $this->id_type_source;
+    }
+
+    public function setIdTypeSource(?TypeSource $id_type_source): static
+    {
+        $this->id_type_source = $id_type_source;
 
         return $this;
     }

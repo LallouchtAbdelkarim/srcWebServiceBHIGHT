@@ -73,6 +73,10 @@ class Telephone
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $type = null;
 
+    #[ORM\ManyToOne]
+    private ?TypeSource $id_type_source = null;
+
+
 
 
     public function getId(): ?int
@@ -303,6 +307,18 @@ class Telephone
     public function setType(?string $type): static
     {
         $this->type = $type;
+
+        return $this;
+    }
+
+    public function getIdTypeSource(): ?TypeSource
+    {
+        return $this->id_type_source;
+    }
+
+    public function setIdTypeSource(?TypeSource $id_type_source): static
+    {
+        $this->id_type_source = $id_type_source;
 
         return $this;
     }

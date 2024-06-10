@@ -22,7 +22,7 @@ class Utilisateurs
     #[ORM\Column(length: 255)]
     private ?string $password = null;
 
-    #[ORM\Column]
+    #[ORM\Column( nullable: true)]
     private ?int $status = null;
 
     #[ORM\Column(length: 255)]
@@ -68,6 +68,10 @@ class Utilisateurs
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: true)]
     private ?Competence $id_competence = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?TypeUtilisateur $responsable = null;
 
     public function getId(): ?int
     {
@@ -286,6 +290,18 @@ class Utilisateurs
     public function setIdCompetence(?Competence $id_competence): static
     {
         $this->id_competence = $id_competence;
+
+        return $this;
+    }
+
+    public function getResponsable(): ?TypeUtilisateur
+    {
+        return $this->responsable;
+    }
+
+    public function setResponsable(?TypeUtilisateur $responsable): static
+    {
+        $this->responsable = $responsable;
 
         return $this;
     }

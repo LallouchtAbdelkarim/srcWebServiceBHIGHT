@@ -15,7 +15,7 @@ class Email
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
-    private ?debiteur $id_debiteur = null;
+    private ?Debiteur $id_debiteur = null;
 
     #[ORM\Column(length: 255)]
     private ?string $email = null;
@@ -32,6 +32,13 @@ class Email
 
     #[ORM\Column(nullable: true)]
     private ?int $id_integration = null;
+
+    #[ORM\ManyToOne]
+    private ?TypeSource $id_type_source = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?StatusEmail $id_status_email = null;
 
     public function getId(): ?int
     {
@@ -106,6 +113,30 @@ class Email
     public function setIdIntegration(?int $id_integration): static
     {
         $this->id_integration = $id_integration;
+
+        return $this;
+    }
+
+    public function getIdTypeSource(): ?TypeSource
+    {
+        return $this->id_type_source;
+    }
+
+    public function setIdTypeSource(?TypeSource $id_type_source): static
+    {
+        $this->id_type_source = $id_type_source;
+
+        return $this;
+    }
+
+    public function getIdStatusEmail(): ?StatusEmail
+    {
+        return $this->id_status_email;
+    }
+
+    public function setIdStatusEmail(?StatusEmail $id_status_email): static
+    {
+        $this->id_status_email = $id_status_email;
 
         return $this;
     }

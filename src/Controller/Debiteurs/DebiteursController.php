@@ -1165,6 +1165,7 @@ class DebiteursController extends AbstractController
             $checkType = $this->TypeService->getListeType("adresse");
             $liste_status = $this->TypeService->getListeStatus("adresse");
             $respObjects["data"] = $checkType;
+            $respObjects["status"] = $liste_status;
             $codeStatut="OK";
         }catch(\Exception $e){
             $codeStatut="ERROR";
@@ -1182,7 +1183,9 @@ class DebiteursController extends AbstractController
         try{
             $this->AuthService->checkAuth(0,$request);
             $checkType = $this->TypeService->getListeType("email");
+            $listeStatus = $this->TypeService->getListeStatus("email");
             $respObjects["data"] = $checkType;
+            $respObjects["status"] = $listeStatus;
             $codeStatut="OK";
             
         }catch(\Exception $e){
@@ -1198,26 +1201,47 @@ class DebiteursController extends AbstractController
     {
         $respObjects =array();
         $codeStatut="ERROR";
-        try{
-            $this->AuthService->checkAuth(0,$request);
+        // try {
+            $this->AuthService->checkAuth(0, $request);
             $data_list = json_decode($request->getContent(), true);
-
-            if($data_list["numero"] != "" || $data_list["origine"] != "" ||  $data_list["id_type_tel_id"] != "" || $data_list["status"] != "" || $data_list["active"] != ""){
+        
+            $data_list["code_p"] = str_replace(" ", "", $data_list["code_p"]);
+            $data_list["numero"] = str_replace(" ", "", $data_list["numero"]);
+        
+            if ($data_list["numero"] != "" || $data_list["origine"] != "" || $data_list["id_type_tel_id"] != "" || $data_list["status"] != "" || $data_list["active"] != "" || $data_list["code_p"] != "") {
                 $checkDebiteur = $this->debiteursRepo->checkDebiteur($data_list["id_debiteur_id"]);
-                $checkType = $this->TypeService->checkType($data_list["id_type_tel_id"] , "tel");
-                if($checkDebiteur && $checkType){
-                    $data = $debiteursRepo->createTelephone($data_list);
-                    $codeStatut="OK";
-                }else{
-                    $codeStatut="NOT_EXIST_ELEMENT";
+                $checkType = $this->TypeService->checkType($data_list["id_type_tel_id"], "tel");
+        
+                if ($checkDebiteur && $checkType) {
+                    if (is_numeric($data_list["numero"]) && is_numeric($data_list["code_p"])) {
+                        if ($debiteursRepo->checkCodePays($data_list["code_p"])) {
+                            try {
+                                // Verify the phone number format
+                                $data_list['numero'] = $this->verifyPhoneNumber($data_list['numero'], $data_list['code_p']);
+                                
+                                $data_list['id_type_source_id'] = 4;
+                                $data = $debiteursRepo->createTelephone($data_list);
+                                $codeStatut = "OK";
+                            } catch (Exception $e) {
+                                $codeStatut = $e->getMessage();
+                            }
+                        } else {
+                            $codeStatut = "FORMAT_INCORRECT";
+                        }
+                    } else {
+                        $codeStatut = "FORMAT_INCORRECT";
+                    }
+                } else {
+                    $codeStatut = "NOT_EXIST_ELEMENT";
                 }
-            }else{
-                $codeStatut="ERROR-EMPTY-PARAMS";
+            } else {
+                $codeStatut = "ERROR-EMPTY-PARAMS";
             }
-        }catch(\Exception $e){
-            $codeStatut="ERROR";
-            $respObjects["err"] = $e->getMessage();
-        }
+        // } catch (\Exception $e) {
+        //     $codeStatut = "ERROR";
+        //     $respObjects["err"] = $e->getMessage();
+        // }
+        
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
@@ -1250,6 +1274,7 @@ class DebiteursController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
     #[Route('/deleteTelephone',methods:"POST")]
     public function deleteTelephone(Request $request,debiteursRepo $debiteursRepo): JsonResponse
     {
@@ -1287,6 +1312,24 @@ class DebiteursController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+    #[Route('/getTelephoneById',methods:"GET")]
+    public function getTelephoneById(Request $request,debiteursRepo $debiteursRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0, $request);
+            $id = $request->get("id");
+            $respObjects["data"] = $debiteursRepo->getTelephoneById($id);;
+            $codeStatut="OK";
+        } catch (\Exception $e) {
+            $codeStatut = "ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
     //Adresse
     #[Route('/listeAdresse')]
     public function listeAdresse(Request $request,debiteursRepo $debiteursRepo): JsonResponse
@@ -1317,7 +1360,7 @@ class DebiteursController extends AbstractController
         try{
             $this->AuthService->checkAuth(0,$request);
             $data_list = json_decode($request->getContent(), true);
-            if($data_list["adresse_complet"] != "" || $data_list["cp"] != "" ||  $data_list["pays"] != "" || $data_list["ville"] != "" || $data_list["status"] != ""  || $data_list["verifier"] != ""){
+            if($data_list["adresse_complet"] != "" || $data_list["code_postal"] != "" ||  $data_list["pays"] != "" || $data_list["ville"] != "" || $data_list["status"] != ""  || $data_list["verifier"] != ""){
                 $checkDebiteur = $this->debiteursRepo->checkDebiteur($data_list["id_debiteur_id"]);
                 $checkType = $this->TypeService->checkType($data_list["id_type_adresse_id"] , "adresse");
                 if($checkDebiteur && $checkType){
@@ -1345,7 +1388,7 @@ class DebiteursController extends AbstractController
         try{
             $this->AuthService->checkAuth(0,$request);
             $data_list = json_decode($request->getContent(), true);
-            if($data_list["numero"] != "" || $data_list["origine"] != "" || $data_list["status"] != "" || $data_list["active"] != ""){
+            if($data_list["adresse_complet"] != "" || $data_list["code_postal"] != "" ||  $data_list["pays"] != "" || $data_list["ville"] != "" || $data_list["status"] != ""  || $data_list["verifier"] != ""){
                 $id = $request->get("id");
                 $checkElement = $this->TypeService->checkElement($id , "adresse");
                 if($checkElement ){
@@ -1393,4 +1436,190 @@ class DebiteursController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
+    #[Route('/addEmail',methods:"POST")]
+    public function addEmail(Request $request,debiteursRepo $debiteursRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data_list = json_decode($request->getContent(), true);
+            if($data_list["email"] != ""){
+                $checkDebiteur = $this->debiteursRepo->checkDebiteur($data_list["id_debiteur_id"]);
+                $checkType = $this->TypeService->checkType($data_list["id_type_email_id"] , "email");
+                $checkStatus = $this->TypeService->getOneStatus( "email" , $data_list["id_status_email_id"] );
+                // if($checkDebiteur && $checkType && $checkStatus){
+                if($this->isValidEmail($data_list["email"])){
+                    $data_list['id_type_source_id'] = 4;
+                    $data = $debiteursRepo->createEmail($data_list);
+                    $codeStatut="OK";
+                }else{
+                    $codeStatut="INVALID_EMAIL";
+                }
+                // }else{
+                //     $codeStatut="NOT_EXIST_ELEMENT";
+                // }
+            }else{
+                $codeStatut="ERROR-EMPTY-PARAMS";
+            }
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/updateEmail',methods:"POST")]
+    public function updateEmail(Request $request,debiteursRepo $debiteursRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data_list = json_decode($request->getContent(), true);
+            if($data_list["email"] != ""){
+                $id = $request->get("id");
+                $checkElement = $this->TypeService->checkElement($id , "email");
+                $checkDebiteur = $this->debiteursRepo->checkDebiteur($data_list["id_debiteur_id"]);
+                $checkType = $this->TypeService->checkType($data_list["id_type_email_id"] , "email");
+                $checkStatus = $this->TypeService->getOneStatus( "email" , $data_list["id_status_email_id"] );
+                // if($checkDebiteur && $checkType && $checkStatus){
+                    if($checkElement ){
+                        $data = $debiteursRepo->updateEmail($data_list,$id);
+                        $codeStatut="OK";
+                    }else{
+                        $codeStatut="NOT_EXIST_ELEMENT";
+                    }
+                // }else{
+                //     $codeStatut="NOT_EXIST_ELEMENT";
+                // }
+            }else{
+                $codeStatut="ERROR-EMPTY-PARAMS";
+            }
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/deleteEmail',methods:"POST")]
+    public function deleteEmail(Request $request,debiteursRepo $debiteursRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data_list = json_decode($request->getContent(), true);
+            $id = $request->get("id");
+            if($id != "" ){
+                $checkCharge = $this->TypeService->checkElement($id ,"email");
+                if($checkCharge ){
+                    $data = $debiteursRepo->deleteEmail($id);
+                    $codeStatut="OK";
+                }else{
+                    $codeStatut="NOT_EXIST_ELEMENT";
+                }
+            }else{
+                $codeStatut="ERROR-EMPTY-PARAMS";
+            }
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/getIdenticatifPays')]
+    public function getIdenticatifPays(Request $request,debiteursRepo $debiteursRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data_list = json_decode($request->getContent(), true);
+            $id = $request->get("id");
+            $data = $debiteursRepo->getIdenticatifPays();
+            $respObjects["data"] = $data;
+            $codeStatut="OK";
+            
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/getAdresseById',methods:"GET")]
+    public function getAdresseById(Request $request,debiteursRepo $debiteursRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0, $request);
+            $id = $request->get("id");
+            $respObjects["data"] = $debiteursRepo->getAdresseById($id);;
+            $codeStatut="OK";
+        } catch (\Exception $e) {
+            $codeStatut = "ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/getEmailById',methods:"GET")]
+    public function getEmailById(Request $request,debiteursRepo $debiteursRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0, $request);
+            $id = $request->get("id");
+            $respObjects["data"] = $debiteursRepo->getEmailById($id);;
+            $codeStatut="OK";
+        } catch (\Exception $e) {
+            $codeStatut = "ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    function verifyPhoneNumber($phoneNumber, $countryCode) {
+        if ($countryCode == "212") {
+            // If the phone number starts with '0', remove the '0'
+            if ($phoneNumber[0] == '0') {
+                $phoneNumber = substr($phoneNumber, 1);
+                // Verify that the remaining number has 9 digits
+                if (strlen($phoneNumber) == 9) {
+                    if (in_array($phoneNumber[0], ['5', '6', '7', '8'])) {
+                        return $phoneNumber;
+                    }else{
+                         throw new \Exception("FORMAT_INCORRECT");
+                    }
+                } else {
+                    throw new \Exception("FORMAT_INCORRECT");
+                }
+            } else {
+                // If the phone number does not start with '0', verify the second digit
+                if (in_array($phoneNumber[0], ['5', '6', '7', '8'])) {
+                    return $phoneNumber;
+                } else {
+                    throw new \Exception("FORMAT_INCORRECT");
+                }
+            }
+        } else {
+            return $phoneNumber; // No additional verification for other country codes
+        }
+    }
+    function isValidEmail($email) {
+        return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+    }
+    
 }

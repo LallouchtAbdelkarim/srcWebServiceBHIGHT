@@ -102,6 +102,7 @@ class DossiersController extends AbstractController
                 $array_accord=array();
                 $array_doss["dossier"]=$dossier;
                 $array_doss["user"]=null;
+                
                 if($dossier["id_users_id"]){
                     $array_doss["user"] = $userRepo->getOneUser($dossier["id_users_id"]);
                 }
@@ -134,6 +135,7 @@ class DossiersController extends AbstractController
                 $respObjects["email_deb"] = $email_deb;
                 $respObjects["debiteur"] = $debiteur;
                 $respObjects["notes"] = $notes;
+
                 if(isset($debiteur[0])){
                     $respObjects["debiteur"] = $debiteur[0];
                 }
@@ -154,6 +156,7 @@ class DossiersController extends AbstractController
                     $type_email = $email_deb[0]["id_type_email_id"];
                     $respObjects["type_email"] = $dossiersRepo->getTypeEmail($type_email);
                 }
+
                 $respObjects["histo"] = $histo;
                 $respObjects["accords"] = $array_accord;
                 $respObjects["courriers"] = $courriers;

@@ -264,7 +264,7 @@ class typeService
                 break;
 
             case 'email':
-                $query = $this->em->createQuery('SELECT r FROM App\Entity\TypeAdresse r ');
+                $query = $this->em->createQuery('SELECT r FROM App\Entity\TypeEmail r ');
                 $resultList = $query->getResult();
                 if ($resultList) {
                     return $resultList;
@@ -299,6 +299,13 @@ class typeService
                 break;
             case 'adresse':
                 $query = $this->em->createQuery('SELECT r FROM App\Entity\StatusAdresse r ');
+                $resultList = $query->getResult();
+                if ($resultList) {
+                    return $resultList;
+                }
+                break;
+            case 'email':
+                $query = $this->em->createQuery('SELECT r FROM App\Entity\StatusEmail r ');
                 $resultList = $query->getResult();
                 if ($resultList) {
                     return $resultList;

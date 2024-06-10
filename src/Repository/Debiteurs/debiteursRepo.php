@@ -5,6 +5,7 @@ namespace App\Repository\Debiteurs;
 use App\Entity\CorresColu;
 use App\Entity\ImportType;
 use App\Entity\ModelImport;
+use App\Entity\Telephone;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -154,6 +155,8 @@ class debiteursRepo extends ServiceEntityRepository
             return null;
         }
     }
+
+
     public function getTypeDebiteur($id_creance , $id_debiteur){
         $sql="SELECT * FROM `details_type_deb` where id in (select p.id_type_id from type_debiteur p where p.id_creance_id = ".$id_creance." and id_debiteur_id = ".$id_debiteur.")";
         $stmt = $this->conn->prepare($sql);
@@ -302,6 +305,13 @@ class debiteursRepo extends ServiceEntityRepository
             $telephone["status"] = $status;
             $contacts["telephone"][$i] = $telephone;
 
+            $sql = "SELECT * FROM type_source WHERE id = :id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam('id', $telephone["id_type_source_id"]);
+            $stmt = $stmt->executeQuery();
+            $source = $stmt->fetchAssociative();
+            $telephone["source"] = $source;
+            $contacts["telephone"][$i] = $telephone;
             
 
         }
@@ -323,6 +333,22 @@ class debiteursRepo extends ServiceEntityRepository
             $type = $stmt->fetchAssociative();
             $address["type"] = $type;
             $contacts["adresse"][$i] = $address;
+
+            $sql = "SELECT * FROM type_source WHERE id = :id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam('id', $address["id_type_source_id"]);
+            $stmt = $stmt->executeQuery();
+            $source = $stmt->fetchAssociative();
+            $address["source"] = $source;
+            $contacts["adresse"][$i] = $address;
+
+            $sql = "SELECT * FROM status_adresse WHERE id = :id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam('id', $address["id_status_id"]);
+            $stmt = $stmt->executeQuery();
+            $status = $stmt->fetchAssociative();
+            $address["status"] = $status;
+            $contacts["adresse"][$i] = $address;
         }
 
         // Fetch all email information
@@ -341,6 +367,22 @@ class debiteursRepo extends ServiceEntityRepository
             $stmt = $stmt->executeQuery();
             $type = $stmt->fetchAssociative();
             $email["type"] = $type;
+            $contacts["email"][$i] = $email;
+
+            $sql = "SELECT * FROM type_source WHERE id = :id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam('id', $email["id_type_source_id"]);
+            $stmt = $stmt->executeQuery();
+            $source = $stmt->fetchAssociative();
+            $email["source"] = $source;
+            $contacts["email"][$i] = $email;
+
+            $sql = "SELECT * FROM status_email WHERE id = :id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam('id', $email["id_status_email_id"]);
+            $stmt = $stmt->executeQuery();
+            $status = $stmt->fetchAssociative();
+            $email["status"] = $status;
             $contacts["email"][$i] = $email;
         }
 
@@ -859,19 +901,23 @@ class debiteursRepo extends ServiceEntityRepository
         $setClauses = [];
         foreach ($data as $key => $value) {
             // Enclose column names within backticks if needed
-                $setClauses[] = "`$key` = :$key";
+            $setClauses[] = "`$key` = :$key";
         }
         $sql .= implode(', ', $setClauses);
         // You need to specify which row to update, typically using the primary key
         $sql .= " WHERE `id` = :id";
         $stmt = $this->conn->prepare($sql);
+
+        // Bind the ID parameter
+        $stmt->bindValue(":id", $id);
+
         // Bind parameters for the SET clauses
         foreach ($data as $key => $value) {
-            $stmt->bindParam($key, $value);  // Use $key directly as the parameter name
-            // Bind the primary key parameter
+            $stmt->bindValue(":$key", $value);  // Use $key directly as the parameter name
         }
-        $stmt->bindParam("id", $id);
-        $stmt = $stmt->executeQuery();
+
+        // Execute the statement
+        $stmt->execute();
     }
 
     public function checkIfDoubleTeleAndNotActive($id_debiteur){
@@ -917,19 +963,22 @@ class debiteursRepo extends ServiceEntityRepository
         $setClauses = [];
         foreach ($data as $key => $value) {
             // Enclose column names within backticks if needed
-                $setClauses[] = "`$key` = :$key";
+            $setClauses[] = "`$key` = :$key";
         }
         $sql .= implode(', ', $setClauses);
         // You need to specify which row to update, typically using the primary key
         $sql .= " WHERE `id` = :id";
         $stmt = $this->conn->prepare($sql);
+
+        // Bind the ID parameter
+        $stmt->bindValue(":id", $id);
+
         // Bind parameters for the SET clauses
         foreach ($data as $key => $value) {
-            $stmt->bindParam($key, $value);  // Use $key directly as the parameter name
-            // Bind the primary key parameter
+            $stmt->bindValue(":$key", $value);  // Use $key directly as the parameter name
         }
-        $stmt->bindParam("id", $id);
-        $stmt = $stmt->executeQuery();
+        // Execute the statement
+        $stmt->execute();
     }
     public function deleteAdresse( $id){
         // $primaryKey = "id";
@@ -938,5 +987,163 @@ class debiteursRepo extends ServiceEntityRepository
         $stmt->bindParam("id", $id);
         $stmt = $stmt->executeQuery();
     }
+    public function createEmail($data){
+        // $sql="INSERT INTO `revenu`( id_type_revenu_id, id_debiteur_id , revenu , adresse) VALUES (:id_type_revenu_id,:id_debiteur_id,:revenu , :adresse);";
+        $sql = "INSERT INTO `email` (";
+        $values = [];
+        $params = [];
+
+        foreach ($data as $key => $value) {
+            // Enclose column names within backticks if needed
+            $values[] = "`$key`";
+            $params[] = ":" . $key;
+        }
+
+        $sql .= implode(', ', $values) . ')';
+        $sql .= ' VALUES (' . implode(', ', $params) . ')';
+
+        $stmt = $this->conn->prepare($sql);
+
+        foreach ($data as $key => $value) {
+            // Bind values for all columns except 'statut'
+                $stmt->bindValue(":" . $key, $value);
+        }
+        $result = $stmt->execute();
+    }
+    public function updateEmail($data , $id){
+        // $primaryKey = "id";
+        $sql = "UPDATE `email` SET ";
+        $setClauses = [];
+        foreach ($data as $key => $value) {
+            // Enclose column names within backticks if needed
+            $setClauses[] = "`$key` = :$key";
+        }
+        $sql .= implode(', ', $setClauses);
+        // You need to specify which row to update, typically using the primary key
+        $sql .= " WHERE `id` = :id";
+        $stmt = $this->conn->prepare($sql);
+
+        // Bind the ID parameter
+        $stmt->bindValue(":id", $id);
+
+        // Bind parameters for the SET clauses
+        foreach ($data as $key => $value) {
+            $stmt->bindValue(":$key", $value);  // Use $key directly as the parameter name
+        }
+        // Execute the statement
+        $stmt->execute();
+    }
+    public function deleteEmail( $id){
+        // $primaryKey = "id";
+        $sql = "DELETE from `email` WHERE `id` = :id ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam("id", $id);
+        $stmt = $stmt->executeQuery();
+    }
+    public function getIdenticatifPays(){
+        $sql = "select * from `paysindicatif`  ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        return $result = $stmt->fetchAll();
+    }
+    
+    public function checkCodePays($codeP){
+        $sql = "select * from `paysindicatif` where Indicatif = :codeP  ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam("codeP", $codeP);
+        $stmt = $stmt->executeQuery();
+        return $result = $stmt->fetchOne();
+    }
+
+    public function getTelephoneById($id){
+        $sql = "select * from `telephone` where id = :id  ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam("id", $id);
+        $stmt = $stmt->executeQuery();
+        $result = $stmt->fetchAssociative();
+
+        $sql = "select * from `type_source` where id = :id  ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam("id", $result['id_type_source_id']);
+        $stmt = $stmt->executeQuery();
+        $source = $stmt->fetchAssociative();
+        $result['id_type_source_id'] = $source; 
+
+        $sql = "select * from `type_tel` where id = :id  ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam("id", $result['id_type_tel_id']);
+        $stmt = $stmt->executeQuery();
+        $type_telephone = $stmt->fetchAssociative();
+        $result['id_type_tel_id'] = $type_telephone; 
+
+        $sql = "select * from `status_telephone` where id = :id  ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam("id", $result['id_status_id']);
+        $stmt = $stmt->executeQuery();
+        $type_telephone = $stmt->fetchAssociative();
+        $result['id_status_id'] = $type_telephone; 
+        return $result;
+    }
+    
+
+    public function getAdresseById($id){
+        $sql = "select * from `adresse` where id = :id  ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam("id", $id);
+        $stmt = $stmt->executeQuery();
+        $result = $stmt->fetchAssociative();
+
+        $sql = "select * from `type_source` where id = :id  ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam("id", $result['id_type_source_id']);
+        $stmt = $stmt->executeQuery();
+        $source = $stmt->fetchAssociative();
+        $result['id_type_source_id'] = $source; 
+
+        $sql = "select * from `type_adresse` where id = :id  ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam("id", $result['id_type_tel_id']);
+        $stmt = $stmt->executeQuery();
+        $type_telephone = $stmt->fetchAssociative();
+        $result['id_type_tel_id'] = $type_telephone; 
+
+        $sql = "select * from `status_adresse` where id = :id  ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam("id", $result['id_status_id']);
+        $stmt = $stmt->executeQuery();
+        $type_telephone = $stmt->fetchAssociative();
+        $result['id_status_id'] = $type_telephone; 
+        return $result;
+    }
+    public function getEmailById($id){
+        $sql = "select * from `email` where id = :id  ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam("id", $id);
+        $stmt = $stmt->executeQuery();
+        $result = $stmt->fetchAssociative();
+
+        $sql = "select * from `type_source` where id = :id  ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam("id", $result['id_type_source_id']);
+        $stmt = $stmt->executeQuery();
+        $source = $stmt->fetchAssociative();
+        $result['id_type_source_id'] = $source; 
+
+        $sql = "select * from `type_email` where id = :id  ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam("id", $result['id_type_email_id']);
+        $stmt = $stmt->executeQuery();
+        $type_email = $stmt->fetchAssociative();
+        $result['id_type_email_id'] = $type_email; 
+
+        $sql = "select * from `status_email` where id = :id  ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam("id", $result['id_status_id']);
+        $stmt = $stmt->executeQuery();
+        $type_email = $stmt->fetchAssociative();
+        $result['id_status_id'] = $type_email; 
+        return $result;
+    }
+    
     
 }

@@ -74,7 +74,10 @@ class MessageService
          "ERROR-SEG"=>"Veuillez vérifier la segmentation sélectionnée",
          "ERROR-SEG1"=>"Veuillez vérifier la segmentation sélectionnée",
          "EMPTY-DATA-ACTIVITY"=>"Veuillez vérifier votre schéma !",
-         "ERROR_EVENT"=>"Veuillez vérifier votre évenment !"
+         "ERROR_EVENT"=>"Veuillez vérifier votre évenment !",
+         "RESPONSABILITY_ERROR"=>"Veuillez vérifier la responsabilité de l'utilisateur!",
+         "FORMAT_INCORRECT"=>"Veuillez vérifier que le format du téléphone !",
+         "INVALID_EMAIL"=>"Veuillez vérifier que le format du email !"
         );
         return $listMessage[$CODEERROR];
     }

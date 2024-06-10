@@ -117,7 +117,7 @@ class dossiersRepo extends ServiceEntityRepository
         return $resulat;
     }
     public function getListesDebiteurByDossier($id){
-        $sql="SELECT DISTINCT deb.* FROM debiteur deb INNER JOIN type_debiteur t ON deb.id = t.id_debiteur_id INNER JOIN creance c ON t.id_creance_id = c.id WHERE c.id_dossier_id = :id and t.type = 1;";
+        $sql="SELECT  deb.* FROM debiteur deb where deb.id in (select dd.id_debiteur_id from debi_doss dd where dd.id_dossier_id = :id)";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam('id', $id);
         $stmt = $stmt->executeQuery();
