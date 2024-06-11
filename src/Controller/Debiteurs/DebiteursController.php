@@ -1098,7 +1098,7 @@ class DebiteursController extends AbstractController
             $id_deb = $request->get("id");
             $type = $request->get("type");
             $adresse = array();
-            $data = $debiteursRepo->getAllContacts($id_deb);
+            $data = $debiteursRepo->getAllDetailsDeb($id_deb);
             $respObjects["data"] = $data;
             $codeStatut="OK";
         }catch(\Exception $e){
@@ -1591,6 +1591,165 @@ class DebiteursController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
+    #[Route('/getListeTypeRelation',methods:"GET")]
+    public function getListeTypeRelation(Request $request,debiteursRepo $debiteursRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0, $request);
+
+            $listeType = $this->TypeService->getListeType("relation");
+            $respObjects["data"] = $listeType;
+            $codeStatut="OK";
+
+        } catch (\Exception $e) {
+            $codeStatut = "ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/listeRelation')]
+    public function listeRelation(Request $request,debiteursRepo $debiteursRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data_list = json_decode($request->getContent(), true);
+            $id_deb = $request->get("id");
+            $type = $request->get("type");
+            $data = $debiteursRepo->getListeParamsByDeb($type , $id_deb);
+            $respObjects["data"] = $data;
+            $codeStatut="OK";
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/addRelation',methods:"POST")]
+    public function addRelation(Request $request,debiteursRepo $debiteursRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data_list = json_decode($request->getContent(), true);
+            $numero = $data_list["numero"] ;
+            $nom = $data_list["nom"] ;
+            $prenom = $data_list["prenom"] ;
+            $adresse = $data_list["adresse"] ;
+
+            if($nom != ""  || $numero != "" ||  $adresse != ""  || $data_list["id_type_relation_id"] != ""  ){
+                $checkType = $this->TypeService->checkType($data_list["id_type_relation_id"] , "relation");
+                $checkDebiteur = $this->debiteursRepo->checkDebiteur($data_list["id_debiteur_id"]);
+                if($checkType && $checkDebiteur){
+                    $data = $debiteursRepo->createRelation($data_list);
+                    $codeStatut="OK";
+                }else{
+                    $codeStatut="NOT_EXIST_ELEMENT";
+                }
+            }else{
+                $codeStatut="ERROR-EMPTY-PARAMS";
+            }
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/updateRelation',methods:"POST")]
+    public function updateRelation(Request $request,debiteursRepo $debiteursRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data_list = json_decode($request->getContent(), true);
+            $id = $request->get('id');
+            $numero = $data_list["numero"] ;
+            $nom = $data_list["nom"] ;
+            $prenom = $data_list["prenom"] ;
+            $adresse = $data_list["adresse"] ;
+
+            if($nom != ""  || $numero != "" ||  $adresse != ""  || $data_list["id_type_relation_id"] != ""  ){
+                $checkType = $this->TypeService->checkType($data_list["id_type_relation_id"] , "relation");
+                $checkDebiteur = $this->debiteursRepo->checkDebiteur($data_list["id_debiteur_id"]);
+                if($checkType && $checkDebiteur){
+                    $data = $debiteursRepo->updateRelation($data_list , $id);
+                    $codeStatut="OK";
+                }else{
+                    $codeStatut="NOT_EXIST_ELEMENT";
+                }
+            }else{
+                $codeStatut="ERROR-EMPTY-PARAMS";
+            }
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/deleteRelation',methods:"POST")]
+    public function deleteRelation(Request $request,debiteursRepo $debiteursRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data_list = json_decode($request->getContent(), true);
+            $id = $request->get("id");
+            if($id != "" ){
+                $checkCharge = $this->TypeService->checkElement($id ,"relation");
+                if($checkCharge ){
+                    $data = $debiteursRepo->deleteRelation($id);
+                    $codeStatut="OK";
+                }else{
+                    $codeStatut="NOT_EXIST_ELEMENT";
+                }
+            }else{
+                $codeStatut="ERROR-EMPTY-PARAMS";
+            }
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+
+    #[Route('/getRelationById')]
+    public function getRelationById(Request $request,debiteursRepo $debiteursRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            // $this->AuthService->checkAuth(0, $request);
+            $id = $request->get("id");
+            $respObjects["data"] = $debiteursRepo->getRelationById($id);;
+            $codeStatut="OK";
+        } catch (\Exception $e) {
+            $codeStatut = "ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
     function verifyPhoneNumber($phoneNumber, $countryCode) {
         if ($countryCode == "212") {
             // If the phone number starts with '0', remove the '0'

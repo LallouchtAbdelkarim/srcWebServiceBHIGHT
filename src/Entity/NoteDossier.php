@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\NoteDossierRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: NoteDossierRepository::class)]
@@ -19,6 +20,9 @@ class NoteDossier
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     private ?Dossier $id_dossier = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false)]
+    private ?\DateTimeInterface $date_creation = null;
 
     public function getId(): ?int
     {
@@ -45,6 +49,18 @@ class NoteDossier
     public function setIdDossier(?Dossier $id_dossier): static
     {
         $this->id_dossier = $id_dossier;
+
+        return $this;
+    }
+
+    public function getDateCreation(): ?\DateTimeInterface
+    {
+        return $this->date_creation;
+    }
+
+    public function setDateCreation(?\DateTimeInterface $date_creation): static
+    {
+        $this->date_creation = $date_creation;
 
         return $this;
     }

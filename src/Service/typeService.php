@@ -278,6 +278,13 @@ class typeService
                     return $resultList;
                 }
                 break;
+            case 'relation':
+                $query = $this->em->createQuery('SELECT r FROM App\Entity\Relation r ');
+                $resultList = $query->getResult();
+                if ($resultList) {
+                    return $resultList;
+                }
+                break;
 
             default:
                 // If $type doesn't match any expected types, return false
@@ -466,6 +473,18 @@ class typeService
             case 'email':
                 // Check if $id matches 'email' type
                 $query = $this->em->createQuery('SELECT e FROM App\Entity\Email e where e.id = :id')
+                    ->setParameters([
+                        'id' => $id
+                    ])
+                    ->setMaxResults(1);
+                $resultList = $query->getOneOrNullResult();
+                if ($resultList) {
+                    return true;
+                }
+                break;
+            case 'relation':
+                // Check if $id matches 'email' type
+                $query = $this->em->createQuery('SELECT e FROM App\Entity\Personne e where e.id = :id')
                     ->setParameters([
                         'id' => $id
                     ])

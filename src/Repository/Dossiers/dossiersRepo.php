@@ -116,12 +116,49 @@ class dossiersRepo extends ServiceEntityRepository
         $resulat = $stmt->fetchAll();
         return $resulat;
     }
-    public function getListesDebiteurByDossier($id){
+    public function getDebiteurByDossier($id){
         $sql="SELECT  deb.* FROM debiteur deb where deb.id in (select dd.id_debiteur_id from debi_doss dd where dd.id_dossier_id = :id)";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam('id', $id);
         $stmt = $stmt->executeQuery();
         $resulat = $stmt->fetchAllAssociative();
+        return $resulat;
+    }
+
+    public function getDetailsCreanceByIdDossier($id){
+        $sql="SELECT SUM(total_creance) FROM `creance` WHERE id_dossier_id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $id);
+        $stmt = $stmt->executeQuery();
+        $total_creance = $stmt->fetchOne();
+        $sql="SELECT SUM(total_restant) FROM `creance` WHERE id_dossier_id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $id);
+        $stmt = $stmt->executeQuery();
+        $total_restant = $stmt->fetchOne();
+
+        $result["total_creance"] = $total_creance;
+        $result["total_restant"] = $total_restant;
+        return $result;
+        
+    }
+
+    public function getListesDebiteurByDossier($id){
+        $sql="SELECT  deb.* FROM debiteur deb where deb.id in (select dd.id_debiteur_id from debi_doss dd where dd.id_dossier_id = :id)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $id);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAll();
+        // Fetch type information for each telephone
+        
+        for ($i=0; $i <count($resulat) ; $i++) { 
+            $sql = "SELECT * FROM `details_type_deb` dt where dt.id in (select d.id_type_id from type_debiteur d where d.id_creance_id in (select c.id from creance c where c.id_dossier_id = :id));";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam('id', $resulat[$i]['id']);
+            $stmt = $stmt->executeQuery();
+            $type = $stmt->fetchAssociative();
+            $resulat[$i]["type"] = $type;
+        }
         return $resulat;
     }
     public function getListesAdresse($id){
@@ -259,7 +296,7 @@ class dossiersRepo extends ServiceEntityRepository
     }
     
     public function createNoteDossier($id , $note){
-        $sql="INSERT INTO `note_dossier`( `id_dossier_id`, `note`) VALUES (:id,:note);";
+        $sql="INSERT INTO `note_dossier`( `id_dossier_id`, `note`,`date_creation`) VALUES (:id,:note,now());";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam('id', $id);
         $stmt->bindParam('note', $note);

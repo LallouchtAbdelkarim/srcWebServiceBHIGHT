@@ -275,7 +275,7 @@ class debiteursRepo extends ServiceEntityRepository
         }
         return $contacts;
     }
-    public function getAllContacts($id){
+    public function getAllDetailsDeb($id){
         $contacts = array();
         $active = true;
 
@@ -312,8 +312,6 @@ class debiteursRepo extends ServiceEntityRepository
             $source = $stmt->fetchAssociative();
             $telephone["source"] = $source;
             $contacts["telephone"][$i] = $telephone;
-            
-
         }
 
         // Fetch all address information
@@ -385,6 +383,44 @@ class debiteursRepo extends ServiceEntityRepository
             $email["status"] = $status;
             $contacts["email"][$i] = $email;
         }
+
+          // Fetch all emploi information
+          $sql = "SELECT * FROM emploi WHERE  id_debiteur_id = :id";
+          $stmt = $this->conn->prepare($sql);
+          $stmt->bindParam('id', $id);
+          $stmt = $stmt->executeQuery();
+          $emploi = $stmt->fetchAll();
+          $contacts["emploi"] = array();
+  
+          // Fetch type information for each telephone
+          foreach ($emploi as $i => $emp) {
+              $sql = "SELECT * FROM status_emploi WHERE id = :id";
+              $stmt = $this->conn->prepare($sql);
+              $stmt->bindParam('id', $emp["id_status_id"]);
+              $stmt = $stmt->executeQuery();
+              $status = $stmt->fetchAssociative();
+              $emp["status"] = $status;
+              $contacts["emploi"][$i] = $emp;
+          }
+
+           // Fetch all emploi information
+           $sql = "SELECT * FROM employeur WHERE  id_debiteur_id = :id";
+           $stmt = $this->conn->prepare($sql);
+           $stmt->bindParam('id', $id);
+           $stmt = $stmt->executeQuery();
+           $employeur = $stmt->fetchAll();
+           $contacts["employeur"] = array();
+           
+           // Fetch type information for each telephone
+           foreach ($employeur as $i => $empl) {
+               $sql = "SELECT * FROM status_employeur WHERE id = :id";
+               $stmt = $this->conn->prepare($sql);
+               $stmt->bindParam('id', $empl["id_status_id"]);
+               $stmt = $stmt->executeQuery();
+               $status = $stmt->fetchAssociative();
+               $empl["status"] = $status;
+               $contacts["employeur"][$i] = $empl;
+           }
 
         return $contacts;
 
@@ -502,6 +538,15 @@ class debiteursRepo extends ServiceEntityRepository
             case 'email':
                 // Check if $id matches 'email' type
                 $query = $this->em->createQuery('SELECT r FROM App\Entity\Charge r where r.id_debiteur = :id')
+                    ->setParameters([
+                        'id' => $id
+                    ]);
+                $resultList = $query->getResult();
+                return $resultList;
+                break;
+            case 'relation':
+                // Check if $id matches 'email' type
+                $query = $this->em->createQuery('SELECT r FROM App\Entity\Relation r ')
                     ->setParameters([
                         'id' => $id
                     ]);
@@ -1142,6 +1187,104 @@ class debiteursRepo extends ServiceEntityRepository
         $stmt = $stmt->executeQuery();
         $type_email = $stmt->fetchAssociative();
         $result['id_status_id'] = $type_email; 
+        return $result;
+    }
+
+    public function createRelation($data){
+        // $sql="INSERT INTO `revenu`( id_type_revenu_id, id_debiteur_id , revenu , adresse) VALUES (:id_type_revenu_id,:id_debiteur_id,:revenu , :adresse);";
+        $sql = "INSERT INTO `personne` (";
+        $values = [];
+        $params = [];
+
+        foreach ($data as $key => $value) {
+            if($key != "id_type_relation_id" && $key != "id_debiteur_id"){
+                // Enclose column names within backticks if needed
+                $values[] = "`$key`";
+                $params[] = ":" . $key;
+            }
+        }
+
+        $sql .= implode(', ', $values) . ')';
+        $sql .= ' VALUES (' . implode(', ', $params) . ')';
+
+        $stmt = $this->conn->prepare($sql);
+
+        foreach ($data as $key => $value) {
+            if($key != "id_type_relation_id" && $key != "id_debiteur_id"){
+            // Bind values for all columns except 'statut'
+                $stmt->bindValue(":" . $key, $value);
+            }
+        }
+        $result = $stmt->execute();
+
+        $sql = "select max(id) from `personne`";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $typeRelation = $stmt->fetchOne();
+        
+        $sql = "INSERT INTO `relation_debiteur`(`id_debiteur_id`, `id_personne_id`, `id_relation_id`) VALUES (:id_debiteur_id, :id_personne_id, :id_relation_id)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue("id_debiteur_id", $data['id_debiteur_id']);
+        $stmt->bindValue("id_relation_id", $data['id_type_relation_id']); // Correct parameter name
+        $stmt->bindValue("id_personne_id", $typeRelation);
+        $result = $stmt->execute();
+    }
+    public function updateRelation($data , $id){
+        // $primaryKey = "id";
+        $sql = "UPDATE `personne` SET ";
+        $setClauses = [];
+        foreach ($data as $key => $value) {
+            if($key != "id_type_relation_id" && $key != "id_debiteur_id"){
+                // Enclose column names within backticks if needed
+                $setClauses[] = "`$key` = :$key";
+            }
+        }
+        $sql .= implode(', ', $setClauses);
+        // You need to specify which row to update, typically using the primary key
+        $sql .= " WHERE `id` = :id";
+        $stmt = $this->conn->prepare($sql);
+
+        // Bind the ID parameter
+        $stmt->bindValue(":id", $id);
+
+        // Bind parameters for the SET clauses
+        foreach ($data as $key => $value) {
+            if($key != "id_type_relation_id" && $key != "id_debiteur_id"){
+                $stmt->bindValue(":$key", $value);  // Use $key directly as the parameter name
+            }
+        }
+        // Execute the statement
+        $stmt->execute();
+    }
+    public function deleteRelation( $id){
+        $gp = $this->em->getRepository(RelationDebiteur::class)->findBy(array('id_personne' => $id));
+        foreach ($gp as $item) {
+            $this->em->remove($item);
+        }
+        $this->em->flush();
+        
+        // $primaryKey = "id";
+        $sql = "DELETE from `personne` WHERE `id` = :id ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam("id", $id);
+        $stmt = $stmt->executeQuery();
+    }
+
+    
+    public function getRelationById($id){
+        $sql = "select * from `personne` where id = 10";
+        $stmt = $this->conn->prepare($sql);
+        // $stmt->bindParam("id", $id);
+        $stmt = $stmt->executeQuery();
+        $result = $stmt->fetchAssociative();
+
+        $sql = "select * from `relation_debiteur` where id_personne_id = :id  ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam("id", $id);
+        $stmt = $stmt->executeQuery();
+        $source = $stmt->fetchAssociative();
+        $result['id_type_relation_id'] = $source; 
+
         return $result;
     }
     

@@ -186,5 +186,15 @@ class GeneralService
         }
         return $step;
     }
+    function generateUniqueFileName()
+    {
+        // Generate a unique name using a combination of timestamp and random string
+        $timestamp = (new \DateTime())->getTimestamp();
+        $randomString = bin2hex(random_bytes(6)); // Generates a random hex string
+
+        // Get the file extension from the original filename
+        return $randomString;
+    }
+
 
 }

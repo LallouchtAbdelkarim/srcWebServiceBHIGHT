@@ -5,9 +5,11 @@ namespace App\Controller\Dossiers;
 use App\Repository\DonneurOrdreAndPTF\donneurRepo;
 use App\Repository\Dossiers\dossiersRepo;
 use App\Repository\Users\userRepo;
+use App\Service\GeneralService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -26,6 +28,7 @@ class DossiersController extends AbstractController
     private $conn;
     private $AuthService;
 
+    public $generalService;
 
     public function __construct(
         dossiersRepo $dossiersRepo,
@@ -34,7 +37,8 @@ class DossiersController extends AbstractController
         EntityManagerInterface $em,
         MessageService $MessageService,
         Connection $conn,
-        AuthService $AuthService
+        AuthService $AuthService,
+        GeneralService $generalService
         )
     {
         $this->conn = $conn;
@@ -44,6 +48,7 @@ class DossiersController extends AbstractController
         $this->MessageService = $MessageService;
         $this->AuthService = $AuthService;
         $this->userRepo = $userRepo;
+        $this->generalService = $generalService;
     }
 
     #[Route('/liste_dossiers', name: 'app_dossiers_dossiers')]
@@ -97,7 +102,6 @@ class DossiersController extends AbstractController
                 $codeStatut="NOT_EXIST_ELEMENT";
             }else{
                 $dossier = $check_doss[0];
-
                 $array_doss=array();
                 $array_accord=array();
                 $array_doss["dossier"]=$dossier;
@@ -117,7 +121,9 @@ class DossiersController extends AbstractController
                     $array_accord[$i]["total_creance"] = $dossiersRepo->getTotalCreanceByAcc($accords[$i]["id"]);
                     $array_accord[$i]["montant_restant"] = number_format((float)$dossiersRepo->getMontantRestant($accords[$i]["id"]), 2, '.', '');
                 }
-                $debiteur = $dossiersRepo->getListesDebiteurByDossier($id);
+
+                $debiteur = $dossiersRepo->getDebiteurByDossier($id);
+                $array_deb = $dossiersRepo->getListesDebiteurByDossier($id);
                 $adresse = $dossiersRepo->getListesAdresse($id);
                 $email_deb = $dossiersRepo->getEmailDebiteur($id);
                 $histo = $dossiersRepo->getHistoriqueDossier($id);
@@ -127,8 +133,10 @@ class DossiersController extends AbstractController
                 $email = $dossiersRepo->getEmail($id);
                 $tel = $dossiersRepo->getListesTel($id);
                 $notes = $dossiersRepo->getListeNote($id);
-                
+
+                $respObjects["total"]  = $dossiersRepo->getDetailsCreanceByIdDossier($id);
                 $respObjects["dossier"] = $array_doss;
+                $respObjects["allDebiteur"] = $array_deb;
                 $respObjects["debiteur"] = $debiteur;
                 $respObjects["adresse"] = $adresse;
                 $respObjects["tel"] = $tel;
@@ -201,12 +209,12 @@ class DossiersController extends AbstractController
         $codeStatut="ERROR";
         try{
             $this->AuthService->checkAuth(0,$request);
-            $id = $request->get("id");
+            $data_list = json_decode($request->getContent(), true);
+            $id = $data_list["id"];
             $check_doss = $dossiersRepo->findDossier($id);
             if(!$check_doss){
                 $codeStatut="NOT_EXIST_ELEMENT";
             }else{
-                $data_list = json_decode($request->getContent(), true);
                 if(isset($data_list["note"])){
                     $note = $data_list["note"];
                     if($note != ""){
@@ -215,6 +223,25 @@ class DossiersController extends AbstractController
                     }
                 }
             }
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/attacheFile',methods:"POST")]
+    public function attacheFile(Request $request,dossiersRepo $dossiersRepo): Response
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data_list = json_decode($request->getContent(), true);
+            $file = $request->get('file');
+
         }catch(\Exception $e){
             $codeStatut="ERROR";
             $respObjects["err"] = $e->getMessage();
