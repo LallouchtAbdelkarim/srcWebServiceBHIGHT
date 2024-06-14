@@ -9,6 +9,7 @@ use App\Entity\DetailModelAffichage;
 use App\Entity\DetailsTypeCreance;
 use App\Entity\DonneurOrdre;
 use App\Entity\ListesRoles;
+use App\Entity\ModelFacturation;
 use App\Entity\Portefeuille;
 use App\Entity\PtfTypeCreanceD;
 use App\Entity\TypeDonneur;
@@ -35,6 +36,8 @@ class donneurRepo extends ServiceEntityRepository
     public function createDonneurOrdre($data)
     {
         if ($data) {
+            
+            $modelFacturation = $this->em->getRepository(ModelFacturation::class)->findOneBy(['id' => $data["regleSelected"]]);
             $type_donneur = $this->em->getRepository(TypeDonneur::class)->findOneBy(['id' => $data["id_type"]]);
 
             $donneur_ordre = new DonneurOrdre();
@@ -47,10 +50,10 @@ class donneurRepo extends ServiceEntityRepository
             $donneur_ordre->setDateCreation(new \DateTime());
             $donneur_ordre->setDateDebut(new \DateTime());
             $donneur_ordre->setDateFin(new \DateTime());
+            $donneur_ordre->setIdModeleRegle($modelFacturation);
             $donneur_ordre->setIdType($type_donneur);
             $this->em->persist($donneur_ordre);
             $this->em->flush();
-
             return $donneur_ordre;
         } else return false;
     }
@@ -130,6 +133,8 @@ class donneurRepo extends ServiceEntityRepository
     public function UpdateDonneur($data, $id)
     {
         if ($data && $id) {
+            $modelFacturation = $this->em->getRepository(ModelFacturation::class)->findOneBy(['id' => $data["regleSelected"]]);
+            $type_donneur = $this->em->getRepository(TypeDonneur::class)->findOneBy(['id' => $data["id_type"]]);
 
             $donneur = $this->em->getRepository(DonneurOrdre::class)->findOneBy(["id" => $id]);
             $donneur->setNom($data['nom']);
@@ -141,6 +146,8 @@ class donneurRepo extends ServiceEntityRepository
             $donneur->setDateCreation(new \DateTime());
             $donneur->setDateDebut(new \DateTime());
             $donneur->setDateFin(new \DateTime());
+            $donneur->setIdType($type_donneur);
+            $donneur->setIdModeleRegle($modelFacturation);
             $this->em->persist($donneur);
             $this->em->flush();
             return true;

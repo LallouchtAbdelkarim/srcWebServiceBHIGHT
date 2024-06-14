@@ -44,6 +44,7 @@ class Facture
     private ?StatusFacture $id_status = null;
 
     #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true)]
     private ?RegleModelFacturation $id_model = null;
 
     #[ORM\ManyToOne]

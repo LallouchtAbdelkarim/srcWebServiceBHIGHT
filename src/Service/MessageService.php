@@ -77,7 +77,8 @@ class MessageService
          "ERROR_EVENT"=>"Veuillez vérifier votre évenment !",
          "RESPONSABILITY_ERROR"=>"Veuillez vérifier la responsabilité de l'utilisateur!",
          "FORMAT_INCORRECT"=>"Veuillez vérifier que le format du téléphone !",
-         "INVALID_EMAIL"=>"Veuillez vérifier que le format du email !"
+         "INVALID_EMAIL"=>"Veuillez vérifier que le format du email !",
+         "IN_DONNEUR"=>"Votre modèle exist dans un donneur ordre !"
         );
         return $listMessage[$CODEERROR];
     }

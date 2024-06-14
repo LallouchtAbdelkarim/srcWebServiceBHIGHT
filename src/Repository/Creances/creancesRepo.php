@@ -2,6 +2,11 @@
 
 namespace App\Repository\Creances;
 
+use App\Entity\Creance;
+use App\Entity\Paiement;
+use App\Entity\TypeDebiteur;
+use App\Entity\TypePaiement;
+use App\Repository\Encaissement\paiementRepo;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -10,7 +15,7 @@ class creancesRepo extends ServiceEntityRepository
     private $conn;
     public $em;
 
-    public function __construct(Connection $conn , EntityManagerInterface $em)
+    public function __construct(Connection $conn , EntityManagerInterface $em )
     {
         $this->conn = $conn;
         $this->em = $em;
@@ -99,6 +104,105 @@ class creancesRepo extends ServiceEntityRepository
         $stmt = $this->conn->prepare($sql);
         $stmt = $stmt->executeQuery();
         $resulat = $stmt->fetchAssociative();
+
+        $sql="SELECT * FROM `details_type_creance` where id = ".$resulat['id_type_creance_id']."";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $type = $stmt->fetchAssociative();
+        $resulat['type_creance'] = $type;
+
+        return $resulat;
+    }
+
+    public function getNbrDeb($id_creance){
+        $sql="SELECT count(distinct(id_debiteur_id)) as nbr_deb FROM `type_debiteur` where id_creance_id = ".$id_creance.";";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $nbr_deb = $stmt->fetchAssociative();
+
+        $sql="select count(p.id) as nbr_relation from personne p where p.id in (select r.id_personne_id from relation_debiteur r where r.id_debiteur_id in (SELECT t.id_debiteur_id FROM `type_debiteur` t where t.id_creance_id = ".$id_creance."));";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $nbr_relation = $stmt->fetchAssociative();
+
+        $resulat[] = $nbr_deb;
+        $resulat[] = $nbr_relation;
+        return $resulat;
+    }
+
+    public function getQueueCreance($id_creance){
+        $sql="SELECT * FROM `queue` where id in (select qc.id_queue from debt_force_seg.queue_creance qc where qc.id_creance = ".$id_creance.")  
+        ORDER BY `queue`.`id` DESC;";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $nbr_relation = $stmt->fetchAssociative();
+
+        return $nbr_relation;
+    }
+    public function getAccords($id){
+        $sql="SELECT distinct a.* FROM accord a INNER JOIN creance_accord ca ON a.id = ca.id_accord_id
+        INNER JOIN creance c ON ca.id_creance_id = :id;";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $id);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAllAssociative();
+
+        for ($i=0; $i < count($resulat); $i++) { 
+            $sql="select * from type_paiement ca where ca.id = ".$resulat[$i]['id_type_paiement_id']." ";
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $act = $stmt->fetchAssociative();
+            $resulat[$i]["type_paiement"] = $act;
+
+            $sql="select * from status_accord ca where ca.id = ".$resulat[$i]['id_status_id']." ";
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $act = $stmt->fetchAssociative();
+            $resulat[$i]["status_accord"] = $act;
+        }
+        return $resulat;
+    }
+
+    public function getActiviteCreance($id_creance){
+        $sql="select * from creance_activite ca where ca.id_creance_id = ".$id_creance." ORDER BY `id` desc";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $result = $stmt->fetchAll();
+
+        for ($i=0; $i < count($result); $i++) { 
+            $sql="select * from param_activite ca where ca.id = ".$result[$i]['id_param_activite_id']." ";
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $act = $stmt->fetchAssociative();
+            $result[$i]["qualification"] = $act;
+
+            $sql="select * from param_activite ca where ca.id = ".$act['type_activite']." ";
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $type = $stmt->fetchAssociative();
+            $result[$i]["type"] = $type;
+
+            $sql="select * from type_parametrage ca where ca.id = ".$act['id_branche_id']." ";
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $type = $stmt->fetchAssociative();
+            $result[$i]["famille"] = $type;
+        }
+        return $result;
+    }
+    
+    public function getPaiement($id){
+        $sql="SELECT * FROM `paiement` where id = ".$id."";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAll();
+        for ($i=0; $i < count($resulat); $i++) { 
+            $sql="SELECT * FROM `type_paiement` where id = ".$resulat[$i]['id_type_paiement_id']."";
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $t = $stmt->fetchAssociative();
+            $resulat[$i]['typePaiement'] = $t;
+        }
         return $resulat;
     }
     
@@ -209,5 +313,295 @@ class creancesRepo extends ServiceEntityRepository
         $resulat = $stmt->fetchAll();
         return $resulat;
     }
-    
+
+    public function createActivity($id_creance , $id_param , $id_dossier){
+        $sql="INSERT INTO `creance_activite`( `id_creance_id`, `id_param_activite_id`) VALUES (:id_creance_id,:id_param_activite_id);";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id_creance_id', $id_creance);
+        $stmt->bindParam('id_param_activite_id', $id_param);
+        $stmt = $stmt->executeQuery();
+
+        $sql="INSERT INTO `dossier_activite`( `id_dossier_id`, `id_activite_id`) VALUES (:id_dossier,:id_activite_id);";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id_dossier', $id_dossier);
+        $stmt->bindParam('id_activite_id', $id_param);
+        $stmt = $stmt->executeQuery();
+    }
+
+    public function addPaiement($paiementRepo,$id_creance , $valueDate,$montant,  $idTypePaiement,$id_user , $commentaire){
+        try {
+            $creance = $this->em->getRepository(Creance::class)->findOneBy(["id" => $id_creance]);
+        $nbrAccordsSys=0;
+        $montantAccordsSys=0;
+        $datePaiement= date_format(new \DateTime($valueDate), 'Y-m-d H:i:s');
+        $accord = $paiementRepo->getDetailsAccord($id_creance);
+        $paiement=$paiementRepo->getPaiement($id_creance,$montant);
+        $typePaiement = $this->em->getRepository(TypePaiement::class)->findOneBy(["id" => $idTypePaiement]);
+        $nbrConfirme=0;
+        $numCreance = $creance->getNumeroCreance();
+        if(!$accord and !$paiement){
+            //TODO:Validé
+            //Restant dialo
+            
+            $solde = $paiementRepo->getRestantCreance($id_creance);
+            if($solde > $montant)
+            {
+                $sql="insert into accord (`id_type_paiement_id`, `date_premier_paiement`, `montant`, `frequence`, `nbr_echeanciers`, `etat`, `date_creation`, `date_fin_paiement`,`id_users_id`,`id_status_id`) values(".$typePaiement->getId().",'".$datePaiement."',".$montant.",1,1,1,sysdate(),'".$datePaiement."','".$id_user."',1)";
+                $stmt = $this->conn->prepare($sql)->executeQuery();
+                $sql = "SELECT MAX(id) FROM accord";
+                $maxAccord = $this->conn->executeQuery($sql)->fetchOne();
+                $sql="insert into creance_accord (`id_creance_id`, `id_accord_id`) values(".$id_creance.",".$maxAccord.")";
+                $stmt = $this->conn->prepare($sql)->executeQuery();
+                $sql = "SELECT MAX(id) FROM creance_accord";
+                $maxCreanceAccord = $this->conn->executeQuery($sql)->fetchOne();
+                $sql="insert into details_accord (`id_accord_id`, `montant`, `id_status_id`, `id_type_paiement_id`, `montant_paiement`, `montant_restant`, `date_paiement`,`id_user_id`) values(".$maxAccord.",".$montant.",1,".$typePaiement->getId().",".$montant.",0,'".$datePaiement."','".$id_user."')";
+                $stmt = $this->conn->prepare($sql)->executeQuery();
+                $nbrAccordsSys++;
+                $montantAccordsSys+=$montant;
+            }
+            else
+            {
+                $sql="insert into accord (`id_type_paiement_id`, `date_premier_paiement`, `montant`, `frequence`, `nbr_echeanciers`, `etat`, `date_creation`, `date_fin_paiement`,`id_users_id`,`id_status_id`) values(".$typePaiement->getId().",'".$datePaiement."',".$solde.",1,1,1,sysdate(),'".$datePaiement."','".$id_user."',1)";
+                $stmt = $this->conn->prepare($sql)->executeQuery();
+                $sql = "SELECT MAX(id) FROM accord";
+                $maxAccord = $this->conn->executeQuery($sql)->fetchOne();
+                $sql="insert into creance_accord (`id_creance_id`, `id_accord_id`) values('".$id_creance."','".$maxAccord."')";
+                $stmt = $this->conn->prepare($sql)->executeQuery();
+                $sql = "SELECT MAX(id) FROM creance_accord";
+                $maxCreanceAccord = $this->conn->executeQuery($sql)->fetchOne();
+                $sql="insert into details_accord (`id_accord_id`, `montant`, `id_status_id`, `id_type_paiement_id`, `montant_paiement`, `montant_restant`, `date_paiement`,`id_user_id`) values(".$maxAccord.",".$solde.",1,".$typePaiement->getId().",".$montant.",0,'".$datePaiement."','".$id_user."')";
+                $stmt = $this->conn->prepare($sql)->executeQuery();
+                $nbrAccordsSys++;
+                $montantAccordsSys+=$solde;
+            }
+            $sql = "SELECT MAX(id) FROM details_accord";
+            $maxDetailAccord = $this->conn->executeQuery($sql)->fetchOne();
+            $date=new \DateTime();
+            $dmy = $date->format('dmYHis');
+            $typeDeb = $this->em->getRepository(TypeDebiteur::class)->findOneBy(["id_creance" => $id_creance, "id_type" => 3]);
+            if (!$typeDeb) {
+                $typeDeb = $this->em->getRepository(TypeDebiteur::class)->findOneBy(["id_creance" => $id_creance]);
+            }
+            $idDeb =$typeDeb->getIdDebiteur()->getId();
+            $ref = "PA" . $dmy . ($typeDeb ? $typeDeb->getId() : "");//Etat de paiement pour l'etat l"annulaion si = 0 non annulé //si=1 est annulé
+            $sql="insert into paiement (`id_creance_id`, `id_type_paiement_id`, `ref`, `montant`, `date_creation`, `date_paiement`, `etat`, `id_users_id`, `id_debiteur_id`, `id_ptf_id`, `id_details_accord_id`, `commentaire`, `confirmed`)
+             values(".$id_creance.",".$typePaiement->getId().",'".$ref."',".$montant.",sysdate(),'".$datePaiement."',0,".$id_user.",".$idDeb.",".$creance->getIdPtf()->getId().",".$maxDetailAccord.",'".$commentaire."',1)";
+            $stmt = $this->conn->prepare($sql)->executeQuery();
+
+            
+            $sql = "SELECT MAX(id) FROM paiement";
+            $maxPaiement = $this->conn->executeQuery($sql)->fetchOne();
+            $sql="insert into paiement_accord (`id_paiement_id`,`id_details_accord_id`) values(".$maxPaiement.",".$maxDetailAccord.")";
+            $stmt = $this->conn->prepare($sql)->executeQuery();
+
+            /*$sql="SELECT * FROM `creance_paiement_dbi` c where c.id_creance = :id_creance and c.id_action = :id_action ORDER BY c.id DESC";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindValue(":id_creance",$id_creance);
+            $stmt->bindValue(":id_action",$id_action);
+            $stmt = $stmt->executeQuery();
+            $checkIfAlreadyExist = $stmt->fetchAssociative();
+            if(!$checkIfAlreadyExist){
+                $newTotalRestant = $creance->getTotalRestant() - $montant;
+                $sql = "INSERT INTO `debt_force_integration`.`creance_paiement_dbi` 
+                (`id_creance`, `old_total_restant`, `new_total_restant`, `montant_paiement`, `id_import`, `is_updated_in_this_action`, `id_action`)
+                VALUES (" . $id_creance . ", " . $creance->getTotalRestant() . ", " . $newTotalRestant . ", " . $montant . ", " . $id_import . ", " . true . ", " . $id_action . ")";
+            }else{
+                $newTotalRestant = $checkIfAlreadyExist["new_total_restant"] - $montant;
+                $TotalRestant = $checkIfAlreadyExist["new_total_restant"] ;
+                $sql = "INSERT INTO `debt_force_integration`.`creance_paiement_dbi` 
+                (`id_creance`, `old_total_restant`, `new_total_restant`, `montant_paiement`, `id_import`, `is_updated_in_this_action`, `id_action`)
+                VALUES (" . $id_creance . ", " . $TotalRestant . ", " . $newTotalRestant . ", " . $montant . ", " . $id_import . ", " . true . ", " . $id_action . ")";
+            }*/
+            $total=($creance->getTotalRestant()-$montant);
+            $creance->setTotalRestant($total);
+            $this->em->flush();
+            $stmt = $this->conn->prepare($sql)->executeQuery();
+        }
+        elseif($paiement)
+        {
+            //TODO:Non Validé
+            $sql="update paiement set `confirmed`=1  where id=".$paiement->getId();
+            $stmt = $this->conn->prepare($sql)->executeQuery();
+            $nbrConfirme++;
+            $montantConfirme+=$paiement[0]->getMontant();
+        }
+        else
+        {
+            $rest = $montant;
+            while($rest > 0)
+            {
+                $autreDetails = $paiementRepo->getDetailsAccord3($numCreance);
+                
+                if($autreDetails)
+                {
+                    foreach ($autreDetails as $autreDetail)
+                    {
+                        if($rest>=$autreDetail["montant_restant"])
+                        {//TODO: Validé
+                            $sql="update details_accord set `id_status_id`=1,`id_type_paiement_id`=".$typePaiement->getId().", `montant_paiement`=".$autreDetail["montant_restant"].", `montant_restant`=0, `date_paiement`=sysdate() where id=".$autreDetail["id"];
+                            $stmt = $this->conn->prepare($sql)->executeQuery();
+
+                            $nbrAccordsAgent++;
+                            $montantAccordsAgent+=$autreDetail["montant_restant"];
+
+                            $date=new \DateTime();
+                            $dmy = $date->format('dmYHis');
+                            $typeDeb = $this->em->getRepository(TypeDebiteur::class)->findOneBy(["id_creance" => $id_creance, "id_type" => 3]);
+                            if (!$typeDeb) {
+                                $typeDeb = $this->em->getRepository(TypeDebiteur::class)->findOneBy(["id_creance" => $id_creance]);
+                            }
+                            $idDeb =$typeDeb->getIdDebiteur()->getId();
+                            $ref = "PA" . $dmy . ($typeDeb ? $typeDeb->getId() : "");
+
+                            $sql="insert into paiement (`id_creance_id`, `id_type_paiement_id`, `ref`, `montant`, `date_creation`, `date_paiement`, `etat`, `id_users_id`, `id_debiteur_id`, `id_ptf_id`, `id_details_accord_id`, `commentaire`,  `confirmed`) values(".$id_creance.",".$typePaiement->getId().",'".$ref."',".$autreDetail["montant_restant"].",sysdate(),'".$datePaiement."',0,".$id_user.",".$idDeb.",".$creance->getIdPtf()->getId().",".$autreDetail["id"].",'".$commentaire."',1)";
+                            $stmt = $this->conn->prepare($sql)->executeQuery();
+
+                            $sql = "SELECT MAX(id) FROM paiement";
+                            $maxPaiement = $this->conn->executeQuery($sql)->fetchOne();
+                            $sql="insert into paiement_accord (`id_paiement_id`,`id_details_accord_id`) values(".$maxPaiement.",".$autreDetail["id"].")";
+                            $stmt = $this->conn->prepare($sql)->executeQuery();
+                            
+                            $total=($creance->getTotalRestant()-$autreDetail->getMontantRestant());
+                            $creance->setTotalRestant($total);
+                            $this->em->flush();
+
+                            $rest = ($rest - $autreDetail['montant_restant']);
+                            if($rest <= 0)
+                            {
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            
+                            $sql="update details_accord set `id_status_id`=2,`id_type_paiement_id`=".$typePaiement->getId().", `montant_paiement`=".$rest.", `montant_restant`=".($autreDetail["montant_restant"]-$rest).", `date_paiement`=sysdate() where id=".$autreDetail["id"];
+                            $stmt = $this->conn->prepare($sql)->executeQuery();
+
+                            $nbrAccordsAgent++;
+                            $montantAccordsAgent+=$rest;
+
+                            $date=new \DateTime();
+                            $dmy = $date->format('dmYHis');
+                            $typeDeb = $this->em->getRepository(TypeDebiteur::class)->findOneBy(["id_creance" => $id_creance, "id_type" => 3]);
+                            if (!$typeDeb) {
+                                $typeDeb = $this->em->getRepository(TypeDebiteur::class)->findOneBy(["id_creance" => $id_creance]);
+                            }
+                            $idDeb =$typeDeb->getIdDebiteur()->getId();
+                            $ref = "PA" . $dmy . ($typeDeb ? $typeDeb->getId() : "");
+
+                            $sql="insert into paiement (`id_creance_id`, `id_type_paiement_id`, `ref`, `montant`, `date_creation`, `date_paiement`, `etat`, `id_users_id`, `id_debiteur_id`, `id_ptf_id`, `id_details_accord_id`, `commentaire`, `confirmed`) values
+                            (".$id_creance.",".$typePaiement->getId().",'".$ref."',".$autreDetail["montant_restant"].",sysdate(),'".$datePaiement."',0,".$id_user.",".$idDeb.",".$creance->getIdPtf()->getId().",".$autreDetail["id"].",'".$commentaire."',1)";
+                            $stmt = $this->conn->prepare($sql)->executeQuery();
+
+                            $sql = "SELECT MAX(id) FROM paiement";
+                            $maxPaiement = $this->conn->executeQuery($sql)->fetchOne();
+                            $sql="insert into paiement_accord (`id_paiement_id`,`id_details_accord_id`) values(".$maxPaiement.",".$autreDetail["id"].")";
+                            $stmt = $this->conn->prepare($sql)->executeQuery();
+
+                            // $checkIfAlreadyExist2 = $paiementRepo->checkIfUpdatedCreance($id_creance , $id_action);dump($checkIfAlreadyExist2);
+                            // if(!$checkIfAlreadyExist2){
+                            //     $newTotalRestant = $creance->getTotalRestant() - $rest;
+                            //     $sql = "INSERT INTO `debt_force_integration`.`creance_paiement_dbi` 
+                            //     (`id_creance`, `old_total_restant`, `new_total_restant`, `montant_paiement`, `id_import`, `is_updated_in_this_action`, `id_action`)
+                            //     VALUES (" . $id_creance . ", " . $creance->getTotalRestant() . ", " . $newTotalRestant . ", " . $rest . ", " . $id_import . ", " . true . ", " . $id_action . ")";
+                            // }else{
+                            //     $newTotalRestant = $checkIfAlreadyExist2["new_total_restant"] - $rest;
+                            //     $TotalRestant = $checkIfAlreadyExist2["new_total_restant"] ;
+                            //     $sql = "INSERT INTO `debt_force_integration`.`creance_paiement_dbi` 
+                            //     (`id_creance`, `old_total_restant`, `new_total_restant`, `montant_paiement`, `id_import`, `is_updated_in_this_action`, `id_action`)
+                            //     VALUES (" . $id_creance . ", " . $TotalRestant . ", " . $newTotalRestant . ", " . $rest . ", " . $id_import . ", " . true . ", " . $id_action . ")";
+                            // }
+                            $total=($creance->getTotalRestant()-$rest);
+                            $creance->setTotalRestant($total);
+                            $this->em->flush();
+                            $stmt = $this->conn->prepare($sql)->executeQuery();
+                            $rest=0;
+                        }
+                    }
+                }
+                else
+                {//TODO:Non Validé
+                    $solde = $paiementRepo->getRestantCreance($id_creance);
+                    if($solde > $rest)
+                    { 
+                        $sql="insert into accord (`id_type_paiement_id`, `date_premier_paiement`, `montant`, `frequence`, `nbr_echeanciers`, `etat`, `date_creation`, `date_fin_paiement`,`id_users_id`) values(".$typePaiement->getId().",'".$datePaiement."',".$rest.",1,1,1,sysdate(),'".$datePaiement."','".$id_user."')";
+                        $stmt = $this->conn->prepare($sql)->executeQuery();
+                        $sql = "SELECT MAX(id) FROM accord";
+                        $maxAccord = $this->conn->executeQuery($sql)->fetchOne();
+                        $sql="insert into creance_accord (`id_creance_id`, `id_accord_id`) values(".$id_creance.",".$maxAccord.")";
+                        $stmt = $this->conn->prepare($sql)->executeQuery();
+                        $sql = "SELECT MAX(id) FROM creance_accord";
+                        $maxCreanceAccord = $this->conn->executeQuery($sql)->fetchOne();
+                        $sql="insert into details_accord (`id_accord_id`, `montant`, `status`, `id_type_paiement_id`, `montant_paiement`, `montant_restant`, `date_paiement`) values(".$maxAccord.",".$rest.",1,".$typePaiement->getId().",".$rest.",0,'".$datePaiement."')";
+                        $stmt = $this->conn->prepare($sql)->executeQuery();
+                        $nbrAccordsSys++;
+                        $montantAccordsSys+=$rest;
+                    }
+                    else
+                    {
+                        $sql="insert into accord (`id_type_paiement_id`, `date_premier_paiement`, `montant`, `frequence`, `nbr_echeanciers`, `etat`, `date_creation`, `date_fin_paiement`) values(".$typePaiement->getId().",'".$datePaiement."',".$solde.",1,1,1,sysdate(),'".$datePaiement."')";
+                        $stmt = $this->conn->prepare($sql)->executeQuery();
+                        $sql = "SELECT MAX(id) FROM debt_force_integration.accord_dbi";
+                        $maxAccord = $this->conn->executeQuery($sql)->fetchOne();
+                        $sql="insert into creance_accord (`id_creance_id`, `id_accord_id`) values(".$id_creance.",".$maxAccord.")";
+                        $stmt = $this->conn->prepare($sql)->executeQuery();
+                        $sql = "SELECT MAX(id) FROM creance_accord";
+                        $maxCreanceAccord = $this->conn->executeQuery($sql)->fetchOne();
+                        $sql="insert into details_accord (`id_accord_id`, `montant`, `status`, `id_type_paiement_id`, `montant_paiement`, `montant_restant`, `date_paiement`) values(".$maxAccord.",".$solde.",1,".$typePaiement->getId().",".$rest.",0,'".$datePaiement."')";
+                        $stmt = $this->conn->prepare($sql)->executeQuery();
+                        $nbrAccordsSys++;
+                        $montantAccordsSys+=$solde;
+                    }
+                    $sql = "SELECT MAX(id) FROM details_accord";
+                    $maxDetailAccord = $this->conn->executeQuery($sql)->fetchOne();
+                    $date=new \DateTime();
+                    $dmy = $date->format('dmYHis');
+                    $typeDeb = $this->em->getRepository(TypeDebiteur::class)->findOneBy(["id_creance" => $id_creance, "id_type" => 3]);
+                    if (!$typeDeb) {
+                        $typeDeb = $this->em->getRepository(TypeDebiteur::class)->findOneBy(["id_creance" => $id_creance]);
+                    }
+                    $idDeb =$typeDeb->getIdDebiteur()->getId();
+                    $ref = "PA" . $dmy . ($typeDeb ? $typeDeb->getId() : "");
+                    $sql="insert into paiement (`id_creance_id`, `id_type_paiement_id`, `ref`, `montant`, `date_creation`, `date_paiement`, `etat`, `id_users_id`, `id_debiteur_id`, `id_ptf_id`, `id_details_accord_id`, `commentaire`, `confirmed`) values(".$id_creance.",".$typePaiement->getId().",'".$ref."',".$montant.",sysdate(),'".$datePaiement."',0,".$id_user.",".$idDeb.",".$creance->getIdPtf()->getId().",".$maxDetailAccord.",'".$commentaire."',1)";
+                    $stmt = $this->conn->prepare($sql)->executeQuery();
+
+                    
+                    $sql = "SELECT MAX(id) FROM paiement";
+                    $maxPaiement = $this->conn->executeQuery($sql)->fetchOne();
+                    $sql="insert into paiement_accord (`id_paiement_id`,`id_details_accord_id`) values(".$maxPaiement.",".$maxDetailAccord.")";
+                    $stmt = $this->conn->prepare($sql)->executeQuery();
+
+                    // $checkIfAlreadyExist = $paiementRepo->checkIfUpdatedCreance($id_creance , $id_action);
+                    // if(!$checkIfAlreadyExist){
+                    //     $newTotalRestant = $creance->getTotalRestant() - $montant;
+                    //     $sql = "INSERT INTO `debt_force_integration`.`creance_paiement_dbi` 
+                    //     (`id_creance`, `old_total_restant`, `new_total_restant`, `montant_paiement`, `id_import`, `is_updated_in_this_action`, `id_action`)
+                    //     VALUES (" . $id_creance . ", " . $creance->getTotalRestant() . ", " . $newTotalRestant . ", " . $montant . ", " . $id_import . ", " . true . ", " . $id_action . ")";
+                    // }else{
+                    //     $newTotalRestant = $checkIfAlreadyExist["new_total_restant"] - $montant;
+                    //     $TotalRestant = $checkIfAlreadyExist["new_total_restant"] ;
+                    //     $sql = "INSERT INTO `debt_force_integration`.`creance_paiement_dbi` 
+                    //     (`id_creance`, `old_total_restant`, `new_total_restant`, `montant_paiement`, `id_import`, `is_updated_in_this_action`, `id_action`)
+                    //     VALUES (" . $id_creance . ", " . $TotalRestant . ", " . $newTotalRestant . ", " . $montant . ", " . $id_import . ", " . true . ", " . $id_action . ")";
+                    // }
+                    // $stmt = $this->conn->prepare($sql)->executeQuery();
+                    $total=($creance->getTotalRestant()-$rest);
+                    $creance->setTotalRestant($total);
+                    $this->em->flush();
+                    // $sql="insert into accord_import (`type`, `id_accord_id`, `id_details_accord_id`, `id_import_id`, `id_creance_accord_id`) values(1,".$maxAccord.",".$maxDetailAccord.",".$id_import.",".$maxCreanceAccord.")";
+                    // $stmt = $this->conn->prepare($sql)->executeQuery();
+
+                    // $sql="insert into paiement_import ( `id_import`, `id_creance`, `id_paiement`) values(".$id_import.",".$id_creance.",".$maxPaiement.")";
+                    // $stmt = $this->conn->prepare($sql)->executeQuery();
+                    $rest=0;
+                }
+            }
+        }
+        return "OK";
+        } catch (\Exception $e) {
+            return "ERROR";
+            //throw $th;
+        }
+        
+    }
 }

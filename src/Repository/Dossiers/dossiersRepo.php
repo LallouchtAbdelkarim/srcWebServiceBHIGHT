@@ -140,8 +140,24 @@ class dossiersRepo extends ServiceEntityRepository
         $result["total_creance"] = $total_creance;
         $result["total_restant"] = $total_restant;
         return $result;
-        
     }
+    public function getCreanceByIdDossier($id){
+        $sql="SELECT * FROM `creance` WHERE id_dossier_id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $id);
+        $stmt = $stmt->executeQuery();
+        $result = $stmt->fetchAll();
+        for ($i=0; $i < count($result); $i++) { 
+            $sql="SELECT * FROM `details_type_creance` WHERE id = :idType";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam('idType', $result[$i]['id_type_creance_id']);
+            $stmt = $stmt->executeQuery();
+            $type = $stmt->fetchAssociative();
+            $result[$i]['type_creance'] = $type;
+        }
+        return $result;
+    }
+    
 
     public function getListesDebiteurByDossier($id){
         $sql="SELECT  deb.* FROM debiteur deb where deb.id in (select dd.id_debiteur_id from debi_doss dd where dd.id_dossier_id = :id)";

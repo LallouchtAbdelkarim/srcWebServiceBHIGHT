@@ -2,21 +2,23 @@
 
 namespace App\Entity;
 
-use App\Repository\EmailRepository;
+use App\Repository\HistoriqueEmailRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity(repositoryClass: EmailRepository::class)]
-class Email
+#[ORM\Entity(repositoryClass: HistoriqueEmailRepository::class)]
+class HistoriqueEmail
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?Debiteur $id_debiteur = null;
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $date_action = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $id_debiteur = null;
 
     #[ORM\Column(length: 255)]
     private ?string $email = null;
@@ -24,9 +26,8 @@ class Email
     #[ORM\Column]
     private ?int $status = null;
 
-    #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?TypeEmail $id_type_email = null;
+    #[ORM\Column]
+    private ?int $id_type_email = null;
 
     #[ORM\Column]
     private ?bool $active = null;
@@ -34,27 +35,36 @@ class Email
     #[ORM\Column(nullable: true)]
     private ?int $id_integration = null;
 
-    #[ORM\ManyToOne]
-    private ?TypeSource $id_type_source = null;
+    #[ORM\Column]
+    private ?int $id_type_source = null;
 
-    #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?StatusEmail $id_status_email = null;
+    #[ORM\Column]
+    private ?int $id_status_email = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $date_creation = null;
-
     public function getId(): ?int
     {
         return $this->id;
     }
 
-    public function getIdDebiteur(): ?debiteur
+    public function getDateAction(): ?\DateTimeInterface
+    {
+        return $this->date_action;
+    }
+
+    public function setDateAction(?\DateTimeInterface $date_action): static
+    {
+        $this->date_action = $date_action;
+
+        return $this;
+    }
+    public function getIdDebiteur(): ?int
     {
         return $this->id_debiteur;
     }
 
-    public function setIdDebiteur(?debiteur $id_debiteur): static
+    public function setIdDebiteur(?int $id_debiteur): static
     {
         $this->id_debiteur = $id_debiteur;
 
@@ -85,12 +95,12 @@ class Email
         return $this;
     }
 
-    public function getIdTypeEmail(): ?TypeEmail
+    public function getIdTypeEmail(): ?int
     {
         return $this->id_type_email;
     }
 
-    public function setIdTypeEmail(?TypeEmail $id_type_email): static
+    public function setIdTypeEmail(?int $id_type_email): static
     {
         $this->id_type_email = $id_type_email;
 
@@ -121,24 +131,24 @@ class Email
         return $this;
     }
 
-    public function getIdTypeSource(): ?TypeSource
+    public function getIdTypeSource(): ?int
     {
         return $this->id_type_source;
     }
 
-    public function setIdTypeSource(?TypeSource $id_type_source): static
+    public function setIdTypeSource(?int $id_type_source): static
     {
         $this->id_type_source = $id_type_source;
 
         return $this;
     }
 
-    public function getIdStatusEmail(): ?StatusEmail
+    public function getIdStatusEmail(): ?int
     {
         return $this->id_status_email;
     }
 
-    public function setIdStatusEmail(?StatusEmail $id_status_email): static
+    public function setIdStatusEmail(?int $id_status_email): static
     {
         $this->id_status_email = $id_status_email;
 

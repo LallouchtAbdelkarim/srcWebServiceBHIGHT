@@ -35,13 +35,28 @@ class facturationRepo extends ServiceEntityRepository
     }
     
 
-    public function getListeModels(){
-        $resultList = $this->em->getRepository(Facture::class)->findAll();
-        if($resultList){
-            return $resultList;
-        }else{
-            return null;
+    public function getListeModels($id){
+        $sql="SELECT * FROM `facture` ";
+        if($id != 0){
+            $sql .= "where id_donneur_ordre_id_id = ".$id.""; 
         }
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $resultList = $stmt->fetchAll();
+        for ($i=0; $i < count($resultList); $i++) { 
+            $sql="SELECT * FROM `status_facture` where id = ".$resultList[$i]['id_status_id']."";
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $status = $stmt->fetchAssociative();
+            $resultList[$i]['status'] = $status;
+
+            $sql="SELECT * FROM `donneur_ordre` where id = ".$resultList[$i]['id_donneur_ordre_id_id']."";
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $dn = $stmt->fetchAssociative();
+            $resultList[$i]['dn'] = $dn;
+        }
+        return $resultList;
     }
     public function getListeDonneurOrdre(){
         $resultList = $this->em->getRepository(DonneurOrdre::class)->findAll();
@@ -95,14 +110,14 @@ class facturationRepo extends ServiceEntityRepository
     }
     public function createFacture2($donneur ,$numeroFact , $yearFact , $totalTTC,$id_type_paiemnt,$model){
         $sql="INSERT INTO `facture`(`id_donneur_ordre_id_id`, `numero_fact`, `year_fact`, `date_creation`, `total_ttc`, `id_type_paiement_id` , `id_status_id`,`id_model_id`) VALUES
-         (:donneur,:numeroFact,:yearFact,now(),:totalTTC,:id_type_paiemnt,1,:model)";
+         (:donneur,:numeroFact,:yearFact,now(),:totalTTC,:id_type_paiemnt,1,null)";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam('donneur', $donneur);
         $stmt->bindParam('numeroFact', $numeroFact);
         $stmt->bindParam('yearFact', $yearFact);
         $stmt->bindParam('totalTTC', $totalTTC);
         $stmt->bindParam('id_type_paiemnt', $id_type_paiemnt);
-        $stmt->bindParam('model', $model);
+        // $stmt->bindParam('model', $model);
         $stmt = $stmt->executeQuery();
         $resulat = $stmt->fetchAllAssociative();
         return $resulat;

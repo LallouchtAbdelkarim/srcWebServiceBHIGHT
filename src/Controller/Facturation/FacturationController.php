@@ -57,8 +57,9 @@ class FacturationController extends AbstractController
         $respObjects =array();
         $codeStatut="ERROR";
         try{
+            $id = $request->get('id');
             $this->AuthService->checkAuth(0,$request);
-            $data = $factureRepo->getListeModels();
+            $data = $factureRepo->getListeModels($id);
             $respObjects["data"] = $data;
             $codeStatut="OK";
         }catch(\Exception $e){

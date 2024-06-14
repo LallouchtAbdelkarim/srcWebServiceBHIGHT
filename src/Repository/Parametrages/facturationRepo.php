@@ -4,6 +4,7 @@ namespace App\Repository\Parametrages;
 
 use App\Entity\CritereModelFacturation;
 use App\Entity\DetailCritereModelFacturation;
+use App\Entity\DonneurOrdre;
 use App\Entity\ModelFacturation;
 use App\Entity\RegleModelFacturation;
 use Doctrine\DBAL\Connection;
@@ -63,21 +64,29 @@ class facturationRepo extends ServiceEntityRepository
             return false;
         }
     }
+
+    
+    public function checkIfInDonneur($id){
+        $model = $this->em->getRepository(DonneurOrdre::class)->findOneBy(["id_modele_regle"=>$id]);
+        return $model;
+    }
     public function deleteModel($id){
-        try{
-            $model = $this->em->getRepository(ModelFacturation::class)->findOneBy(["id"=>$id]);
-            $detail_model = $this->em->getRepository(DetailModelFacturation::class)->findBy(["id_model_facturation"=>$id]);
-            foreach ($detail_model as $item) {
-                $this->em->remove($item);
+        $model = $this->em->getRepository(ModelFacturation::class)->findOneBy(["id"=>$id]);
+        $detail_model = $this->em->getRepository(RegleModelFacturation::class)->findBy(["id_model"=>$id]);
+        foreach ($detail_model as $item) {
+            $critere = $this->em->getRepository(CritereModelFacturation::class)->findBy(["idRegle"=>$item->getId()]);
+            foreach ($critere as $item1){ 
+                $detail_critere = $this->em->getRepository(DetailCritereModelFacturation::class)->findBy(["idCritere"=>$item1->getId()]);
+                foreach ($detail_critere as $dt) {
+                    $this->em->remove($dt);
+                }
+                $this->em->remove($item1);
             }
-            $this->em->remove($model);
-            $this->em->flush();
-            $statut = "OK";
-            return $statut;
-        }catch(\Exception $e){
-            $statut = "NO";
-			return $statut;
+            $this->em->remove($item);
         }
+        $this->em->remove($model);
+        $this->em->flush();
+        $statut = "OK";
     }
     public function createRegle($r,$model){
         $reglefact = new RegleModelFacturation();

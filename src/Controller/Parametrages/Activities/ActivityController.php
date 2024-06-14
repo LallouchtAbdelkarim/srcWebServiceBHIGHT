@@ -986,4 +986,26 @@ class ActivityController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+    #[Route('/activities/getQualificationByType' )]
+    public function getQualificationByType(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $id = $request->get('id');
+            $result = $activityRepo->getQualificationByType($id);
+            $respObjects['data'] = $result;
+            
+            $codeStatut="OK";
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects['error'] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    
 }

@@ -40,8 +40,6 @@ class paiementController extends AbstractController
     public $em;
     private $conn;
     private $AuthService;
-
-
     public function __construct(
         paiementRepo $paiementRepo,
         SerializerInterface $serializer,
@@ -359,8 +357,7 @@ class paiementController extends AbstractController
                                                                 $ref = "PA" . $dmy . ($typeDeb ? $typeDeb->getId() : "");
                                                                 $sql="insert into debt_force_integration.paiement_dbi (`id_creance`, `id_type_paiement`, `ref`, `montant`, `date_creation`, `date_paiement`, `etat`, `id_users`, `id_debiteur`, `id_ptf`, `id_details_accord`, `commentaire`, `id_import`, `confirmed`) values(".$creance->getId().",".$typePaiement->getId().",'".$ref."',".$montant.",sysdate(),'".$datePaiement."',0,".$id_user.",".$idDeb.",".$creance->getIdPtf()->getId().",".$maxDetailAccord.",'".$commentaire."',".$detailsImp->getId().",1)";
                                                                 $stmt = $this->conn->prepare($sql)->executeQuery();
-
-                                                                
+     
                                                                 $sql = "SELECT MAX(id) FROM debt_force_integration.paiement_dbi";
                                                                 $maxPaiement = $this->conn->executeQuery($sql)->fetchOne();
                                                                 $sql="insert into debt_force_integration.paiement_accord_dbi (`id_paiement`,`id_details_accord`) values(".$maxPaiement.",".$maxDetailAccord.")";

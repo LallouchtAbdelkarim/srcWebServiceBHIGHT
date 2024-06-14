@@ -135,6 +135,10 @@ class activityRepo extends ServiceEntityRepository
         $resultatList =  $this->em->getRepository(ResultatActivite::class)->findBy(['id_activite' => $id]);
         return $resultatList;
     }
+    public function getQualificationByType($id){
+        $resultatList =  $this->em->getRepository(ParamActivite::class)->findBy(['activite_p' => $id]);
+        return $resultatList;
+    }
     public function getDetailsOfTypeParametrages(){
         $resultatList = array();
         $type_parametre_details = array();

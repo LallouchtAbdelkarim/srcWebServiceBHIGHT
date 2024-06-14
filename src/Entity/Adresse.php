@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\AdresseRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: AdresseRepository::class)]
@@ -61,6 +62,9 @@ class Adresse
 
     #[ORM\ManyToOne]
     private ?TypeSource $id_type_source = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $date_creation = null;
 
     public function getId(): ?int
     {
@@ -242,6 +246,18 @@ class Adresse
     public function setIdTypeSource(?TypeSource $id_type_source): static
     {
         $this->id_type_source = $id_type_source;
+
+        return $this;
+    }
+
+    public function getDateCreation(): ?\DateTimeInterface
+    {
+        return $this->date_creation;
+    }
+
+    public function setDateCreation(?\DateTimeInterface $date_creation): static
+    {
+        $this->date_creation = $date_creation;
 
         return $this;
     }

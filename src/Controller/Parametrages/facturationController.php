@@ -117,6 +117,7 @@ class facturationController extends AbstractController
                                     }
                                 }
                             }
+
                             if(isset($criteres[$j]["details_critere"])){
                                 $details_criteres = $criteres[$j]["details_critere"];
 
@@ -154,20 +155,27 @@ class facturationController extends AbstractController
     public function deleteModel(facturationRepo $facturationRepo , Request $request): JsonResponse
     {
         $respObjects = array();
-        try{
+        $codeStatut='ERROR';
+        // try{
             $id = $request->get("id");
             $data = $facturationRepo->findModel($id);
             if($data){
-                $facturationRepo->deleteModel($id);
-                $respObjects["message"] = "success";
+                $checkIfInDonneur = $facturationRepo->checkIfInDonneur($id);
+                if(!$checkIfInDonneur){
+                    $facturationRepo->deleteModel($id);
+                    $codeStatut='OK';
+                }else{
+                    $codeStatut='IN_DONNEUR';
+                }
             }else{
-                $respObjects["message"] = "Model n'existe pas";
+                $codeStatut="NOT_EXIST";
             }
-        }catch(\Exception $e){
-            $result = "Une erreur s'est produite".$e->getMessage();
-            $respObjects["message"] = $result;
-        }
-        return $this->json($respObjects);
+        // }catch(\Exception $e){
+        //     $codeStatut="ERROR";
+        // }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);    
     }  
 
     #[Route('/facturation/createModel', methods: ['POST'])]
@@ -298,11 +306,12 @@ class facturationController extends AbstractController
                 $respObjects["codeStatut"] = "NOT_EXIST";
             }
         }catch(\Exception $e){
-            $result = "Une erreur s'est produite".$e->getMessage();
+            $result = "Une erreur s'est produite";
             $respObjects["message"] = $result;
         }
         return $this->json($respObjects);
     }
+
     #[Route('/facturation/updateRegleWithDetails')]
     public function updateRegleWithDetails(facturationRepo $facturationRepo , Request $request): JsonResponse
     {

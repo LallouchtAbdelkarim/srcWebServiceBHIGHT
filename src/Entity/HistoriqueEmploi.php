@@ -41,6 +41,9 @@ class HistoriqueEmploi
     #[ORM\Column]
     private ?int $id_debiteur = null;
 
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $date_action = null;
+
 
     public function getId(): ?int
     {
@@ -151,6 +154,18 @@ class HistoriqueEmploi
     public function setIdDebiteur(?int $id_debiteur): static
     {
         $this->id_debiteur = $id_debiteur;
+
+        return $this;
+    }
+
+    public function getDateAction(): ?\DateTimeInterface
+    {
+        return $this->date_action;
+    }
+
+    public function setDateAction(?\DateTimeInterface $date_action): static
+    {
+        $this->date_action = $date_action;
 
         return $this;
     }

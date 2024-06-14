@@ -677,6 +677,8 @@ class debiteursRepo extends ServiceEntityRepository
                 $params[] = ":" . $key;
             }
         }
+        $values[] = "date_creation";
+        $params[] = "now()";
 
         $sql .= implode(', ', $values) . ')';
         $sql .= ' VALUES (' . implode(', ', $params) . ')';
@@ -928,6 +930,8 @@ class debiteursRepo extends ServiceEntityRepository
             $values[] = "`$key`";
             $params[] = ":" . $key;
         }
+        $values[] = "`date_creation`";
+        $params[] = "now()";
 
         $sql .= implode(', ', $values) . ')';
         $sql .= ' VALUES (' . implode(', ', $params) . ')';
@@ -990,7 +994,8 @@ class debiteursRepo extends ServiceEntityRepository
             $values[] = "`$key`";
             $params[] = ":" . $key;
         }
-
+        $values[] = "`date_creation`";
+        $params[] = "now()";
         $sql .= implode(', ', $values) . ')';
         $sql .= ' VALUES (' . implode(', ', $params) . ')';
 
@@ -1043,7 +1048,8 @@ class debiteursRepo extends ServiceEntityRepository
             $values[] = "`$key`";
             $params[] = ":" . $key;
         }
-
+        $values[] = "`date_creation`";
+        $params[] = "now()";
         $sql .= implode(', ', $values) . ')';
         $sql .= ' VALUES (' . implode(', ', $params) . ')';
 
@@ -1203,6 +1209,9 @@ class debiteursRepo extends ServiceEntityRepository
                 $params[] = ":" . $key;
             }
         }
+        
+        $values[] = "`date_creation`";
+        $params[] = "now()";
 
         $sql .= implode(', ', $values) . ')';
         $sql .= ' VALUES (' . implode(', ', $params) . ')';

@@ -4,6 +4,7 @@ namespace App\Controller\Debiteurs;
 
 use App\Repository\Debiteurs\debiteursRepo;
 use App\Repository\Dossiers\dossiersRepo;
+use App\Repository\Historiques\histoRepo;
 use App\Repository\Users\userRepo;
 use App\Service\typeService;
 use DateTime;
@@ -33,6 +34,7 @@ class DebiteursController extends AbstractController
     private $GeneralService;
 
     private $TypeService;
+    private  $histoRepo;
 
 
 
@@ -46,7 +48,8 @@ class DebiteursController extends AbstractController
         Connection $conn,
         AuthService $AuthService,
         GeneralService $GeneralService,
-        typeService $TypeService
+        typeService $TypeService,
+        histoRepo $histoRepo
         )
     {
         $this->conn = $conn;
@@ -59,6 +62,7 @@ class DebiteursController extends AbstractController
         $this->GeneralService = $GeneralService;
         $this->TypeService = $TypeService;
         $this->userRepo = $userRepo;
+        $this->histoRepo = $histoRepo;
     }
     #[Route('/liste_debiteurs')]
     public function liste_debiteurs(Request $request,debiteursRepo $debiteursRepo): JsonResponse
@@ -640,7 +644,7 @@ class DebiteursController extends AbstractController
         return $this->json($respObjects);
     }
     #[Route('/deleteEmployeur',methods:"POST")]
-    public function deleteEmployeur(Request $request,debiteursRepo $debiteursRepo): JsonResponse
+    public function deleteEmployeur(Request $request,debiteursRepo $debiteursRepo , histoRepo $histoRepo ): JsonResponse
     {
         $respObjects =array();
         $codeStatut="ERROR";
@@ -649,8 +653,9 @@ class DebiteursController extends AbstractController
             $data_list = json_decode($request->getContent(), true);
             $id = $request->get("id");
             if($id != "" ){
-                $checkCharge = $this->TypeService->checkElement($id ,"foncier");
+                $checkCharge = $this->TypeService->checkElement($id ,"employeur");
                 if($checkCharge ){
+                    $histoRepo->addHistoriqueEmployeur($id);
                     $data = $debiteursRepo->deleteEmployeur($id);
                     $codeStatut="OK";
                 }else{
@@ -863,7 +868,7 @@ class DebiteursController extends AbstractController
         return $this->json($respObjects);
     }
     #[Route('/deleteHistoriqueEmploi',methods:"POST")]
-    public function deleteHistoriqueEmploi(Request $request,debiteursRepo $debiteursRepo): JsonResponse
+    public function deleteHistoriqueEmploi(Request $request,debiteursRepo $debiteursRepo , histoRepo $histoRepo): JsonResponse
     {
         $respObjects =array();
         $codeStatut="ERROR";
@@ -874,6 +879,7 @@ class DebiteursController extends AbstractController
             if($id != "" ){
                 $checkCharge = $this->TypeService->checkElement($id ,"historique_emploi");
                 if($checkCharge ){
+                    $histoRepo->addHistoriqueEmploi($id);
                     $data = $debiteursRepo->deleteHistoriqueEmploi($id);
                     $codeStatut="OK";
                 }else{
@@ -1057,7 +1063,7 @@ class DebiteursController extends AbstractController
         return $this->json($respObjects);
     }
     #[Route('/deleteEmploi',methods:"POST")]
-    public function deleteEmploi(Request $request,debiteursRepo $debiteursRepo): JsonResponse
+    public function deleteEmploi(Request $request,debiteursRepo $debiteursRepo , histoRepo $histoRepo): JsonResponse
     {
         $respObjects =array();
         $codeStatut="ERROR";
@@ -1068,6 +1074,7 @@ class DebiteursController extends AbstractController
             if($id != "" ){
                 $checkEmploi = $this->TypeService->checkElement($id ,"emploi");
                 if($checkEmploi ){
+                    $histoRepo->addHistoriqueEmploi($id);
                     $data = $debiteursRepo->deleteEmploi($id);
                     $codeStatut="OK";
                 }else{
@@ -1276,7 +1283,7 @@ class DebiteursController extends AbstractController
     }
 
     #[Route('/deleteTelephone',methods:"POST")]
-    public function deleteTelephone(Request $request,debiteursRepo $debiteursRepo): JsonResponse
+    public function deleteTelephone(Request $request,debiteursRepo $debiteursRepo , histoRepo $histoRepo ): JsonResponse
     {
         $respObjects =array();
         $codeStatut="ERROR";
@@ -1286,11 +1293,13 @@ class DebiteursController extends AbstractController
             $id = $request->get("id");
             $id_debiteur = $request->get("id_debiteur");
             if($id != "" ){
+                $checkCharge = $this->TypeService->checkElement($id ,"telephone");
+                $tel  = $debiteursRepo->getTelephoneById($id);
                 $data = $debiteursRepo->checkIfDoubleTeleAndNotActive($id_debiteur);
-                if($data > 1)
+                if( $tel['active'] != 1 || $data > 1)
                 {
-                    $checkCharge = $this->TypeService->checkElement($id ,"telephone");
                     if($checkCharge ){
+                        $histoRepo->addHistorique($id);
                         $data = $debiteursRepo->deleteTelephone($id);
                         $codeStatut="OK";
                     }else{
@@ -1409,7 +1418,7 @@ class DebiteursController extends AbstractController
         return $this->json($respObjects);
     }
     #[Route('/deleteAdresse',methods:"POST")]
-    public function deleteAdresse(Request $request,debiteursRepo $debiteursRepo): JsonResponse
+    public function deleteAdresse(Request $request,debiteursRepo $debiteursRepo , histoRepo $histoRepo): JsonResponse
     {
         $respObjects =array();
         $codeStatut="ERROR";
@@ -1420,6 +1429,7 @@ class DebiteursController extends AbstractController
             if($id != "" ){
                 $checkCharge = $this->TypeService->checkElement($id ,"adresse");
                 if($checkCharge ){
+                    $histoRepo->addHistoriqueAdresse($id);
                     $data = $debiteursRepo->deleteAdresse($id);
                     $codeStatut="OK";
                 }else{
@@ -1507,7 +1517,7 @@ class DebiteursController extends AbstractController
         return $this->json($respObjects);
     }
     #[Route('/deleteEmail',methods:"POST")]
-    public function deleteEmail(Request $request,debiteursRepo $debiteursRepo): JsonResponse
+    public function deleteEmail(Request $request,debiteursRepo $debiteursRepo , histoRepo $histoRepo): JsonResponse
     {
         $respObjects =array();
         $codeStatut="ERROR";
@@ -1518,6 +1528,7 @@ class DebiteursController extends AbstractController
             if($id != "" ){
                 $checkCharge = $this->TypeService->checkElement($id ,"email");
                 if($checkCharge ){
+                    $histoRepo->addHistoriqueEmail($id);
                     $data = $debiteursRepo->deleteEmail($id);
                     $codeStatut="OK";
                 }else{

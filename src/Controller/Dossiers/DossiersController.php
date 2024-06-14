@@ -133,6 +133,7 @@ class DossiersController extends AbstractController
                 $email = $dossiersRepo->getEmail($id);
                 $tel = $dossiersRepo->getListesTel($id);
                 $notes = $dossiersRepo->getListeNote($id);
+                $creance = $dossiersRepo->getCreanceByIdDossier($id);
 
                 $respObjects["total"]  = $dossiersRepo->getDetailsCreanceByIdDossier($id);
                 $respObjects["dossier"] = $array_doss;
@@ -143,6 +144,7 @@ class DossiersController extends AbstractController
                 $respObjects["email_deb"] = $email_deb;
                 $respObjects["debiteur"] = $debiteur;
                 $respObjects["notes"] = $notes;
+                $respObjects["creance"] = $creance;
 
                 if(isset($debiteur[0])){
                     $respObjects["debiteur"] = $debiteur[0];

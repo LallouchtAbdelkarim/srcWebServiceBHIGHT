@@ -50,6 +50,9 @@ class HistoTelephone
     #[ORM\Column(nullable: true)]
     private ?int $id_integration = null;
 
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $date_action = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -195,6 +198,18 @@ class HistoTelephone
     public function setIdIntegration(?int $id_integration): static
     {
         $this->id_integration = $id_integration;
+
+        return $this;
+    }
+
+    public function getDateAction(): ?\DateTimeInterface
+    {
+        return $this->date_action;
+    }
+
+    public function setDateAction(?\DateTimeInterface $date_action): static
+    {
+        $this->date_action = $date_action;
 
         return $this;
     }

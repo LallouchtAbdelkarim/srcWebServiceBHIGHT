@@ -45,6 +45,9 @@ class DonneurOrdre
     #[ORM\JoinColumn(nullable: false)]
     private ?TypeDonneur $id_type = null;
 
+    #[ORM\ManyToOne]
+    private ?ModelFacturation $id_modele_regle = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -166,6 +169,18 @@ class DonneurOrdre
     public function setIdType(?TypeDonneur $id_type): static
     {
         $this->id_type = $id_type;
+
+        return $this;
+    }
+
+    public function getIdModeleRegle(): ?ModelFacturation
+    {
+        return $this->id_modele_regle;
+    }
+
+    public function setIdModeleRegle(?ModelFacturation $id_modele_regle): static
+    {
+        $this->id_modele_regle = $id_modele_regle;
 
         return $this;
     }

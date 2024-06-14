@@ -54,10 +54,11 @@ class GeneralController extends AbstractController
     {
         $codeStatut = "ERROR";
         $isConnected = false;
-        $jwt = $request->headers->get('Authorization');
+        $this->AuthService->checkAuth(0,$request);
         $data = [];
         try{
-            $data = $this->conn->getSchemaManager()->listTableNames(); 
+            // $data = $this->conn->getSchemaManager()->listTableNames(); 
+            $data = ['creance' ,"accord","dossier","paiement","telephone"]; 
             $codeStatut = "OK";
         }catch(\Exception $e){
             $codeStatut = "ERROR";
@@ -74,7 +75,11 @@ class GeneralController extends AbstractController
         $table = $request->get("table");
         $data = [];
         if($table != ""){
-            $sql="SHOW COLUMNS FROM ".$table. " WHERE `Key` != 'MUL'  and Field != 'id' and Field != 'cin_formate';"; 
+            $sql="SHOW COLUMNS FROM ".$table. " WHERE `Key` != 'MUL'  and Field != 'id' and Field != 'cin_formate' ";
+            $sql .= "and Field != 'id_integration'  and Field != 'id_creance' and Field != 'etat' and Field != 'id_creance_dbi'";
+            $sql .= "and Field != 'motif' ";
+            $sql .= "and Field != 'id_dossier_dbi' ";
+            $sql .= "and Field != 'ref' and Field != 'confirmed' and Field != 'commentaire' ";
             $stmt = $this->conn->prepare($sql);
             $stmt = $stmt->executeQuery();
             // returns an array of arrays (i.e. a raw data set)

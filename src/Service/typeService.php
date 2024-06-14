@@ -345,7 +345,13 @@ class typeService
                     return $resultList;
                 }
                 break;
-
+            case 'email':
+                $query = $this->em->createQuery('SELECT r FROM App\Entity\StatusEmail r where r.id = '.$id.'');
+                $resultList = $query->getOneOrNullResult();
+                if ($resultList) {
+                    return $resultList;
+                }
+                break;
             
             default:
                 // If $type doesn't match any expected types, return false

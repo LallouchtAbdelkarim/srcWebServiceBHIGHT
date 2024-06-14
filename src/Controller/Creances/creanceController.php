@@ -4,6 +4,8 @@ namespace App\Controller\Creances;
 
 use App\Repository\DonneurOrdreAndPTF\donneurRepo;
 use App\Repository\Creances\creancesRepo;
+use App\Repository\Encaissement\paiementRepo;
+use App\Repository\Parametrages\Activities\activityRepo;
 use App\Repository\Users\userRepo;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -22,6 +24,7 @@ use App\Service\typeService;
 class creanceController extends AbstractController
 {
     private  $integrationRepo;
+    private  $activityRepo;
     private  $donneurRepo;
     private  $affichageRepo;
     private  $serializer;
@@ -40,7 +43,8 @@ class creanceController extends AbstractController
         MessageService $MessageService,
         Connection $conn,
         AuthService $AuthService,
-        TypeService $TypeService
+        TypeService $TypeService,
+        activityRepo $activityRepo
         )
     {
         $this->conn = $conn;
@@ -51,6 +55,7 @@ class creanceController extends AbstractController
         $this->AuthService = $AuthService;
         $this->userRepo = $userRepo;
         $this->TypeService = $TypeService;
+        $this->activityRepo= $activityRepo;
     }
     #[Route('/liste_creances_by_filtrage',methods:"POST")]
     public function liste_dossiers_by_filtrage(Request $request,creancesRepo $creancesRepo): JsonResponse
@@ -115,8 +120,14 @@ class creanceController extends AbstractController
                 $typePaiement = $this->TypeService->getListeType("paiement");
                 $respObjects["type_paiemennt"] = $typePaiement;
                 $respObjects["status_paiement"] =$creancesRepo->getStatusPaiement();
+                $respObjects["nbr_deb"] =$creancesRepo->getNbrDeb($id);
+                $respObjects["queue"] =$creancesRepo->getQueueCreance($id);
                 $respObjects["status_accord"] =$creancesRepo->getStatusAccord();
+                $respObjects["accord"] =$creancesRepo->getAccords($id);
+                $respObjects["activite_creance"] =$creancesRepo->getActiviteCreance($id);
+                $respObjects["paiement"] =$creancesRepo->getPaiement($id);
                 $codeStatut="OK";
+
             }else{
                 $codeStatut = "NOT_EXIST_ELEMENT";
             }
@@ -304,4 +315,65 @@ class creanceController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
+    #[Route('/addActivity',methods:"POST")]
+    public function addActivity(Request $request,creancesRepo $creancesRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data = json_decode($request->getContent(), true);
+            $id_creance =  $data["id_creance"];
+            $creance = $creancesRepo->getOneCreance($id_creance);
+            if($creance){
+                $id_param = $data["id_param"];
+                $checkParam = $this->activityRepo->getOneParam($id_param);
+                if($checkParam){
+                    $creancesRepo->createActivity($id_creance , $id_param , $creance['id_dossier_id']);
+                    
+                    $codeStatut="OK";
+                }else{
+                    $codeStatut = "NOT_EXIST_ELEMENT";
+                }
+            }else{
+                $codeStatut = "NOT_EXIST_ELEMENT";
+            }
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/addPaiement',methods:"POST")]
+    public function addPaiement(Request $request,creancesRepo $creancesRepo , paiementRepo $paiementRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        // try{
+            $this->AuthService->checkAuth(0,$request);
+            $data = json_decode($request->getContent(), true);
+            $id_creance =  $data["id_creance"];
+            $valueDate = $data['valueDate'];
+            $montant = $data['montant'];
+            $idTypePaiement = $data['idTypePaiement'];
+            $id_user = $this->AuthService->returnUserId($request);
+            $commentaire = $data['commentaire'];
+
+            
+            $creance = $creancesRepo->addPaiement($paiementRepo,$id_creance , $valueDate,$montant,  $idTypePaiement,$id_user , $commentaire);
+        // }catch(\Exception $e){
+        //     $codeStatut="ERROR";
+        //     $respObjects["err"] = $e->getMessage();
+        // }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    
+
 }

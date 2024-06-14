@@ -47,6 +47,9 @@ class Emploi
     #[ORM\Column(nullable: true)]
     private ?int $id_integration = null;
 
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $date_creation = null;
+
 
     public function getId(): ?int
     {
@@ -169,6 +172,18 @@ class Emploi
     public function setIdIntegration(?int $id_integration): static
     {
         $this->id_integration = $id_integration;
+
+        return $this;
+    }
+
+    public function getDateCreation(): ?\DateTimeInterface
+    {
+        return $this->date_creation;
+    }
+
+    public function setDateCreation(?\DateTimeInterface $date_creation): static
+    {
+        $this->date_creation = $date_creation;
 
         return $this;
     }
