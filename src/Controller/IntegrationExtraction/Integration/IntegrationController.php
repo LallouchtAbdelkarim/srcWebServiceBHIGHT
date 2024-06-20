@@ -7,9 +7,6 @@ use App\Entity\CorresColu;
 use App\Entity\Debiteur;
 use App\Entity\DetailsImport;
 use App\Entity\Import;
-use App\Entity\ImportTypeCreance;
-use App\Entity\ImportTypeDebiteur;
-use App\Entity\ImportTypeGarantie;
 use App\Entity\DetailModelAffichage;
 use App\Entity\IntegDebiteur;
 use App\Entity\IntegDossier;
@@ -67,7 +64,7 @@ class IntegrationController extends AbstractController
         FileService $FileService,
         Connection $conn,
         AuthService $AuthService,
-        GeneralService $generalService,
+        GeneralService $generalService
         )
     {
         $this->conn = $conn;
@@ -441,7 +438,7 @@ class IntegrationController extends AbstractController
                 $integration->setEtat(1);
                 $integration->setStatus($statutIntgeration);
                 $integration->setIdPtf($ptf_);
-                // $integration->setIsMaj(0);
+                $integration->setIsMaj($isMaj);
                 $this->em->persist($integration);
                 $this->em->flush();
                 $test=false ;
@@ -1598,69 +1595,6 @@ class IntegrationController extends AbstractController
         // return $this->json($respObjects);
     }
 
-    #[Route('/importData', methods : ["POST"])]
-    public function importData(integrationRepo $integrationRepo ,ManagerRegistry $doctrine ,  SerializerInterface $serializer , Request $request): JsonResponse
-    {
-        $codeStatut= "ERROR";
-        try{
-            
-        }catch(\Exception $e){
-            $codeStatut="ERROR";
-            $respObjects["errr"] = $e->getMessage();
-        }
-        $respObjects["codeStatut"]=$codeStatut;
-        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
-        return $this->json($respObjects );
-    }
-
-   
-
-    #[Route('/importIntegration1', methods : ["POST"])]
-    public function importIntegration(integrationRepo $integrationRepo ,ManagerRegistry $doctrine ,  SerializerInterface $serializer , Request $request): JsonResponse
-    {
-        $codeStatut= "ERROR";
-        try{
-            $ordre = 1;
-            $this->startIntegrationToDBI($integrationRepo, $doctrine, $serializer, $request , $ordre);
-        }catch(\Exception $e){
-            $codeStatut="ERROR";
-            $respObjects["errr"] = $e->getMessage();
-        }
-        $respObjects["codeStatut"]=$codeStatut;
-        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
-        return $this->json($respObjects );
-    }
-   
-    #[Route('/importIntegration2', methods : ["POST"])]
-    public function importIntegration2(integrationRepo $integrationRepo ,ManagerRegistry $doctrine ,  SerializerInterface $serializer , Request $request): JsonResponse
-    {
-        $codeStatut= "ERROR";
-        try{
-            $ordre = 2;
-            $this->startIntegrationToDBI($integrationRepo, $doctrine, $serializer, $request , $ordre);
-        }catch(\Exception $e){
-            $codeStatut="ERROR";
-            $respObjects["errr"] = $e->getMessage();
-        }
-        $respObjects["codeStatut"]=$codeStatut;
-        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
-        return $this->json($respObjects );
-    }
-    #[Route('/importIntegration3', methods : ["POST"])]
-    public function importIntegration3(integrationRepo $integrationRepo ,ManagerRegistry $doctrine ,  SerializerInterface $serializer , Request $request): JsonResponse
-    {
-        $codeStatut= "ERROR";
-        try{
-            $ordre =3;
-            $this->startIntegrationToDBI($integrationRepo, $doctrine, $serializer, $request , $ordre);
-        }catch(\Exception $e){
-            $codeStatut="ERROR";
-            $respObjects["errr"] = $e->getMessage();
-        }
-        $respObjects["codeStatut"]=$codeStatut;
-        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
-        return $this->json($respObjects );
-    }
     #[Route('/importToDBI', methods : ["POST"])]
     public function importToDBI(integrationRepo $integrationRepo ,ManagerRegistry $doctrine ,  SerializerInterface $serializer , Request $request): JsonResponse
     {
@@ -1673,14 +1607,12 @@ class IntegrationController extends AbstractController
 
         try{
             $IntegrationNonCommencer = $integrationRepo->getAllInegrationByStatus2();
-            
             if($IntegrationNonCommencer){
                 for ($t=0; $t <count($IntegrationNonCommencer);$t++) {
                     try {
                         $porte_feuille = $IntegrationNonCommencer[$t]->getIdPtf()->getId(); 
                         $integrationId =  $IntegrationNonCommencer[$t]->getId();
 
-                        
                         if($IntegrationNonCommencer[$t]->getStatus()->getId() == 2){
                             $sql = 'CALL debt_force_integration.PROC_ROOLBACK_DBI('.$integrationId.');';
                             $stmt = $integrationRepo->executeSQL($sql);
@@ -1711,7 +1643,7 @@ class IntegrationController extends AbstractController
                         $emDbi->flush();
 
                         $sql = 'CALL debt_force_integration.PROC_INSERT_DEB_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().');';
-                        dump($sql);
+                        
                         $stmt = $integrationRepo->executeSQL($sql);
                         $importByType = $integrationRepo->getOneImportType($integrationId , "dossier");
                         $a=new actionsImportDbi();
@@ -2038,3256 +1970,7 @@ class IntegrationController extends AbstractController
 
         return $this->json($respObjects);
     }
-    // #[Route('/startIntegrationToDBI1', methods : ["POST"])]
-    public function startIntegrationToDBI(integrationRepo $integrationRepo ,ManagerRegistry $doctrine ,  SerializerInterface $serializer , Request $request , $ordre): JsonResponse
-    {
-        ini_set('memory_limit','-1');
-        ini_set('memory_size','-1');
-        ini_set('max_execution_time','-1');
-        
-        $countv=0;
-        $countnv=0;
-        $cr = 0;
-        $dispatch1=array();
-        $tableDispatch=array();
-
-        $emDbi = $doctrine->getManager('customer');
-        $respObjects =array();
-        $codeStatut = "ERROR";
-        $IntegrationNonCommencer = $integrationRepo->getAllInegrationByStatus(1);
-
-        if($IntegrationNonCommencer){
-            for ($t=0; $t <count($IntegrationNonCommencer);$t++) { 
-                // $this->em->flush();
-                $porte_feuille = $IntegrationNonCommencer[$t]->getIdPtf(); 
-                $integrationId =  $IntegrationNonCommencer[$t]->getId();
-                $importByType = $integrationRepo->getOneImportType($integrationId , "debiteur");
-                //Etat en cours
-                $importByType->setEtat(2);
-                $this->em->flush();
-                $id_import = $importByType->getId();
-                $detailsImp = $integrationRepo->getDetailsImprt($id_import , $ordre);
-                //grouping les tables by table_bdd 
-                $query = $this->em->createQuery('SELECT t.table_bdd from App\Entity\ColumnsParams t where  t.id
-                    in(select (c.id_col_params) from  App\Entity\CorresColu  c where  c.id_model_import=:idSchema and c.origin_champ = 1
-                     and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type) )group by t.table_bdd');
-                $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                $query->setParameter('type','debiteur');
-                $tables = $query->getResult();
-                $tables_debiteur = $tables;
-
-                $query = $this->em->createQuery('SELECT t.column_name,(t.id_col_params) as id_col_params,t.required  , t.origine from App\Entity\CorresColu t where t.origin_champ = 1 
-                 and (t.id_model_import)=:idSchema and t.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type)');
-                $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                $query->setParameter('type','debiteur');
-                $colFile = $query->getResult();
-
-                $query = $this->em->createQuery('SELECT t.column_name,(t.id_col_params) as id_col_params,t.required  , t.origine from App\Entity\CorresColu t where t.origin_champ = 2 
-                and (t.id_model_import)=:idSchema and t.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type)');
-                $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                $query->setParameter('type','debiteur');
-                $colFileC = $query->getResult();
-
-                $query = $this->em->createQuery('SELECT t.table_bdd from App\Entity\ColumnsParams t where t.id in(select (c.id_col_params) 
-                from App\Entity\CorresColu c where (c.id_model_import)=:idSchema and c.origin_champ = 1  and  c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type))');
-                $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                $query->setParameter('type','debiteur');
-                $tableDb = $query->getResult();
-
-                $query = $this->em->createQuery('SELECT t.id from App\Entity\ColumnsParams t where t.id in(select (c.id_col_params) 
-                from App\Entity\CorresColu c where (c.id_model_import)=:idSchema and c.origin_champ = 1  and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type))');
-                $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                $query->setParameter('type','debiteur');
-                $colDb = $query->getResult();
-
-                $param=array();
-                $val=array();
-
-                $response="";
-                
-                $filePath = $detailsImp->getUrl();
-                
-                if (($handle = fopen($filePath, "r")) !== FALSE)
-                {
-                    while (($data = fgetcsv($handle, 1000000, ";")) !== FALSE)
-                    {
-                        break;
-                    }
-                    //Les entétes de fichier excel
-                    $data=array_map("utf8_encode",$data);
-                    $data=array_map('trim', $data);
-                    $data1=array_map("utf8_encode",str_replace(" ","_",$data));
-                    
-                    for ($i=0; $i < count($colFile); $i++) { 
-                        if(!in_array($colFile[$i]["column_name"],$data1))
-                        {
-                            $response="ENTETE_IDENTIQUE";
-                            $codeStatut="ENTETE_IDENTIQUE";
-                        }
-                    }
-
-                    if($response == ""){
-                        $a=new actionsImportDbi();
-                        $a->setEtat(0);
-                        $a->setCodeAction("Ajo");
-                        $a->setDateDebut(new \DateTime());
-                        $a->setIdImport($importByType->getId());
-                        $a->setTitre("Ajout");
-                        $emDbi->persist($a);
-                        $emDbi->flush();
-
-                        $isCinDeb = $integrationRepo->isCinDeb($importByType->getIdModel()->getId());
-
-                        // $a = $this->integrationRepo->createActionsImport
-
-                        $importByType->setEtat(2);
-                        $this->em->flush(); 
-
-                        foreach($tables as $ta)
-                        {
-                            $val[$ta["table_bdd"]]="";
-                            // if($ta["table_bdd"]=="debiteur")
-                            if($ta["table_bdd"]=="debiteur")
-                            {
-                                $val[$ta["table_bdd"]].="cin_formate";
-                            }
-                            for ($i = 0; $i < count($colFile); $i++)
-                            {   
-                                if(($colFile[$i]["origine"] == 0)){//TODO:Test si séparer par la déclaration dans le fichier
-                                    $colParam = $this->em->getRepository(ColumnsParams::class)->find($colFile[$i]["id_col_params"]);
-                                    if ($colParam->getTableBdd() == $ta["table_bdd"] and $colParam->getTitreCol()!="cin_gestionnaire")
-                                    {
-                                        $val[$ta["table_bdd"]].=",".$colParam->getTitreCol();
-                                    }
-                                }
-                            }
-                            if($ta["table_bdd"]=="creance")
-                            {
-                                if(!$this->in_array_r(5,$colDb))
-                                {
-                                    $val[$ta["table_bdd"]].=",numero_creance";
-                                }
-                            }
-                        }
-                        
-                        $data=$this->convert($filePath,";");
-                        
-                        $valCinF=array();
-                        $valCin=array();
-                        foreach ($tables as $ta){
-                            if($data){
-                                $countRow=0;
-                                foreach ($data as $row)
-                                {
-                                    $valCin[$countRow]="";
-                                    $valCinF[$countRow]="";
-                                    $numCreance[$countRow]="";
-                                    $principale[$countRow]="";
-                                    $frais[$countRow]="";
-                                    $interet[$countRow]="";
-                                    $type_deb[$countRow]="";
-                                    $nom_deb[$countRow]="";
-                                    $prenom_deb[$countRow]= "";
-                                    $rs_deb[$countRow]= "";
-                                    $id_debiteur[$countRow]= "";
-                                    $date_naissance[$countRow]= "";
-                                    $numDossier[$countRow]="";
-                                
-                                    $valRaison[$countRow]="";
-                                    $cinGest[$countRow]="";
-                                    $param[$ta["table_bdd"]][$countRow]="";
-
-                                    $champ[$countRow]="";
-                                    for ($i=0; $i <count($colFileC) ; $i++) 
-                                    { 
-                                        $champ[$countRow."-".$i] = $row[$colFileC[$i]["column_name"]];
-                                    }
-                                    if(!$isCinDeb){
-                                        $param[$ta["table_bdd"]][$countRow]=",''";
-                                    }
-                                    for ($i = 0; $i < count($colFile); $i++)
-                                    {
-                                        if($colDb[$i]["id"]==75 and $row[$colFile[$i]["nomCol"]]!="")
-                                        {
-                                            $gest = $this->em->getRepository(Utilisateurs::class)->findOneBy(["cin"=>$row[$colFile[$i]["nomCol"]]]);
-                                            if($gest)
-                                            {
-                                                $cinGest[$countRow]=$gest->getId();
-                                            }
-                                        }
-                                        if($colDb[$i]["id"]==23)
-                                        {
-                                            if(isset($row[$colFile[$i]["column_name"]])=="")
-                                            {
-                                                for ($r = 0; $r < count($colFile); $r++)
-                                                {
-                                                    if($colDb[$r]["id"]==144)
-                                                    {
-                                                        $row[$colFile[$i]["column_name"]]=$row[$colFile[$r]["column_name"]];
-                                                    }
-                                                }
-                                            }
-                                            $cin=$row[$colFile[$i]["column_name"]];
-                                            $valCin[$countRow]=$cin;
-                                            $valCinF[$countRow]=strtoupper(preg_replace('/[^A-Za-z0-9]+/',"", $cin));
-                                            if(!$this->in_array_r(5,$colDb))
-                                            {
-                                                $numCreance[$countRow]="Sys".$valCinF[$countRow]."-".($countRow+1);
-                                            }
-                                        }
-                                        if($colDb[$i]["id"]==179)
-                                        {
-                                            $type_deb[$countRow]=$row[$colFile[$i]["column_name"]];
-                                        }
-                                        if($colDb[$i]["id"]==24)
-                                        {
-                                            $nom_deb[$countRow]=$row[$colFile[$i]["column_name"]];
-                                        }
-                                        if($colDb[$i]["id"]==25)
-                                        {
-                                            $prenom_deb[$countRow]=$row[$colFile[$i]["column_name"]];
-                                        }
-                                        if($colDb[$i]["id"]==37)
-                                        {
-                                            $rs_deb[$countRow]=$row[$colFile[$i]["column_name"]];
-                                        }
-                                        if($colDb[$i]["id"]==185)
-                                        {
-                                            $id_debiteur[$countRow]=$row[$colFile[$i]["column_name"]];
-                                        }
-                                        if($colDb[$i]["id"]==15)
-                                        {
-                                            $row[$colFile[$i]["column_name"]]=str_replace(" ","",$row[$colFile[$i]["column_name"]]);
-                                        }
-                                        if($colDb[$i]["id"]==65)
-                                        {
-                                            $numDossier[$countRow]=$row[$colFile[$i]["column_name"]];
-                                        }
-                                        if($colDb[$i]["id"]==167)
-                                        {
-                                            $principale[$countRow]=$row[$colFile[$i]["column_name"]];
-                                        }
-                                        if($colDb[$i]["id"]==28)
-                                        {
-                                            $date = $row[$colFile[$i]["column_name"]];
-                                            $date_naissance[$countRow] = strtoupper(preg_replace('/[^A-Za-z0-9]+/', "", $date));
-                                        }
-                                        if($colDb[$i]["id"]==168)
-                                        {
-                                            $frais[$countRow]=$row[$colFile[$i]["column_name"]];
-                                        }
-                                        if($colDb[$i]["id"]==169)
-                                        {
-                                            $interet[$countRow]=$row[$colFile[$i]["column_name"]];
-                                        }
-                                        $cle[$countRow] = $valCinF[$countRow]."".$nom_deb[$countRow]."".$prenom_deb[$countRow]."".$rs_deb[$countRow]."".$date_naissance[$countRow];
-                                        
-                                        $colParam = $this->em->getRepository(ColumnsParams::class)->find($colFile[$i]["id_col_params"]);
-                                        if ($colParam->getTableBdd() == $ta["table_bdd"])
-                                        {
-                                            $isDate = $this->em->getRepository(ColumnsParams::class)->find($colDb[$i]["id"]);
-                                            if ($isDate->getIsDate() == 1 and \DateTime::createFromFormat('d/m/Y', $row[$colFile[$i]["column_name"]])==true)
-                                            {
-                                                $valueDate=\DateTime::createFromFormat('d/m/Y', $row[$colFile[$i]["column_name"]])->format("d-m-Y");
-                                                $param[$ta["table_bdd"]][$countRow].= ",'" . date_format(new \DateTime($valueDate), 'Y-m-d H:i:s') . "'";
-                                            }
-                                            else
-                                            {
-                                                if($colDb[$i]["id"]!=75 && $colDb[$i]["id"]!=179 && $colDb[$i]["id"]!=24 && $colDb[$i]["id"]!=185 )
-                                                {
-                                                    $param[$ta["table_bdd"]][$countRow].= ",'" . $row[$colFile[$i]["column_name"]] . "'";
-                                                }
-                                            }
-                                            if($colFile[$i]["required"] == 1 and empty($row[$colFile[$i]["column_name"]]))
-                                            {
-                                                unset($param[$ta["table_bdd"]][$countRow]);
-                                            }
-                                        }
-                                    }
-
-                                    if($ta["table_bdd"]=="creance" and $this->in_array_r("creance",$tableDb))
-                                    {
-                                        if(!$this->in_array_r(5,$colDb))
-                                        {
-                                            $param[$ta["table_bdd"]][$countRow].= ",'Sys" . $valCinF[$countRow] . "-".($countRow+1)."'";
-                                        }
-                                    }
-                                    $countRow++;
-                                }
-                            }
-                        }
-                        $model = $importByType->getIdModel()->getId();
-                        $query = $this->em->createQuery('SELECT t from App\Entity\CorresColu t where t.id_model_import = :idSchema 
-                        and t.id_col_params is null 
-                        and t.id_model_import in (select m.id from App\Entity\ModelImport m where m.type = :type) ');
-                        $query->setParameter('idSchema', $model);
-                        $query->setParameter('type','debiteur');
-                        $champPersonalise = $query->getResult();
-                        if(count($val)>0 and count($param)>0)
-                        {
-                            foreach ($tables as $ta)
-                            {
-                                $nameTable="debiteur";
-                                if($ta["table_bdd"]==$nameTable)
-                                {
-                                    $lastKey = key(array_slice($param[$ta["table_bdd"]], -1, 1, true));
-                                    for($i=0;$i<($lastKey+1);$i++)
-                                    {
-                                        if(array_key_exists($i,$param[$ta["table_bdd"]]) )
-                                        {   
-                                            if($this->integrationRepo->findTypeDeb(($type_deb[$i])))
-                                            {
-                                                if(!empty($nom_deb[$i]) or !empty($prenom_deb[$i]) or !empty($rs_deb[$i]))
-                                                {
-                                                    if($this->integrationRepo->testDebiteurCle($cle[$i])["exist"]==false)
-                                                    {
-                                                        // try {
-                                                            $type_presone = "Personne morale";
-                                                            if($nom_deb[$i] != "" || $prenom_deb[$i] != "")
-                                                            {
-                                                                $type_presone = "Personne physique";
-                                                            }
-                                                            $sql="insert into debt_force_integration.debiteur_dbi(cle_identifiant,cin,nom,prenom,raison_social,type_personne,id_debiteur,id_import,id_integration) values('".$cle[$i]."','".$valCinF[$i]."','".$nom_deb[$i]."','".$prenom_deb[$i]."','".$rs_deb[$i]."','".$type_presone."','".$id_debiteur[$i]."',".$id_import.",".$integrationId.")";
-                                                            $stmt = $this->conn->prepare($sql)->executeQuery();
-                                                            if($this->integrationRepo->addToLogImportDbi(1,$a->getId(),'Débiteur ajouté')==true)
-                                                            {
-                                                                $countv++;
-                                                            }
-                                                            $deb1 = $integrationRepo->testDebiteurIdDeb($id_debiteur[$i],$integrationId);
-                                                            if($deb1["exist"]){
-                                                                $sql="insert into `debt_force_integration`.`type_debiteur_dbi`(id_debiteur_id,id_creance_id,type,origin_deb,origin_creance,id_integration,numero_dossier,id_debiteur) values(".$deb1["deb"].",0,".$type_deb[$i].",".$deb1["place"].",0,".$integrationId.",'".$numDossier[$i]."',".$id_debiteur[$i].")";
-                                                                $this->em->getConnection()->prepare($sql)->execute();
-                                                            }
-                                                            if($champPersonalise)
-                                                            {
-                                                                for ($c=0; $c < count($champPersonalise); $c++) { 
-                                                                    $sql=" INSERT INTO `debt_force_integration`.`champs_dbi`(`id_details_model`, `colum_name`, `value`, `id_import`, `id_champ`) VALUES ('".$champPersonalise[$c]->getColumnTable()."','','".$champ[$i."-".$c]."',".$id_import.",'1')";
-                                                                    $stmt = $this->conn->prepare($sql)->executeQuery();
-                                                                }
-                                                            }
-                                                        // }
-                                                        // catch (\Exception $e) {
-                                                        //     if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),$e->getMessage())==true)
-                                                        //     {
-                                                        //         $countnv++;
-                                                        //     }
-                                                        // }
-                                                    }else{
-                                                        // $debiteur = $this->em->getRepository(Debiteur::class)->findOneBy(["cin_formate"=>$valCinF[$i]]);
-                                                        if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),"Le débiteur avec cin ".$valCinF[$i]." déja existe !!")==true)
-                                                        {
-                                                            $countnv++;
-                                                        }
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),"Nom débiteur ou rc est oubliguatoire !!")==true)
-                                                    {
-                                                        $countnv++;
-                                                    }
-                                                }
-                                            }
-                                            else
-                                            {
-                                                if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),"Type débiteur ".$type_deb[$i]." n'existe pas !!")==true)
-                                                {
-                                                    $countnv++;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            foreach ($tables as $ta)
-                            {
-                                $nameTable="dossier";
-                                if($ta["table_bdd"]==$nameTable)
-                                {
-                                    $lastKey = key(array_slice($param[$ta["table_bdd"]], -1, 1, true));
-                                    for($i=0;$i<($lastKey+1);$i++)
-                                    {
-                                        if(array_key_exists($i,$param[$ta["table_bdd"]]) )
-                                        {
-                                            /*if($this->in_array_r(65,$colDb)==false)
-                                            {
-                                                try {
-                                                    //Génerer le redDossier
-                                                    $sql="SELECT count(d.id) FROM `debt_force_integration`.`dossier_dbi` d where d.id_import = :id";
-                                                    $stmt = $this->conn->prepare($sql);
-                                                    $stmt->bindValue(":id",$id_import);
-                                                    $stmt = $stmt->executeQuery();
-                                                    $countDossDbi = $stmt->fetchOne();
-
-                                                    $query = $this->em->createQuery('SELECT max(t.id) from App\Entity\Dossier t');
-                                                    $maxNum = $query->getSingleScalarResult();
-                                                    if(!$maxNum)
-                                                    {
-                                                        $maxNum=0;
-                                                    }
-                                                    $maxNum = $countDossDbi + $maxNum;
-                                                    
-                                                    $refDossier=$porte_feuille->getNumeroPtf()."-".($maxNum+1);
-                                                    $numDossier[$i]=$refDossier;
-                                                    if($this->integrationRepo->testDossierDbi($refDossier,$porte_feuille->getId())==false){
-                                                        if($cinGest[$i]!=""){
-                                                            $sql="insert into `debt_force_integration`.`dossier_dbi`(date_creation,numero_dossier,id_users,id_ptf".$val[$ta["table_bdd"]].",id_import) values(now(),'".$refDossier."','".$cinGest[$i]."',".$porte_feuille->getId().$param[$ta["table_bdd"]][$i].",".$id_import.")";
-                                                        }else{
-                                                            $sql="insert into `debt_force_integration`.`dossier_dbi`(date_creation,numero_dossier,id_ptf".$val[$ta["table_bdd"]].",id_import) values(now(),'".$refDossier."',".$porte_feuille->getId().$param[$ta["table_bdd"]][$i].",".$id_import.")";
-                                                        }dump($sql);
-                                                        $stmt = $this->conn->prepare($sql)->executeQuery();                                                        
-                                                        // if($cinGest[$i]!=""){
-                                                        //     $query = $this->em->createQuery('SELECT max(t.id) from App\Entity\Dossier t');
-                                                        //     $dossier = $query->getSingleScalarResult();
-                                                        //     $tableDispatch[$cr]=$dossier;
-                                                        //     $cr++;
-                                                        // }
-                                                        $idDeb = $this->integrationRepo->testDebiteurDbi1($valCinF[$i]);
-                                                        if(!$idDeb["exist"])
-                                                        {
-                                                            if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),'Debiteur avec cin '.$valCinF[$i].' n\'existe pas !!')==true)
-                                                            {
-                                                                $countnv++;
-                                                            }
-                                                        }
-                                                        else
-                                                        {
-                                                            $dossier = $this->integrationRepo->testDossDbi1($numDossier[$i],$porte_feuille->getId());
-                                                            $typeDeb = $this->integrationRepo->testDebDoss($idDeb["deb"],$dossier["dossier"]);
-                                                            if(!$typeDeb["exist"])
-                                                            {
-                                                                if(array_key_exists($i,$numDossier) and $numDossier[$i]!="")
-                                                                {
-                                                                    $qualite="1";
-                                                                    $c=$dossier;
-                                                                    if($c)
-                                                                    {
-                                                                        $c=",".$c["dossier"];
-                                                                        $origin_dossier=$dossier["place"];
-                                                                        $origin_deb=$idDeb["place"];
-                                                                        $sql="insert into `debt_force_integration`.`debi_doss_dbi`(id_debiteur_id,id_dossier_id,origin_deb,origin_doss) values(".$idDeb["deb"].$c.",".$origin_deb.",".$origin_dossier.")";
-                                                                    }
-                                                                }
-                                                                $this->em->getConnection()->prepare($sql)->execute();
-                                                            }
-                                                        }
-                                                        if($this->integrationRepo->addToLogImportDbi(1,$a->getId(),'Dossier ajouté')==true)
-                                                        {
-                                                            $countv++;
-                                                        }
-                                                    }else{
-                                                        if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),'Dossier n° '.$refDossier.' existe déjà')==true)
-                                                        {
-                                                            $countnv++;
-                                                        }
-                                                    }
-                                                }catch (\Exception $e) {
-                                                    if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),$e->getMessage())==true)
-                                                    {
-                                                        $countnv++;
-                                                    }
-                                                }
-                                            }else{*/
-                                            try {
-                                                if($this->integrationRepo->testDossierDbi($numDossier[$i],$porte_feuille->getId())==false){
-                                                    if($cinGest[$i]!="")
-                                                    {
-                                                        $sql="insert into `debt_force_integration`.`dossier_dbi`(date_creation,id_users,id_ptf".$val[$ta["table_bdd"]].",numero_dossier,id_import,id_integration) values(now(),'".$cinGest[$i]."',".$porte_feuille->getId().$param[$ta["table_bdd"]][$i].",".$id_import.",".$integrationId.")";
-                                                    }else{
-                                                        $sql="insert into `debt_force_integration`.`dossier_dbi`(date_creation,id_ptf".$val[$ta["table_bdd"]].",numero_dossier,id_import,id_integration) values(now(),".$porte_feuille->getId().$param[$ta["table_bdd"]][$i].",".$id_import.",".$integrationId.")";
-                                                    }
-                                                    $stmt = $this->conn->prepare($sql)->executeQuery();
-                                                    $idDeb = $this->integrationRepo->testDebiteurIdDebCle($id_debiteur[$i],$cle[$i],$integrationId);
-                                                    if(!$idDeb["exist"])
-                                                    {
-                                                        if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),'Debiteur avec cle '.$cle[$i].' n\'existe pas !!')==true)
-                                                        {
-                                                            $countnv++;
-                                                        }
-                                                    }
-                                                    else
-                                                    {
-                                                        $dossier = $this->integrationRepo->testDossDbi1($numDossier[$i],$porte_feuille->getId());
-                                                        $typeDeb = $this->integrationRepo->testDebDoss($idDeb["deb"],$dossier["dossier"]);
-                                                        if(!$typeDeb["exist"])
-                                                        {
-                                                            if(array_key_exists($i,$numDossier) and $numDossier[$i]!="")
-                                                            {
-                                                                $qualite="1";
-                                                                $c=$dossier;
-                                                                if($c)
-                                                                {
-                                                                    $c=",".$c["dossier"];
-                                                                    $origin_dossier=$dossier["place"];
-                                                                    $origin_deb=$idDeb["place"];
-                                                                    $sql="insert into `debt_force_integration`.`debi_doss_dbi`(id_debiteur_id,id_dossier_id,origin_deb,origin_doss) values(".$idDeb["deb"].$c.",".$origin_deb.",".$origin_dossier.")";
-                                                                }
-                                                            }
-                                                            $this->em->getConnection()->prepare($sql)->execute();
-                                                        }
-                                                    }
-                                                    
-                                                    if($this->integrationRepo->addToLogImportDbi(1,$a->getId(),'Dossier ajouté')==true)
-                                                    {
-                                                        $countv++;
-                                                    }
-                                                }else{
-                                                    $numDoss = str_replace('"',' ',$numDossier[$i]);
-                                                    if($this->integrationRepo->addToLogImportDbi(0, $a->getId(), 'Dossier n° ' . $numDoss . ' existe déjà')==true)
-                                                    {
-                                                        $countnv++;
-                                                    }
-                                                }
-                                            }catch (\Exception $e) {
-                                                if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),$e->getMessage())==true)
-                                                {
-                                                    $countnv++;
-                                                }
-                                            }
-                                            // }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                //TODO :Import dossier
-                // $IntegrationNonCommencer[$t]->setEtat(2);
-                $tableDb_dossier = [];
-                $importByType = $integrationRepo->getOneImportType($integrationId , "dossier");
-                if($importByType){
-                    //Etat en cours
-                    $importByType->setEtat(2);
-                    $this->em->flush();
-                    $id_import = $importByType->getId();
-                    $detailsImp = $integrationRepo->getDetailsImprt($id_import , $ordre);
-    
-                    //grouping les tables by table_bdd 
-                    $query = $this->em->createQuery('SELECT t.table_bdd from App\Entity\ColumnsParams t where t.id
-                        in(select (c.id_col_params) from  App\Entity\CorresColu  c where  c.id_model_import=:idSchema and c.origin_champ = 1 and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type) )group by t.table_bdd');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','dossier');
-                    $tables = $query->getResult();
-                    $tableDb_dossier = $tables;
-                    $query = $this->em->createQuery('SELECT t.column_name,(t.id_col_params) as id_col_params,t.required  , t.origine from App\Entity\CorresColu t where (t.id_model_import)=:idSchema  and t.origin_champ = 1 and t.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type)');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','dossier');
-                    $colFile = $query->getResult();
-
-                    $query = $this->em->createQuery('SELECT t.column_name,(t.id_col_params) as id_col_params,t.required  , t.origine from App\Entity\CorresColu t where t.origin_champ = 2 
-                    and (t.id_model_import)=:idSchema and t.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type)');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','dossier');
-                    $colFileC = $query->getResult();
-    
-                    $query = $this->em->createQuery('SELECT t.table_bdd from App\Entity\ColumnsParams t where t.id in(select (c.id_col_params) 
-                    from App\Entity\CorresColu c where (c.id_model_import)=:idSchema  and c.origin_champ = 1 and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type))');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','dossier');
-                    $tableDb = $query->getResult();
-    
-                    $query = $this->em->createQuery('SELECT t.id from App\Entity\ColumnsParams t where t.id in(select (c.id_col_params) 
-                    from App\Entity\CorresColu c where (c.id_model_import)=:idSchema   and c.origin_champ = 1 and  c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type))');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','dossier');
-                    $colDb = $query->getResult();
-                    
-    
-                    $param=array();
-                    $val=array();   
-    
-                    $response="";
-    
-                    $filePath = $detailsImp->getUrl();
-                    
-                    if (($handle = fopen($filePath, "r")) !== FALSE)
-                    {
-                        while (($data = fgetcsv($handle, 1000000, ";")) !== FALSE)
-                        {
-                            break;
-                        }
-                        //Les entétes de fichier excel
-                        $data=array_map("utf8_encode",$data);
-                        $data=array_map('trim', $data);
-                        $data1=array_map("utf8_encode",str_replace(" ","_",$data));
-                        
-                        for ($i=0; $i < count($colFile); $i++) { 
-                            if(!in_array($colFile[$i]["column_name"],$data1))
-                            {
-                                $response="ENTETE_IDENTIQUE";
-                                $codeStatut="ENTETE_IDENTIQUE";
-                            }
-                        }
-                        
-                        if($response == ""){
-                            $a=new actionsImportDbi();
-                            $a->setEtat(0);
-                            $a->setCodeAction("Ajo");
-                            $a->setDateDebut(new \DateTime());
-                            $a->setIdImport($importByType->getId());
-                            $a->setTitre("Ajout");
-                            $emDbi->persist($a);
-                            $emDbi->flush();
-                            
-    
-                            $importByType->setEtat(2);
-                            $this->em->flush(); 
-    
-                            foreach($tables as $ta){
-                                $val[$ta["table_bdd"]]="";
-                                if($ta["table_bdd"]=="debiteur")
-                                {
-                                    $val[$ta["table_bdd"]].="cin_formate";
-                                }
-                                for ($i = 0; $i < count($colFile); $i++)
-                                {   
-                                    if(($colFile[$i]["origine"] == 1)){
-                                        $colParam = $this->em->getRepository(ColumnsParams::class)->find($colFile[$i]["id_col_params"]);
-                                        
-                                        if ($colParam->getTableBdd() == $ta["table_bdd"] and $colParam->getTitreCol()!="cin_gestionnaire")
-                                        {
-                                            $val[$ta["table_bdd"]].=",".$colParam->getTitreCol();
-                                        }
-                                    }
-                                }
-                                if($ta["table_bdd"]=="creance")
-                                {
-                                    if(!$this->in_array_r(5,$colDb))
-                                    {
-                                        $val[$ta["table_bdd"]].=",numero_creance";
-                                    }
-                                }
-                            }
-    
-                            $data=$this->convert($filePath,";");
-                            
-                            foreach ($tables as $ta){
-                                if($data){
-                                    $countRow=0;
-                                    foreach ($data as $row)
-                                    {
-                                        $valCin[$countRow]="";
-                                        $valCinF[$countRow]="";
-                                        $numCreance[$countRow]="";
-                                        $principale[$countRow]="";
-                                        $frais[$countRow]="";
-                                        $interet[$countRow]="";
-                                        $type_deb[$countRow]="";
-                                        $id_debiteur[$countRow]= "";
-
-                                        $valRaison[$countRow]="";
-                                        $cinGest[$countRow]="";
-                                        $param[$ta["table_bdd"]][$countRow]="";
-
-                                        $champ[$countRow]="";
-
-                                        for ($i=0; $i <count($colFileC) ; $i++) 
-                                        { 
-                                            $champ[$countRow."-".$i] = $row[$colFileC[$i]["column_name"]];
-                                        }
-                                        for ($i = 0; $i < count($colFile); $i++)
-                                        {
-                                            if($colDb[$i]["id"]==75 and $row[$colFile[$i]["nomCol"]]!="")
-                                            {
-                                                $gest = $this->em->getRepository(Utilisateurs::class)->findOneBy(["cin"=>$row[$colFile[$i]["nomCol"]]]);
-                                                if($gest)
-                                                {
-                                                    $cinGest[$countRow]=$gest->getId();
-                                                }
-                                            }
-                                            if($colDb[$i]["id"]==23)
-                                            {
-                                                if(isset($row[$colFile[$i]["column_name"]])=="")
-                                                {
-                                                    for ($r = 0; $r < count($colFile); $r++)
-                                                    {
-                                                        if($colDb[$r]["id"]==144)
-                                                        {
-                                                            $row[$colFile[$i]["column_name"]]=$row[$colFile[$r]["column_name"]];
-                                                        }
-                                                    }
-                                                }
-                                                $cin=$row[$colFile[$i]["column_name"]];
-                                                $valCin[$countRow]=$cin;
-                                                $valCinF[$countRow]=strtoupper(preg_replace('/[^A-Za-z0-9]+/',"", $cin));
-                                                if(!$this->in_array_r(5,$colDb))
-                                                {
-                                                    $numCreance[$countRow]="Sys".$valCinF[$countRow]."-".($countRow+1);
-                                                }
-                                            }
-                                            if($colDb[$i]["id"]==179)
-                                            {
-                                                $type_deb[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==5)
-                                            {
-                                                $numCreance[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==15)
-                                            {
-                                                $row[$colFile[$i]["column_name"]]=str_replace(" ","",$row[$colFile[$i]["column_name"]]);
-                                            }
-                                            if($colDb[$i]["id"]==65)
-                                            {
-                                                $numDossier[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==167)
-                                            {
-                                                $principale[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==168)
-                                            {
-                                                $frais[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==185)
-                                            {
-                                                $id_debiteur[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==169)
-                                            {
-                                                $interet[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            $colParam = $this->em->getRepository(ColumnsParams::class)->find($colFile[$i]["id_col_params"]);
-                                            if ($colParam->getTableBdd() == $ta["table_bdd"])
-                                            {
-                                            $isDate = $this->em->getRepository(ColumnsParams::class)->find($colDb[$i]["id"]);
-                                                if($isDate->getIsDate() == 1 and \DateTime::createFromFormat('d/m/Y', $row[$colFile[$i]["column_name"]])==true)
-                                                {
-                                                    $valueDate=\DateTime::createFromFormat('d/m/Y', $row[$colFile[$i]["column_name"]])->format("d-m-Y");
-                                                    $param[$ta["table_bdd"]][$countRow].= ",'" . date_format(new \DateTime($valueDate), 'Y-m-d H:i:s') . "'";
-                                                }
-                                                else
-                                                {
-                                                    if($colDb[$i]["id"]!=75)
-                                                    {
-                                                        $param[$ta["table_bdd"]][$countRow].= ",'" . $row[$colFile[$i]["column_name"]] . "'";
-                                                    }
-                                                }
-                                                if($colFile[$i]["required"] == 1 and empty($row[$colFile[$i]["column_name"]]))
-                                                {
-                                                    unset($param[$ta["table_bdd"]][$countRow]);
-                                                }
-                                            }
-                                        }
-                                        
-                                        if($ta["table_bdd"]=="creance" and $this->in_array_r("creance",$tableDb))
-                                        {
-                                            if(!$this->in_array_r(5,$colDb))
-                                            {
-                                                $param[$ta["table_bdd"]][$countRow].= ",'Sys" . $valCinF[$countRow] . "-".($countRow+1)."'";
-                                            }
-                                        }
-                                        $countRow++;
-                                    }
-                                }
-                            }
-                            $model = $importByType->getIdModel()->getId();
-                            $query = $this->em->createQuery('SELECT t from App\Entity\CorresColu t where t.id_model_import = :idSchema 
-                            and t.id_col_params is null 
-                            and t.id_model_import in (select m.id from App\Entity\ModelImport m where m.type = :type) ');
-                            $query->setParameter('idSchema', $model);
-                            $query->setParameter('type','dossier');
-                            $champPersonalise = $query->getResult();
-                            if(count($val)>0 and count($param)>0)
-                            {
-                                $nameTable="dossier";
-                                if($ta["table_bdd"]==$nameTable)
-                                {
-                                    $lastKey = key(array_slice($param[$ta["table_bdd"]], -1, 1, true));
-                                    for($i=0;$i<($lastKey+1);$i++)
-                                    {
-                                        if(array_key_exists($i,$param[$ta["table_bdd"]]) )
-                                        {
-                                            if($this->in_array_r(65,$colDb)==false)
-                                            {
-                                                try {
-                                                    //Génerer le redDossier
-                                                    $sql="SELECT count(d.id) FROM `debt_force_integration`.`dossier_dbi` d where d.id_import = :id";
-                                                    $stmt = $this->conn->prepare($sql);
-                                                    $stmt->bindValue(":id",$id_import);
-                                                    $stmt = $stmt->executeQuery();
-                                                    $countDossDbi = $stmt->fetchOne();
-
-                                                    $query = $this->em->createQuery('SELECT max(t.id) from App\Entity\Dossier t');
-                                                    $maxNum = $query->getSingleScalarResult();
-                                                    if(!$maxNum)
-                                                    {
-                                                        $maxNum=0;
-                                                    }
-                                                    $maxNum = $countDossDbi + $maxNum;
-                                                    
-                                                    $refDossier=$porte_feuille->getNumeroPtf()."-".($maxNum+1);
-                                                    $numDossier[$i]=$refDossier;
-                                                    if($this->integrationRepo->testDossierDbi($refDossier,$porte_feuille->getId())==false){
-                                                        if($cinGest[$i]!=""){
-                                                            $sql="insert into `debt_force_integration`.`dossier_dbi`(date_creation,numero_dossier,id_users,id_ptf".$val[$ta["table_bdd"]].",id_import,id_integration) values(now(),'".$refDossier."','".$cinGest[$i]."',".$porte_feuille->getId().$param[$ta["table_bdd"]][$i].",".$id_import.",".$integrationId.")";
-                                                        }else{
-                                                            $sql="insert into `debt_force_integration`.`dossier_dbi`(date_creation,numero_dossier,id_ptf".$val[$ta["table_bdd"]].",id_import,id_integration) values(now(),'".$refDossier."',".$porte_feuille->getId().$param[$ta["table_bdd"]][$i].",".$id_import.",".$integrationId.")";
-                                                        }
-                                                        $stmt = $this->conn->prepare($sql)->executeQuery();                                                        
-                                                        // if($cinGest[$i]!=""){
-                                                        //     $query = $this->em->createQuery('SELECT max(t.id) from App\Entity\Dossier t');
-                                                        //     $dossier = $query->getSingleScalarResult();
-                                                        //     $tableDispatch[$cr]=$dossier;
-                                                        //     $cr++;
-                                                        // }
-                                                        // $idDeb = $this->integrationRepo->testDebiteurDbi1($valCinF[$i]);
-
-                                                        $idDeb = $this->integrationRepo->testDebiteurIdDebCle($id_debiteur[$i],$cle[$i],$integrationId);
-                                                        
-                                                        if(!$idDeb["exist"])
-                                                        {
-                                                            if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),'Debiteur avec cin '.$valCinF[$i].' n\'existe pas !!')==true)
-                                                            {
-                                                                $countnv++;
-                                                            }
-                                                        }
-                                                        else
-                                                        {
-                                                            $dossier = $this->integrationRepo->testDossDbi1($numDossier[$i],$porte_feuille->getId());
-                                                            $typeDeb = $this->integrationRepo->testDebDoss($idDeb["deb"],$dossier["dossier"]);
-                                                            if(!$typeDeb["exist"])
-                                                            {
-                                                                if(array_key_exists($i,$numDossier) and $numDossier[$i]!="")
-                                                                {
-                                                                    $qualite="1";
-                                                                    $c=$dossier;
-                                                                    if($c)
-                                                                    {
-                                                                        $c=",".$c["dossier"];
-                                                                        $origin_dossier=$dossier["place"];
-                                                                        $origin_deb=$idDeb["place"];
-                                                                        $sql="insert into `debt_force_integration`.`debi_doss_dbi`(id_debiteur_id,id_dossier_id,origin_deb,origin_doss) values(".$idDeb["deb"].$c.",".$origin_deb.",".$origin_dossier.")";
-                                                                    }
-                                                                }
-                                                                $this->em->getConnection()->prepare($sql)->execute();
-                                                            }
-                                                        }
-                                                        if($this->integrationRepo->addToLogImportDbi(1,$a->getId(),'Dossier ajouté')==true)
-                                                        {
-                                                            $countv++;
-                                                        }
-                                                    }else{
-                                                        if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),'Dossier n° '.$refDossier.' existe déjà')==true)
-                                                        {
-                                                            $countnv++;
-                                                        }
-                                                    }
-                                                }catch (\Exception $e) {
-                                                    if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),$e->getMessage())==true)
-                                                    {
-                                                        $countnv++;
-                                                    }
-                                                }
-                                            }else{
-                                                try {
-                                                    if($this->integrationRepo->testDossierDbi($numDossier[$i],$porte_feuille->getId())==false){
-                                                        if($cinGest[$i]!="")
-                                                        {
-                                                            $sql="insert into `debt_force_integration`.`dossier_dbi`(date_creation,id_users,id_ptf".$val[$ta["table_bdd"]].",id_import,id_integration) values(now(),'".$cinGest[$i]."',".$porte_feuille->getId().$param[$ta["table_bdd"]][$i].",".$id_import.",".$integrationId.")";
-                                                        }else{
-                                                            $sql="insert into `debt_force_integration`.`dossier_dbi`(date_creation,id_ptf".$val[$ta["table_bdd"]].",id_import,id_integration) values(now(),".$porte_feuille->getId().$param[$ta["table_bdd"]][$i].",".$id_import.",".$integrationId.")";
-                                                        }
-                                                        $stmt = $this->conn->prepare($sql)->executeQuery();
-                                                        // $idDeb = $this->integrationRepo->testDebiteurDbi1($valCinF[$i]);
-                                                        $idDeb = $this->integrationRepo->testDebiteurIdDebCle($id_debiteur[$i],$cle[$i],$integrationId);
-                                                        if(!$idDeb["exist"])
-                                                        {
-                                                            if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),'Debiteur avec cin '.$valCinF[$i].' n\'existe pas !!')==true)
-                                                            {
-                                                                $countnv++;
-                                                            }
-                                                        }
-                                                        else
-                                                        {
-                                                            $dossier = $this->integrationRepo->testDossDbi1($numDossier[$i],$porte_feuille->getId());
-                                                            $typeDeb = $this->integrationRepo->testDebDoss($idDeb["deb"],$dossier["dossier"]);
-                                                            if(!$typeDeb["exist"])
-                                                            {
-                                                                if(array_key_exists($i,$numDossier) and $numDossier[$i]!="")
-                                                                {
-                                                                    $qualite="1";
-                                                                    $c=$dossier;
-                                                                    if($c)
-                                                                    {
-                                                                        $c=",".$c["dossier"];
-                                                                        $origin_dossier=$dossier["place"];
-                                                                        $origin_deb=$idDeb["place"];
-                                                                        $sql="insert into `debt_force_integration`.`debi_doss_dbi`(id_debiteur_id,id_dossier_id,origin_deb,origin_doss) values(".$idDeb["deb"].$c.",".$origin_deb.",".$origin_dossier.")";
-                                                                    }
-                                                                }
-                                                                $this->em->getConnection()->prepare($sql)->execute();
-                                                            }
-                                                        }
-                                                        
-                                                        if($this->integrationRepo->addToLogImportDbi(1,$a->getId(),'Dossier ajouté')==true)
-                                                        {
-                                                            $countv++;
-                                                        }
-                                                    }else{
-                                                        $numDoss = str_replace('"',' ',$numDossier[$i]);
-                                                        if($this->integrationRepo->addToLogImportDbi(0, $a->getId(), 'Dossier n° ' . $numDoss . ' existe déjà')==true)
-                                                        {
-                                                            $countnv++;
-                                                        }
-                                                    }
-                                                }catch (\Exception $e) {
-                                                    if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),$e->getMessage())==true)
-                                                    {
-                                                        $countnv++;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                //TODO : Fin dossier
-                
-                //---------------
-                //Start
-                $importByType = $integrationRepo->getOneImportType($integrationId , "emploi");
-    
-
-                if($importByType){
-                    //Etat en cours
-                    $importByType->setEtat(2);
-                    $this->em->flush();
-    
-                    $id_import = $importByType->getId();
-    
-                    $detailsImp = $integrationRepo->getDetailsImprt($id_import , $ordre);
-    
-                    //grouping les tables by table_bdd 
-                    $query = $this->em->createQuery('SELECT t.table_bdd from App\Entity\ColumnsParams t where t.id
-                        in(select (c.id_col_params) from  App\Entity\CorresColu  c where  c.id_model_import=:idSchema and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type) )group by t.table_bdd');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','emploi');
-                    $tables = $query->getResult();
-                    $tables_emploi = $tables;
-    
-                    $query = $this->em->createQuery('SELECT t.column_name,(t.id_col_params) as id_col_params,t.required  , t.origine from App\Entity\CorresColu t where (t.id_model_import)=:idSchema and t.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type)');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','emploi');
-                    $colFile = $query->getResult();
-
-                    $query = $this->em->createQuery('SELECT t.column_name,(t.id_col_params) as id_col_params,t.required  , t.origine from App\Entity\CorresColu t where t.origin_champ = 2 
-                    and (t.id_model_import)=:idSchema and t.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type )');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','emploi');
-                    $colFileC = $query->getResult();
-    
-                    $query = $this->em->createQuery('SELECT t.table_bdd from App\Entity\ColumnsParams t where t.id in(select (c.id_col_params) 
-                    from App\Entity\CorresColu c where (c.id_model_import)=:idSchema and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type))');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','emploi');
-                    $tableDb = $query->getResult();
-    
-                    $query = $this->em->createQuery('SELECT t.id from App\Entity\ColumnsParams t where t.id in(select (c.id_col_params) 
-                    from App\Entity\CorresColu c where (c.id_model_import)=:idSchema and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type))');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','emploi');
-                    $colDb = $query->getResult();
-
-                    $param=array();
-                    $val=array();
-                    $response="";
-    
-                    $filePath = $detailsImp->getUrl();
-                    if (($handle = fopen($filePath, "r")) !== FALSE)
-                    {
-                        while (($data = fgetcsv($handle, 1000000, ";")) !== FALSE)
-                        {
-                            break;
-                        }
-                        //Les entétes de fichier excel
-                        $data=array_map("utf8_encode",$data);
-                        $data=array_map('trim', $data);
-                        $data1=array_map("utf8_encode",str_replace(" ","_",$data));
-                        
-                        for ($i=0; $i < count($colFile); $i++) { 
-                            if(!in_array($colFile[$i]["column_name"],$data1))
-                            {
-                                $response="ENTETE_IDENTIQUE";
-                                $codeStatut="ENTETE_IDENTIQUE";
-                            }
-                        }
-                        if($response == ""){
-                            $a=new actionsImportDbi();
-                            $a->setEtat(0);
-                            $a->setCodeAction("Ajo");
-                            $a->setDateDebut(new \DateTime());
-                            $a->setIdImport($importByType->getId());
-                            $a->setTitre("Ajout");
-                            $emDbi->persist($a);
-                            $emDbi->flush();
-                            // $a = $this->integrationRepo->createActionsImport
-                            $importByType->setEtat(2);
-                            $this->em->flush(); 
-                            foreach($tables as $ta){
-                                $val[$ta["table_bdd"]]="";
-                                if($ta["table_bdd"]=="debiteur")
-                                {
-                                    $val[$ta["table_bdd"]].="cin_formate";
-                                }
-                                for ($i = 0; $i < count($colFile); $i++)
-                                {   
-                                    if(($colFile[$i]["origine"] == 1)){
-                                        $colParam = $this->em->getRepository(ColumnsParams::class)->find($colFile[$i]["id_col_params"]);
-                                        
-                                        if ($colParam->getTableBdd() == $ta["table_bdd"] and $colParam->getTitreCol()!="cin_gestionnaire" and $colFile[$i]["id_col_params"]!=89)
-                                        {
-                                            $val[$ta["table_bdd"]].=",".$colParam->getTitreCol();
-                                        }
-                                    }
-                                }
-                                if($ta["table_bdd"]=="creance")
-                                {
-                                    if(!$this->in_array_r(5,$colDb))
-                                    {
-                                        $val[$ta["table_bdd"]].=",numero_creance";
-                                    }
-                                }
-                            }
-    
-                            $data=$this->convert($filePath,";");
-                            $valCinF=array();
-                            $valCin=array();
-                            foreach ($tables as $ta){
-                                if($data){
-                                    $countRow=0;
-                                    foreach ($data as $row)
-                                    {
-                                        $valCin[$countRow]="";
-                                        $valCinF[$countRow]="";
-                                        $valRaison[$countRow]="";
-                                        $cinGest[$countRow]="";
-                                        $profession[$countRow]="";
-                                        $id_debiteur[$countRow]="";
-
-                                        $param[$ta["table_bdd"]][$countRow]="";
-
-                                        $champ[$countRow]="";
-                                        
-                                        for ($i=0; $i <count($colFileC) ; $i++) 
-                                        { 
-                                            $champ[$countRow."-".$i] = $row[$colFileC[$i]["column_name"]];
-                                        }
-
-                                        for ($i = 0; $i < count($colFile); $i++)
-                                        {
-                                            if($colDb[$i]["id"]==75 and $row[$colFile[$i]["nomCol"]]!="")
-                                            {
-                                                $gest = $this->em->getRepository(Utilisateurs::class)->findOneBy(["cin"=>$row[$colFile[$i]["nomCol"]]]);
-                                                if($gest)
-                                                {
-                                                    $cinGest[$countRow]=$gest->getId();
-                                                }
-                                            }
-                                            if($colDb[$i]["id"]==23)
-                                            {
-                                                $cin=$row[$colFile[$i]["column_name"]];
-                                                $valCin[$countRow]=$cin;
-                                                $valCinF[$countRow]=strtoupper(preg_replace('/[^A-Za-z0-9]+/',"", $cin));
-                                                if(!$this->in_array_r(5,$colDb))
-                                                {
-                                                    $numCreance[$countRow]="Sys".$valCinF[$countRow]."-".($countRow+1);
-                                                }
-                                            }
-                                            if($colDb[$i]["id"]==5)
-                                            {
-                                                $numCreance[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==15)
-                                            {
-                                                $row[$colFile[$i]["column_name"]]=str_replace(" ","",$row[$colFile[$i]["column_name"]]);
-                                            }
-                                            if($colDb[$i]["id"]==65)
-                                            {
-                                                $numDossier[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==167)
-                                            {
-                                                $principale[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==168)
-                                            {
-                                                $frais[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==178)
-                                            {
-                                                $typeTelephone[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==185)
-                                            {
-                                                $id_debiteur[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==89)
-                                            {
-                                                $profession[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            $colParam = $this->em->getRepository(ColumnsParams::class)->find($colFile[$i]["id_col_params"]);
-                                            if ($colParam->getTableBdd() == $ta["table_bdd"])
-                                            {
-                                                $isDate = $this->em->getRepository(ColumnsParams::class)->find($colDb[$i]["id"]);
-                                                    if ($isDate->getIsDate() == 1 and \DateTime::createFromFormat('d/m/Y', $row[$colFile[$i]["column_name"]])==true)
-                                                    {
-                                                        $valueDate=\DateTime::createFromFormat('d/m/Y', $row[$colFile[$i]["column_name"]])->format("d-m-Y");
-                                                        $param[$ta["table_bdd"]][$countRow].= ",'" . date_format(new \DateTime($valueDate), 'Y-m-d H:i:s') . "'";
-                                                    }
-                                                    else
-                                                    {
-                                                        if($colDb[$i]["id"]!=75  && $colDb[$i]["id"]!=89)
-                                                        {
-                                                            $param[$ta["table_bdd"]][$countRow].= ",'" . $row[$colFile[$i]["column_name"]] . "'";
-                                                        }
-                                                    }
-                                                    if($colFile[$i]["required"] == 1 and empty($row[$colFile[$i]["column_name"]]))
-                                                    {
-                                                        unset($param[$ta["table_bdd"]][$countRow]);
-                                                    }
-                                            }
-                                        }
-                                        
-                                        if($ta["table_bdd"]=="creance" and $this->in_array_r("creance",$tableDb))
-                                        {
-                                            if(!$this->in_array_r(5,$colDb))
-                                            {
-                                                $param[$ta["table_bdd"]][$countRow].= ",'Sys" . $valCinF[$countRow] . "-".($countRow+1)."'";
-                                            }
-                                        }
-                                        $countRow++;
-                                    }
-                                }
-                            }
-                            $model = $importByType->getIdModel()->getId();
-                            $query = $this->em->createQuery('SELECT t from App\Entity\CorresColu t where t.id_model_import = :idSchema 
-                            and t.id_col_params is null 
-                            and t.id_model_import in (select m.id from App\Entity\ModelImport m where m.type = :type) ');
-                            $query->setParameter('idSchema', $model);
-                            $query->setParameter('type','emploi');
-                            $champPersonalise = $query->getResult();
-                            if(count($val)>0 and count($param)>0)
-                            {
-                                $nameTable="emploi";
-                                if($ta["table_bdd"]==$nameTable)
-                                {
-                                    $lastKey = key(array_slice($param[$ta["table_bdd"]], -1, 1, true));
-                                    for($i=0;$i<($lastKey+1);$i++)
-                                    {
-                                        // dump($param[$ta["table_bdd"]][$i]);
-                                        if(array_key_exists($i,$param[$ta["table_bdd"]]) and $id_debiteur[$i]!="")
-                                        {
-                                            try {
-                                                $debExist = $this->integrationRepo->testDebiteurIdDeb($id_debiteur[$i],$integrationId);
-                                                if($debExist["exist"] == false)
-                                                {
-                                                    if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),'Debiteur n\'existe pas !!')==true)
-                                                    {
-                                                        $countnv++;
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    $p = 0;
-                                                    if($profession[$i] != ''){
-                                                        $p = $this->integrationRepo->findProfession(trim($profession[$i]));
-                                                    }
-                                                    $sql="insert into debt_force_integration.emploi_dbi(id_debiteur".$val[$ta["table_bdd"]].",origin_deb , id_import , profession_id) values(".$debExist["deb"].$param[$ta["table_bdd"]][$i].",".$debExist["place"].",".$id_import.",".$p.")";
-                                                    
-                                                    $stmt = $this->conn->prepare($sql)->executeQuery();
-                                                    if($this->integrationRepo->addToLogImportDbi(1,$a->getId(),'Emploie ajouté')==true)
-                                                    {
-                                                        $countv++;
-                                                    }
-                                                }
-                                            }
-                                            catch (\Exception $e) {
-                                                if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),$e->getMessage())==true)
-                                                {
-                                                    $countnv++;
-                                                }
-                                            }   
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            //Set l'état d'importation d'import
-                            // $sql="SELECT l.* from logs_actions l where l.etat=0 and l.id_action_id in(select a.id from actions_import a where a.id_import_id = :id)";
-                            // $param=(array("id"=>$importByType->getId() ));
-                            // $error_import = $this->conn->fetchAllAssociative($sql , $param);
-                            // if(count($error_import) == 0){
-                            //     $importByType->setEtat(4);
-                            // }else{
-                            //     $importByType->setEtat(3);
-                            // }
-                            // $this->em->flush();
-                            // $this->verifecationDoublent($a->getId());
-                        }
-                    }
-                }
-
-                //END
-
-                //Start
-                $importByType = $integrationRepo->getOneImportType($integrationId , "employeur");
-    
-
-                if($importByType){
-                    //Etat en cours
-                    $importByType->setEtat(2);
-                    $this->em->flush();
-    
-                    $id_import = $importByType->getId();
-    
-                    $detailsImp = $integrationRepo->getDetailsImprt($id_import , $ordre);
-    
-                    //grouping les tables by table_bdd 
-                    $query = $this->em->createQuery('SELECT t.table_bdd from App\Entity\ColumnsParams t where t.id
-                        in(select (c.id_col_params) from  App\Entity\CorresColu  c where  c.id_model_import=:idSchema and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type) )group by t.table_bdd');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','employeur');
-                    $tables = $query->getResult();
-                    $tables_employeur = $tables;
-    
-                    $query = $this->em->createQuery('SELECT t.column_name,(t.id_col_params) as id_col_params,t.required  , t.origine from App\Entity\CorresColu t where (t.id_model_import)=:idSchema and t.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type)');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','employeur');
-                    $colFile = $query->getResult();
-
-                    $query = $this->em->createQuery('SELECT t.column_name,(t.id_col_params) as id_col_params,t.required  , t.origine from App\Entity\CorresColu t where t.origin_champ = 2 
-                    and (t.id_model_import)=:idSchema and t.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type )');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','employeur');
-                    $colFileC = $query->getResult();
-    
-                    $query = $this->em->createQuery('SELECT t.table_bdd from App\Entity\ColumnsParams t where t.id in(select (c.id_col_params) 
-                    from App\Entity\CorresColu c where (c.id_model_import)=:idSchema and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type))');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','employeur');
-                    $tableDb = $query->getResult();
-    
-                    $query = $this->em->createQuery('SELECT t.id from App\Entity\ColumnsParams t where t.id in(select (c.id_col_params) 
-                    from App\Entity\CorresColu c where (c.id_model_import)=:idSchema and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type))');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','employeur');
-                    $colDb = $query->getResult();
-
-                    $param=array();
-                    $val=array();
-                    $response="";
-    
-                    $filePath = $detailsImp->getUrl();
-                    if (($handle = fopen($filePath, "r")) !== FALSE)
-                    {
-                        while (($data = fgetcsv($handle, 1000000, ";")) !== FALSE)
-                        {
-                            break;
-                        }
-                        //Les entétes de fichier excel
-                        $data=array_map("utf8_encode",$data);
-                        $data=array_map('trim', $data);
-                        $data1=array_map("utf8_encode",str_replace(" ","_",$data));
-                        
-                        for ($i=0; $i < count($colFile); $i++) { 
-                            if(!in_array($colFile[$i]["column_name"],$data1))
-                            {
-                                $response="ENTETE_IDENTIQUE";
-                                $codeStatut="ENTETE_IDENTIQUE";
-                            }
-                        }
-                        if($response == ""){
-                            $a=new actionsImportDbi();
-                            $a->setEtat(0);
-                            $a->setCodeAction("Ajo");
-                            $a->setDateDebut(new \DateTime());
-                            $a->setIdImport($importByType->getId());
-                            $a->setTitre("Ajout");
-                            $emDbi->persist($a);
-                            $emDbi->flush();
-                            // $a = $this->integrationRepo->createActionsImport
-                            $importByType->setEtat(2);
-                            $this->em->flush(); 
-                            foreach($tables as $ta){
-                                $val[$ta["table_bdd"]]="";
-                                if($ta["table_bdd"]=="debiteur")
-                                {
-                                    $val[$ta["table_bdd"]].="cin_formate";
-                                }
-                                for ($i = 0; $i < count($colFile); $i++)
-                                {   
-                                    if(($colFile[$i]["origine"] == 1)){
-                                        $colParam = $this->em->getRepository(ColumnsParams::class)->find($colFile[$i]["id_col_params"]);
-                                        
-                                        if ($colParam->getTableBdd() == $ta["table_bdd"] and $colParam->getTitreCol()!="cin_gestionnaire")
-                                        {
-                                            $val[$ta["table_bdd"]].=",".$colParam->getTitreCol();
-                                        }
-                                    }
-                                }
-                                if($ta["table_bdd"]=="creance")
-                                {
-                                    if(!$this->in_array_r(5,$colDb))
-                                    {
-                                        $val[$ta["table_bdd"]].=",numero_creance";
-                                    }
-                                }
-                            }
-    
-                            $data=$this->convert($filePath,";");
-                            $valCinF=array();
-                            $valCin=array();
-                            foreach ($tables as $ta){
-                                if($data){
-                                    $countRow=0;
-                                    foreach ($data as $row)
-                                    {
-                                        $valCin[$countRow]="";
-                                        $valCinF[$countRow]="";
-                                        $valRaison[$countRow]="";
-                                        $cinGest[$countRow]="";
-                                        $id_debiteur[$countRow]="";
-                                        $param[$ta["table_bdd"]][$countRow]="";
-
-                                        $champ[$countRow]="";
-                                        
-                                        for ($i=0; $i <count($colFileC) ; $i++) 
-                                        { 
-                                            $champ[$countRow."-".$i] = $row[$colFileC[$i]["column_name"]];
-                                        }
-
-                                        for ($i = 0; $i < count($colFile); $i++)
-                                        {
-                                            if($colDb[$i]["id"]==75 and $row[$colFile[$i]["nomCol"]]!="")
-                                            {
-                                                $gest = $this->em->getRepository(Utilisateurs::class)->findOneBy(["cin"=>$row[$colFile[$i]["nomCol"]]]);
-                                                if($gest)
-                                                {
-                                                    $cinGest[$countRow]=$gest->getId();
-                                                }
-                                            }
-                                            if($colDb[$i]["id"]==23)
-                                            {
-                                                $cin=$row[$colFile[$i]["column_name"]];
-                                                $valCin[$countRow]=$cin;
-                                                $valCinF[$countRow]=strtoupper(preg_replace('/[^A-Za-z0-9]+/',"", $cin));
-                                                if(!$this->in_array_r(5,$colDb))
-                                                {
-                                                    $numCreance[$countRow]="Sys".$valCinF[$countRow]."-".($countRow+1);
-                                                }
-                                            }
-                                            if($colDb[$i]["id"]==5)
-                                            {
-                                                $numCreance[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==15)
-                                            {
-                                                $row[$colFile[$i]["column_name"]]=str_replace(" ","",$row[$colFile[$i]["column_name"]]);
-                                            }
-                                            if($colDb[$i]["id"]==65)
-                                            {
-                                                $numDossier[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==167)
-                                            {
-                                                $principale[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==168)
-                                            {
-                                                $frais[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==178)
-                                            {
-                                                $typeTelephone[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==185)
-                                            {
-                                                $id_debiteur[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            $colParam = $this->em->getRepository(ColumnsParams::class)->find($colFile[$i]["id_col_params"]);
-                                            if ($colParam->getTableBdd() == $ta["table_bdd"])
-                                            {
-                                                $isDate = $this->em->getRepository(ColumnsParams::class)->find($colDb[$i]["id"]);
-                                                if ($isDate->getIsDate() == 1 and \DateTime::createFromFormat('d/m/Y', $row[$colFile[$i]["column_name"]])==true)
-                                                {
-                                                    $valueDate=\DateTime::createFromFormat('d/m/Y', $row[$colFile[$i]["column_name"]])->format("d-m-Y");
-                                                    $param[$ta["table_bdd"]][$countRow].= ",'" . date_format(new \DateTime($valueDate), 'Y-m-d H:i:s') . "'";
-                                                }
-                                                else
-                                                {
-                                                    if($colDb[$i]["id"]!=75)
-                                                    {
-                                                        $param[$ta["table_bdd"]][$countRow].= ",'" . $row[$colFile[$i]["column_name"]] . "'";
-                                                    }
-                                                }
-                                                if($colFile[$i]["required"] == 1 and empty($row[$colFile[$i]["column_name"]]))
-                                                {
-                                                    unset($param[$ta["table_bdd"]][$countRow]);
-                                                }
-                                            }
-                                        }
-                                        
-                                        if($ta["table_bdd"]=="creance" and $this->in_array_r("creance",$tableDb))
-                                        {
-                                            if(!$this->in_array_r(5,$colDb))
-                                            {
-                                                $param[$ta["table_bdd"]][$countRow].= ",'Sys" . $valCinF[$countRow] . "-".($countRow+1)."'";
-                                            }
-                                        }
-                                        $countRow++;
-                                    }
-                                }
-                            }
-                            $model = $importByType->getIdModel()->getId();
-                            $query = $this->em->createQuery('SELECT t from App\Entity\CorresColu t where t.id_model_import = :idSchema 
-                            and t.id_col_params is null 
-                            and t.id_model_import in (select m.id from App\Entity\ModelImport m where m.type = :type) ');
-                            $query->setParameter('idSchema', $model);
-                            $query->setParameter('type','employeur');
-                            $champPersonalise = $query->getResult();
-                            if(count($val)>0 and count($param)>0)
-                            {
-                                $nameTable="employeur";
-                                if($ta["table_bdd"]==$nameTable)
-                                {
-                                    $lastKey = key(array_slice($param[$ta["table_bdd"]], -1, 1, true));
-                                    for($i=0;$i<($lastKey+1);$i++)
-                                    {
-                                        // dump($param[$ta["table_bdd"]][$i]);
-                                        if(array_key_exists($i,$param[$ta["table_bdd"]]) and $id_debiteur[$i]!="")
-                                        {
-                                            try {
-                                                $debExist = $this->integrationRepo->testDebiteurIdDeb($id_debiteur[$i],$integrationId);
-                                                if($debExist["exist"] == false)
-                                                {
-                                                    if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),'Debiteur n\'existe pas !!')==true)
-                                                    {
-                                                        $countnv++;
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    // $idDeb=$idDeb->getId();
-                                                    $sql="insert into debt_force_integration.employeur_dbi(id_debiteur".$val[$ta["table_bdd"]].",origin_deb , id_import) values(".$debExist["deb"].$param[$ta["table_bdd"]][$i].",".$debExist["place"].",".$id_import.")";
-                                                    $stmt = $this->conn->prepare($sql)->executeQuery();
-                                                    if($this->integrationRepo->addToLogImportDbi(1,$a->getId(),'Employeur ajouté')==true)
-                                                    {
-                                                        $countv++;
-                                                    }
-                                                }
-                                            }
-                                            catch (\Exception $e) {
-                                                if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),$e->getMessage())==true)
-                                                {
-                                                    $countnv++;
-                                                }
-                                            }   
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            //Set l'état d'importation d'import
-                            // $sql="SELECT l.* from logs_actions l where l.etat=0 and l.id_action_id in(select a.id from actions_import a where a.id_import_id = :id)";
-                            // $param=(array("id"=>$importByType->getId() ));
-                            // $error_import = $this->conn->fetchAllAssociative($sql , $param);
-                            // if(count($error_import) == 0){
-                            //     $importByType->setEtat(4);
-                            // }else{
-                            //     $importByType->setEtat(3);
-                            // }
-                            // $this->em->flush();
-                            // $this->verifecationDoublent($a->getId());
-                        }
-                    }
-                }
-
-                //END
-
-                //---------------
-                
-                //Start creance
-                $importByType = $integrationRepo->getOneImportType($integrationId , "creance");
-                if($importByType){
-                    // dump($importByType);
-                    //Etat en cours
-                    $importByType->setEtat(2);
-                    $this->em->flush();
-    
-                    $id_import = $importByType->getId();
-    
-                    $detailsImp = $integrationRepo->getDetailsImprt($id_import,$ordre);
-    
-                    //grouping les tables by table_bdd 
-                    $query = $this->em->createQuery('SELECT t.table_bdd from App\Entity\ColumnsParams t where t.id
-                        in(select (c.id_col_params) from  App\Entity\CorresColu  c where  c.id_model_import=:idSchema and c.origin_champ = 1  and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type or m.type = :type1) )group by t.table_bdd');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','creance');
-                    $query->setParameter('type1','detail_creance');
-                    $tables = $query->getResult();
-    
-                    $query = $this->em->createQuery('SELECT t.column_name,(t.id_col_params) as id_col_params,t.required  , t.origine from App\Entity\CorresColu t where (t.id_model_import)=:idSchema and t.origin_champ = 1  and t.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type or m.type = :type1 )');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','creance');
-                    $query->setParameter('type1','detail_creance');
-                    $colFile = $query->getResult();
-
-                    $query = $this->em->createQuery('SELECT t.column_name,(t.id_col_params) as id_col_params,t.required  , t.origine from App\Entity\CorresColu t where t.origin_champ = 2 
-                    and (t.id_model_import)=:idSchema and t.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type or m.type = :type1)');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','creance');
-                    $query->setParameter('type1','detail_creance');
-                    $colFileC = $query->getResult();
-
-                    $query = $this->em->createQuery('SELECT t.table_bdd from App\Entity\ColumnsParams t where t.id in(select (c.id_col_params) 
-                    from App\Entity\CorresColu c where (c.id_model_import)=:idSchema and c.origin_champ = 1  and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type or m.type = :type1))');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','creance');
-                    $query->setParameter('type1','detail_creance');
-                    $tableDb = $query->getResult();
-    
-                    $query = $this->em->createQuery('SELECT t.id from App\Entity\ColumnsParams t where t.id in(select (c.id_col_params) 
-                    from App\Entity\CorresColu c where (c.id_model_import)=:idSchema and c.origin_champ = 1  and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type or m.type = :type1))');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','creance');
-                    $query->setParameter('type1','detail_creance');
-                    $colDb = $query->getResult();
-
-                    $param=array();
-                    $val=array();
-    
-                    $response="";
-    
-                    $filePath = $detailsImp->getUrl();
-    
-                    if (($handle = fopen($filePath, "r")) !== FALSE)
-                    {
-                        while (($data = fgetcsv($handle, 1000000, ";")) !== FALSE)
-                        {
-                            break;
-                        }
-                        //Les entétes de fichier excel
-                        $data=array_map("utf8_encode",$data);
-                        $data=array_map('trim', $data);
-                        $data1=array_map("utf8_encode",str_replace(" ","_",$data));
-                        
-                        for ($i=0; $i < count($colFile); $i++) { 
-                            if(!in_array($colFile[$i]["column_name"],$data1))
-                            {
-                                $response="ENTETE_IDENTIQUE";
-                                $codeStatut="ENTETE_IDENTIQUE";
-                            }
-                        }
-
-                        if($response == ""){
-                            $a=new actionsImportDbi();
-                            $a->setEtat(0);
-                            $a->setCodeAction("Ajo");
-                            $a->setDateDebut(new \DateTime());
-                            $a->setIdImport($importByType->getId());
-                            $a->setTitre("Ajout");
-                            $emDbi->persist($a);
-                            $emDbi->flush();
-    
-                            $importByType->setEtat(2);
-                            $this->em->flush(); 
-    
-                            foreach($tables as $ta){
-                                $val[$ta["table_bdd"]]="";
-                                if($ta["table_bdd"]=="debiteur")
-                                {
-                                    $val[$ta["table_bdd"]].="cin_formate";
-                                }
-                                for ($i = 0; $i < count($colFile); $i++)
-                                {   
-                                    if(($colFile[$i]["origine"] == 1) && $colFile[$i]["id_col_params"]){
-                                        $colParam = $this->em->getRepository(ColumnsParams::class)->find($colFile[$i]["id_col_params"]);
-                                        
-                                        if ($colParam->getTableBdd() == $ta["table_bdd"] and $colParam->getTitreCol()!="cin_gestionnaire" and $colFile[$i]["id_col_params"] != 3)
-                                        {
-                                            $val[$ta["table_bdd"]].=",".$colParam->getTitreCol();
-                                        }
-                                    }
-                                }
-                                if($ta["table_bdd"]=="creance")
-                                {
-                                    if(!$this->in_array_r(5,$colDb))
-                                    {
-                                        $val[$ta["table_bdd"]].=",numero_creance";
-                                    }
-                                }
-                            }
-
-                            foreach($tables_debiteur as $ta){
-                                $val[$ta["table_bdd"]]="";
-                                if($ta["table_bdd"]=="debiteur")
-                                {
-                                    $val[$ta["table_bdd"]].="cin_formate";
-                                }
-                            }
-    
-                            $data=$this->convert($filePath,";");
-                            $valCinF=array();
-                            $valCin=array();
-                            foreach ($tables as $ta){
-                                if($data){
-                                    $countRow=0;
-                                    foreach ($data as $row)
-                                    {
-                                        $valCin[$countRow]="";
-                                        $valCinF[$countRow]="";
-                                        $numCreance[$countRow]="";
-                                        $principale[$countRow]="";
-                                        $frais[$countRow]="";
-                                        $interet[$countRow]="";
-                                        $valRaison[$countRow]="";
-                                        $cinGest[$countRow]="";
-                                        $param[$ta["table_bdd"]][$countRow]="";
-                                        $type_deb[$countRow]="";
-                                        $type_creance[$countRow]="";
-                                        $id_debiteur[$countRow]="";
-                                        $numDossier[$countRow]="";
-
-                                        $champ[$countRow]="";
-                                        
-                                        for ($i=0; $i <count($colFileC) ; $i++) 
-                                        { 
-                                            $champ[$countRow."-".$i] = $row[$colFileC[$i]["column_name"]];
-                                        }
-
-                                        for ($i = 0; $i < count($colFile); $i++)
-                                        {
-                                            if($colDb[$i]["id"]==75  and  $row[$colFile[$i]["nomCol"]]!="")
-                                            {
-                                                $gest = $this->em->getRepository(Utilisateurs::class)->findOneBy(["cin"=>$row[$colFile[$i]["nomCol"]]]);
-                                                if($gest)
-                                                {
-                                                    $cinGest[$countRow]=$gest->getId();
-                                                }
-                                            }
-                                            if($colDb[$i]["id"]==23)
-                                            {
-                                                if(isset($row[$colFile[$i]["column_name"]])=="")
-                                                {
-                                                    for ($r = 0; $r < count($colFile); $r++)
-                                                    {
-                                                        if($colDb[$r]["id"]==144)
-                                                        {
-                                                            $row[$colFile[$i]["column_name"]]=$row[$colFile[$r]["column_name"]];
-                                                        }
-                                                    }
-                                                }
-                                                $cin=$row[$colFile[$i]["column_name"]];
-                                                $valCin[$countRow]=$cin;
-                                                $valCinF[$countRow]=strtoupper(preg_replace('/[^A-Za-z0-9]+/',"", $cin));
-                                                if(!$this->in_array_r(5,$colDb))
-                                                {
-                                                    $numCreance[$countRow]="Sys".$valCinF[$countRow]."-".($countRow+1);
-                                                }
-                                            }
-                                            if($colDb[$i]["id"]==5)
-                                            {
-                                                $numCreance[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==15)
-                                            {
-                                                $row[$colFile[$i]["column_name"]]=str_replace(" ","",$row[$colFile[$i]["column_name"]]);
-                                            }
-                                            if($colDb[$i]["id"]==65)
-                                            {
-                                                $numDossier[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==179)
-                                            {
-                                                $type_deb[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==3)
-                                            {
-                                                $type_creance[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==167)
-                                            {
-                                                $principale[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==168)
-                                            {
-                                                $frais[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==185)
-                                            {
-                                                $id_debiteur[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            
-                                            if($colDb[$i]["id"]==169)
-                                            {
-                                                $interet[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            $colParam = $this->em->getRepository(ColumnsParams::class)->find($colFile[$i]["id_col_params"]);
-                                            if ($colParam->getTableBdd() == $ta["table_bdd"])
-                                            {
-                                            $isDate = $this->em->getRepository(ColumnsParams::class)->find($colDb[$i]["id"]);
-                                                if ($isDate->getIsDate() == 1 and \DateTime::createFromFormat('d/m/Y', $row[$colFile[$i]["column_name"]])==true)
-                                                {
-                                                    $valueDate=\DateTime::createFromFormat('d/m/Y', $row[$colFile[$i]["column_name"]])->format("d-m-Y");
-                                                    $param[$ta["table_bdd"]][$countRow].= ",'" . date_format(new \DateTime($valueDate), 'Y-m-d H:i:s') . "'";
-                                                }
-                                                else
-                                                {
-                                                    if($colDb[$i]["id"]!=75 && $colDb[$i]["id"]!=3)
-                                                    {
-                                                        $param[$ta["table_bdd"]][$countRow].= ",'" . $row[$colFile[$i]["column_name"]] . "'";
-                                                    }
-                                                }
-                                                if($colFile[$i]["required"] == 1 and empty($row[$colFile[$i]["column_name"]]))
-                                                {
-                                                    unset($param[$ta["table_bdd"]][$countRow]);
-                                                }
-                                            }
-                                        }
-                                        
-                                        if($ta["table_bdd"]=="creance" and $this->in_array_r("creance",$tableDb))
-                                        {
-                                            if(!$this->in_array_r(5,$colDb))
-                                            {
-                                                $param[$ta["table_bdd"]][$countRow].= ",'Sys" . $valCinF[$countRow] . "-".($countRow+1)."'";
-                                            }
-                                        }
-                                        $countRow++;
-                                    }
-                                }
-                            }
-                            
-                            $model = $importByType->getIdModel()->getId();
-                            $query = $this->em->createQuery('SELECT t from App\Entity\CorresColu t where t.id_model_import = :idSchema 
-                            and t.id_col_params is null 
-                            and t.id_model_import in (select m.id from App\Entity\ModelImport m where m.type = :type) ');
-                            $query->setParameter('idSchema', $model);
-                            $query->setParameter('type','creance');
-                            $champPersonalise = $query->getResult();
-
-                            if(count($val)>0 and count($param)>0)
-                            {
-                                foreach($tables as $ta)
-                                {
-                                    $nameTable="creance";
-                                    if($ta["table_bdd"]==$nameTable)
-                                    {
-                                        $lastKey = key(array_slice($param[$ta["table_bdd"]], -1, 1, true));
-                                        for($i=0;$i<($lastKey+1);$i++)
-                                        {
-                                            if(array_key_exists($i,$param[$ta["table_bdd"]]) and $id_debiteur[$i]!="")
-                                            {
-                                                // if(!$this->in_array_r("dossier",$tableDb_dossier))
-                                                // {
-                                                //     try{
-                                                //         $sql="SELECT count(d.id) FROM `debt_force_integration`.`dossier_dbi` d where d.id_import = :id";
-                                                //         $stmt = $this->conn->prepare($sql);
-                                                //         $stmt->bindValue(":id",$id_import);
-                                                //         $countDossDbi = $stmt->executeQuery()->fetchOne();
-
-                                                //         $query = $this->em->createQuery('SELECT max(t.id) from App\Entity\Dossier t');
-                                                //         $maxNum = $query->getSingleScalarResult();
-                                                //         if(!$maxNum)
-                                                //         {
-                                                //             $maxNum=0;
-                                                //         }
-                                                //         $maxNum = $countDossDbi + $maxNum;
-                                                //         $refDossier=$porte_feuille->getNumeroPtf()."-".($maxNum+1);
-                                                //         $numDossier[$i]=$refDossier;
-                                                //         if(!$this->in_array_r(5,$colDb))
-                                                //         {
-                                                //             $param[$ta->getTableBdd()][$i].= ",'Sys".$valCinF[$i]."-".($i+1) ."'";
-                                                //             $numCreance[$i]="Sys".$valCinF[$i]."-".($i+1);
-                                                //         }
-                                                //         if($this->integrationRepo->testCreanceDbi($numCreance[$i],$porte_feuille->getId())==false)
-                                                //         {
-                                                //             if($this->integrationRepo->testDossierDbi($refDossier,$porte_feuille->getId())==false){
-                                                //                 if($cinGest[$i]!=""){
-                                                //                     $sql="insert into `debt_force_integration`.`dossier_dbi`(date_creation,numero_dossier,id_users,id_ptf,id_import) values(now(),'".$refDossier."','".$cinGest[$i]."',".$porte_feuille->getId().",".$id_import.")";
-                                                //                 }else{
-                                                //                     $sql="insert into `debt_force_integration`.`dossier_dbi`(date_creation,numero_dossier,id_ptf,id_import) values(now(),'".$refDossier."',".$porte_feuille->getId().",".$id_import.")";
-                                                //                 }
-                                                //                 $stmt = $this->conn->prepare($sql)->executeQuery();                                                        
-                                                //                 // if($cinGest[$i]!=""){
-                                                //                 //     $query = $this->em->createQuery('SELECT max(t.id) from App\Entity\Dossier t');
-                                                //                 //     $dossier = $query->getSingleScalarResult();
-                                                //                 //     $tableDispatch[$cr]=$dossier;
-                                                //                 //     $cr++;
-                                                //                 // }
-
-                                                //                 if($this->integrationRepo->addToLogImportDbi(1,$a->getId(),'Dossier ajouté')==true)
-                                                //                 {
-                                                //                     $countv++;
-                                                //                 }
-                                                //             }else{
-                                                //                 if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),'Dossier n° '.$refDossier.' existe déjà')==true)
-                                                //                 {
-                                                //                     $countnv++;
-                                                //                 }
-                                                //             }
-                                                            
-                                                //         }
-                                                //     }
-                                                //     catch (\Exception $e) {
-                                                //         if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),$e->getMessage())==true)
-                                                //         {
-                                                //             $countnv++;
-                                                //         }
-                                                //     }
-                                                // }
-                                                if($this->integrationRepo->testCreanceDbi($numCreance[$i],$porte_feuille->getId())==false)
-                                                {
-                                                    try {
-                                                        // if(array_key_exists($i,$numDossier) and $numDossier[$i]!="")
-                                                        // {
-                                                            // $d = $this->integrationRepo->testDossierDbi1($numDossier[$i],$porte_feuille->getId());
-                                                            // if($d["exist"])
-                                                            // {
-                                                                // if(!array_key_exists($d["doss"],$dispatch1))
-                                                                // {
-                                                                //     $dispatch1[$d]=$d["doss"];
-                                                                // }
-                                                                // $dossierId=",".$d["doss"];
-                                                                // $sql="insert into `debt_force_integration`.`creance_dbi`(etat,id_ptf_id,id_dossier".$val[$ta["table_bdd"]].",origine_doss,id_import) values(6,".$porte_feuille->getId().$dossierId.$param[$ta["table_bdd"]][$i].",".$d["place"].",".$id_import.")";
-                                                                // $this->em->getConnection()->prepare($sql)->execute();
-                                                            // }
-                                                            // else
-                                                            // {
-                                                                // $sql="insert into `debt_force_integration`.`creance_dbi`(etat,id_ptf_id".$val[$ta["table_bdd"]].",id_import) values(1,".$porte_feuille->getId().$param[$ta["table_bdd"]][$i].",".$id_import.")";
-                                                                // $this->em->getConnection()->prepare($sql)->execute();
-                                                            // }
-                                                        // }
-                                                        // else
-                                                        // {
-                                                        //     $sql="insert into `debt_force_integration`.`creance_dbi`(etat,id_ptf_id".$val[$ta["table_bdd"]].",id_import) values(1,".$porte_feuille->getId().$param[$ta["table_bdd"]][$i].",".$id_import.")";
-                                                        //     $this->em->getConnection()->prepare($sql)->execute();
-                                                        // }
-                                                        
-                                                        $idDeb = $this->integrationRepo->testDebiteurIdDeb($id_debiteur[$i],$integrationId);
-                                                        if(!$idDeb["exist"])
-                                                        {
-                                                            if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),'Debiteur avec cin '.$valCinF[$i].' n\'existe pas !!')==true)
-                                                            {
-                                                                $countnv++;
-                                                            }
-                                                        }
-                                                        else
-                                                        {      
-                                                            $typeDetails = $this->integrationRepo->findTypeDeb($type_deb[$i]);
-                                                            $typeCreance = $this->integrationRepo->findTypeCreance($type_creance[$i]);
-                                                            // if($typeDetails)
-                                                            // {
-                                                                if($typeCreance){
-                                                                    $sql="insert into `debt_force_integration`.`creance_dbi`(etat,id_ptf_id".$val[$ta["table_bdd"]].",id_import, type_creance,id_integration) values(1,".$porte_feuille->getId().$param[$ta["table_bdd"]][$i].",".$id_import.",".$typeCreance.",".$integrationId.")";
-                                                                    $this->em->getConnection()->prepare($sql)->execute();
-                                                                    $creance = $this->integrationRepo->testCreanceDbi1($numCreance[$i],$porte_feuille->getId());
-                                                                    // $typeDeb = $this->integrationRepo->testTypeDebiteur1($idDeb["deb"],$creance["creance"]);
-
-                                                                    $typeDeb2 = $this->integrationRepo->testTypeDebiteur2($idDeb["deb"],$id_debiteur[$i],$numDossier[$i]);
-                                                                    
-                                                                    if($typeDeb2["exist"])
-                                                                    {
-                                                                        if($typeDeb2["type_d"]["id_creance_id"] == 0){
-                                                                            $sql="SELECT max(t.id) FROM   `debt_force_integration`.`creance_dbi` t ";
-                                                                            $stmt = $this->conn->prepare($sql);
-                                                                            $stmt = $stmt->executeQuery();
-                                                                            $creanceMax = $stmt->fetchOne();
-
-                                                                            $sql = "UPDATE `debt_force_integration`.`type_debiteur_dbi` SET `id_creance_id`=".$creanceMax." WHERE id = ".$typeDeb2["type_d"]["id"]."";
-                                                                            $this->em->getConnection()->prepare($sql)->execute();
-                                                                        }
-                                                                    //     $typeDeb1 = $this->integrationRepo->testTypeDebiteur2($idDeb["deb"],$creance["creance"]);
-                                                                    //     $c=",".$creance["creance"];
-                                                                    //     $origin_creance=$creance["place"];
-                                                                    //     $origin_deb=$idDeb["place"];
-                                                                    //     $sql="insert into `debt_force_integration`.`type_debiteur_dbi`(id_debiteur_id,id_creance_id,type,origin_deb,origin_creance,id_integration) values(".$idDeb["deb"].$c.",".$typeDetails.",".$origin_deb.",".$origin_creance.",".$integrationId.")";
-                                                                    //     $this->em->getConnection()->prepare($sql)->execute();
-                                                                    }
-
-
-                                                                    if($this->integrationRepo->addToLogImportDbi(1,$a->getId(),'Créance ajouté')==true)
-                                                                    {
-                                                                        $countv++;
-                                                                    }
-                                                                }else{
-                                                                    if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),"Type creance ".$type_creance[$i]." n'existe pas !!")==true)
-                                                                    {
-                                                                        $countnv++;
-                                                                    }
-                                                                }
-                                                            // }
-                                                            // else
-                                                            // {
-                                                            //     if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),"Type débiteur ".$type_deb[$i]." n'existe pas !!")==true)
-                                                            //     {
-                                                            //         $countnv++;
-                                                            //     }
-                                                            // }
-                                                        }
-                                                        // if($this->integrationRepo->addToLogImportDbi(1,$a->getId(),'Créance ajouté')==true)
-                                                        // {
-                                                        //     $countv++;
-                                                        // }
-                                                        // if($this->integrationRepo->addToLogImportTypeDeb(1,$a->getId(),'Type débiteur ajouté')==true)
-                                                        // {
-                                                        //     $countv++;
-                                                        // }
-                                                    } catch (\Exception $e) {
-                                                        if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),$e->getMessage())==true)
-                                                        {
-                                                            $countnv++;
-                                                        }
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),'Le numéro de créance '.$numCreance[$i].' existe déjà dans le portefeuille !!')==true)
-                                                    {
-                                                        $countnv++;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                $model = $importByType->getIdModel()->getId();
-                                $query = $this->em->createQuery('SELECT t from App\Entity\CorresColu t where t.id_model_import = :idSchema 
-                                and t.id_col_params is null 
-                                and t.id_model_import in (select m.id from App\Entity\ModelImport m where m.type = :type) ');
-                                $query->setParameter('idSchema', $model);
-                                $query->setParameter('type','detail_creance');
-                                $champPersonalise = $query->getResult();
-    
-                                foreach ($tables as $ta)
-                                {
-                                    $nameTable="detail_creance";
-                                    if($ta["table_bdd"]==$nameTable)
-                                    {
-                                        $lastKey = key(array_slice($param[$ta["table_bdd"]], -1, 1, true));
-                                        for($i=0;$i<($lastKey+1);$i++)
-                                        {
-                                            if(array_key_exists($i,$param[$ta["table_bdd"]]) and $id_debiteur[$i]!="")
-                                            {
-                                                try {
-                                                    $creanceData =$this->integrationRepo->testCreanceDbi2($numCreance[$i], $porte_feuille->getId());
-                                                    if($creanceData["exist"] == false)
-                                                    {
-                                                        if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),'Créance n\'existe pas !!')==true)
-                                                        {
-                                                            $countnv++;
-                                                        }
-                                                    }
-                                                    else
-                                                    {
-                                                        $total_crenace = 0;
-                                                        if($principale[$i] != ""){
-                                                            $total_crenace += $principale[$i];
-                                                        }
-                                                        if($frais[$i] != ""){
-                                                            $total_crenace += $frais[$i];
-                                                        }
-                                                        if($interet[$i] != ""){
-                                                            $total_crenace += $interet[$i];
-                                                        }
-                                                        if($creanceData["place"] == 2)
-                                                        {
-                                                            $total_crenace += $creanceData["creance"]["total_creance"];
-                                                            $sql="UPDATE `debt_force_integration`.`creance_dbi` SET `total_creance`= ".$total_crenace."  WHERE id = ".$creanceData["creance"]["id"]."";
-                                                            $stmt = $this->conn->prepare($sql)->executeQuery();
-                                                        }
-                                                        $sql="insert into `debt_force_integration`.`detail_creance_dbi`(id_creance , frais,interet,principale,origin_creance) values(".$creanceData["creance"]["id"].", ".$frais[$i]." , ".$interet[$i]." ,".$principale[$i].",".$creanceData["place"].")";
-                                                        $stmt = $this->conn->prepare($sql)->executeQuery();
-
-                                                        if($this->integrationRepo->addToLogImportDbi(1,$a->getId(),'Détail créance ajouté')==true)
-                                                        {
-                                                            $countv++;
-                                                        }
-                                                    }
-                                                }
-                                                catch (\Exception $e) {
-                                                    if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),$e->getMessage())==true)
-                                                    {
-                                                        $countnv++;
-                                                    }
-                                                }   
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                //TODO:END creance 
-
-
-                //Start garantie
-                $importByType = $integrationRepo->getOneImportType($integrationId , "garantie");
-
-                if($importByType){
-                    //Etat en cours
-                    $importByType->setEtat(2);
-                    $this->em->flush();
-    
-                    $id_import = $importByType->getId();
-    
-                    $detailsImp = $integrationRepo->getDetailsImprt($id_import , $ordre);
-    
-                    //grouping les tables by table_bdd 
-                    $query = $this->em->createQuery('SELECT t.table_bdd from App\Entity\ColumnsParams t where t.id
-                        in(select (c.id_col_params) from  App\Entity\CorresColu  c where  c.id_model_import=:idSchema and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type) )group by t.table_bdd');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','garantie');
-                    $tables = $query->getResult();
-                    $tables_garantie = $tables;
-    
-                    $query = $this->em->createQuery('SELECT t.column_name,(t.id_col_params) as id_col_params,t.required  , t.origine from App\Entity\CorresColu t where (t.id_model_import)=:idSchema and t.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type)');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','garantie');
-                    $colFile = $query->getResult();
-    
-                    $query = $this->em->createQuery('SELECT t.table_bdd from App\Entity\ColumnsParams t where t.id in(select (c.id_col_params) 
-                    from App\Entity\CorresColu c where (c.id_model_import)=:idSchema and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type))');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','garantie');
-                    $tableDb = $query->getResult();
-
-                    $query = $this->em->createQuery('SELECT t.column_name,(t.id_col_params) as id_col_params,t.required  , t.origine from App\Entity\CorresColu t where t.origin_champ = 2 
-                    and (t.id_model_import)=:idSchema and t.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type )');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','garantie');
-                    $colFileC = $query->getResult();
-    
-                    $query = $this->em->createQuery('SELECT t.id from App\Entity\ColumnsParams t where t.id in(select (c.id_col_params) 
-                    from App\Entity\CorresColu c where (c.id_model_import)=:idSchema and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type))');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','garantie');
-                    $colDb = $query->getResult();
-    
-                    $param=array();
-                    $val=array();
-    
-                    $response="";
-    
-                    $filePath = $detailsImp->getUrl();
-                    if (($handle = fopen($filePath, "r")) !== FALSE)
-                    {
-                        while (($data = fgetcsv($handle, 1000000, ";")) !== FALSE)
-                        {
-                            break;
-                        }
-                        //Les entétes de fichier excel
-                        $data=array_map("utf8_encode",$data);
-                        $data=array_map('trim', $data);
-                        $data1=array_map("utf8_encode",str_replace(" ","_",$data));
-                        
-                        for ($i=0; $i < count($colFile); $i++) { 
-                            if(!in_array($colFile[$i]["column_name"],$data1))
-                            {
-                                $response="ENTETE_IDENTIQUE";
-                                $codeStatut="ENTETE_IDENTIQUE";
-                            }
-                        }
-                        
-                        if($response == ""){
-                            $a=new actionsImportDbi();
-                            $a->setEtat(0);
-                            $a->setCodeAction("Ajo");
-                            $a->setDateDebut(new \DateTime());
-                            $a->setIdImport($importByType->getId());
-                            $a->setTitre("Ajout");
-                            $emDbi->persist($a);
-                            $emDbi->flush();
-    
-                            // $a = $this->integrationRepo->createActionsImport
-    
-                            $importByType->setEtat(2);
-                            $this->em->flush(); 
-    
-                            foreach($tables as $ta){
-                                $val[$ta["table_bdd"]]="";
-                                if($ta["table_bdd"]=="debiteur")
-                                {
-                                    $val[$ta["table_bdd"]].="cin_formate";
-                                }
-                                for ($i = 0; $i < count($colFile); $i++)
-                                {   
-                                    if(($colFile[$i]["origine"] == 1)){
-                                        $colParam = $this->em->getRepository(ColumnsParams::class)->find($colFile[$i]["id_col_params"]);
-                                        
-                                        if ($colParam->getTableBdd() == $ta["table_bdd"] and $colParam->getTitreCol()!="cin_gestionnaire")
-                                        {
-                                            $val[$ta["table_bdd"]].=",".$colParam->getTitreCol();
-                                        }
-                                    }
-                                }
-                                if($ta["table_bdd"]=="creance")
-                                {
-                                    if(!$this->in_array_r(5,$colDb))
-                                    {
-                                        $val[$ta["table_bdd"]].=",numero_creance";
-                                    }
-                                }
-                            }
-    
-                            $data=$this->convert($filePath,";");
-                            $valCinF=array();
-                            $valCin=array();
-                            foreach ($tables as $ta){
-                                if($data){
-                                    $countRow=0;
-                                    foreach ($data as $row)
-                                    {
-                                        $valCin[$countRow]="";
-                                        $valCinF[$countRow]="";
-                                        $principale[$countRow]="";
-                                        $frais[$countRow]="";
-                                        $interet[$countRow]="";
-    
-                                        $valRaison[$countRow]="";
-                                        $cinGest[$countRow]="";
-                                        $param[$ta["table_bdd"]][$countRow]="";
-
-                                        $champ[$countRow]="";
-                                        
-                                        for ($i=0; $i <count($colFileC) ; $i++) 
-                                        { 
-                                            $champ[$countRow."-".$i] = $row[$colFileC[$i]["column_name"]];
-                                        }
-                                
-                                        for ($i = 0; $i < count($colFile); $i++)
-                                        {
-                                            if($colDb[$i]["id"]==75 and $row[$colFile[$i]["nomCol"]]!="")
-                                            {
-                                                $gest = $this->em->getRepository(Utilisateurs::class)->findOneBy(["cin"=>$row[$colFile[$i]["nomCol"]]]);
-                                                if($gest)
-                                                {
-                                                    $cinGest[$countRow]=$gest->getId();
-                                                }
-                                            }
-                                            if($colDb[$i]["id"]==23)
-                                            {
-                                                $cin=$row[$colFile[$i]["column_name"]];
-                                                $valCin[$countRow]=$cin;
-                                                $valCinF[$countRow]=strtoupper(preg_replace('/[^A-Za-z0-9]+/',"", $cin));
-                                                if(!$this->in_array_r(5,$colDb))
-                                                {
-                                                    $numCreance[$countRow]="Sys".$valCinF[$countRow]."-".($countRow+1);
-                                                }
-                                            }
-                                            if($colDb[$i]["id"]==5)
-                                            {
-                                                $numCreance[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==15)
-                                            {
-                                                $row[$colFile[$i]["column_name"]]=str_replace(" ","",$row[$colFile[$i]["column_name"]]);
-                                            }
-                                            if($colDb[$i]["id"]==65)
-                                            {
-                                                $numDossier[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==167)
-                                            {
-                                                $principale[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==168)
-                                            {
-                                                $frais[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==169)
-                                            {
-                                                $interet[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            $colParam = $this->em->getRepository(ColumnsParams::class)->find($colFile[$i]["id_col_params"]);
-                                            if ($colParam->getTableBdd() == $ta["table_bdd"])
-                                            {
-                                            $isDate = $this->em->getRepository(ColumnsParams::class)->find($colDb[$i]["id"]);
-                                                if ($isDate->getIsDate() == 1 and \DateTime::createFromFormat('d/m/Y', $row[$colFile[$i]["column_name"]])==true)
-                                                {
-                                                    $valueDate=\DateTime::createFromFormat('d/m/Y', $row[$colFile[$i]["column_name"]])->format("d-m-Y");
-                                                    $param[$ta["table_bdd"]][$countRow].= ",'" . date_format(new \DateTime($valueDate), 'Y-m-d H:i:s') . "'";
-                                                }
-                                                else
-                                                {
-                                                    if($colDb[$i]["id"]!=75)
-                                                    {
-                                                        $param[$ta["table_bdd"]][$countRow].= ",'" . $row[$colFile[$i]["column_name"]] . "'";
-                                                    }
-                                                }
-                                                if($colFile[$i]["required"] == 1 and empty($row[$colFile[$i]["column_name"]]))
-                                                {
-                                                    unset($param[$ta["table_bdd"]][$countRow]);
-                                                }
-                                            }
-                                        }
-                                        
-                                        if($ta["table_bdd"]=="creance" and $this->in_array_r("creance",$tableDb))
-                                        {
-                                            if(!$this->in_array_r(5,$colDb))
-                                            {
-                                                $param[$ta["table_bdd"]][$countRow].= ",'Sys" . $valCinF[$countRow] . "-".($countRow+1)."'";
-                                            }
-                                        }
-                                        $countRow++;
-                                    }
-                                }
-                            }
-                            
-                            if(count($val)>0 and count($param)>0)
-                            {
-    
-                                // /*
-                                //     ETAT Si creance d"ja exite 3
-                                //     ETAT Si exeption 2
-                                //     ETAT Si debiteur n'existe pas 4
-                                //     L'état debiteur si l'opération éffectue 
-                                // */
-                                $model = $importByType->getIdModel()->getId();
-                                $query = $this->em->createQuery('SELECT t from App\Entity\CorresColu t where t.id_model_import = :idSchema 
-                                and t.id_col_params is null 
-                                and t.id_model_import in (select m.id from App\Entity\ModelImport m where m.type = :type) ');
-                                $query->setParameter('idSchema', $model);
-                                $query->setParameter('type','garantie');
-                                $champPersonalise = $query->getResult();
-    
-                                foreach ($tables as $ta)
-                                {
-                                    $nameTable="garantie";
-                                    if($ta["table_bdd"]==$nameTable)
-                                    {
-                                        $lastKey = key(array_slice($param[$ta["table_bdd"]], -1, 1, true));
-                                        for($i=0;$i<($lastKey+1);$i++)
-                                        {
-                                            if(array_key_exists($i,$param[$ta["table_bdd"]]) and $valCinF[$i]!="")
-                                            {
-                                                try {
-                                                    $debExist = $this->integrationRepo->testDebiteurDbi1($valCinF[$i]);
-                                                    if($debExist["exist"] == false)
-                                                    {
-                                                        if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),'Debiteur avec cin '.$valCinF[$i].' n\'existe pas !!')==true)
-                                                        {
-                                                            $countnv++;
-                                                        }
-                                                    }
-                                                    else
-                                                    {
-                                                        // $idDeb=$idDeb->getId();
-                                                        $sql="insert into `debt_force_integration`.`garantie_dbi`(id_import".$val[$ta["table_bdd"]].") values(".$id_import.$param[$ta["table_bdd"]][$i].")";
-                                                        $stmt = $this->conn->prepare($sql)->executeQuery();
-    
-                                                        // $query = $this->em->createQuery('SELECT max(t.id) from App\Entity\GarantieDbi t');
-                                                        // $garantieMax = $query->getSingleScalarResult();
-    
-                                                        $sql="SELECT max(t.id) FROM   `debt_force_integration`.`garantie_dbi` t ";
-                                                        $stmt = $this->conn->prepare($sql);
-                                                        $stmt = $stmt->executeQuery();
-                                                        $garantieMax = $stmt->fetchOne();
-    
-                                                        
-                                                        if($this->integrationRepo->addToLogImportDbi(1,$a->getId(),'Garantie ajouté')==true)
-                                                        {
-                                                            $countv++;
-                                                        }
-                                                        $sql="insert into debt_force_integration.garantie_debiteur_dbi( `id_garantie`, `id_debiteur`, `origin_deb`,`id_import`) values(".$garantieMax.",".$debExist["deb"].",".$debExist["place"].",".$id_import.")";
-                                                        $stmt = $this->conn->prepare($sql)->executeQuery();
-                                                        // if($this->integrationRepo->addToLogImportDbi(1,$a->getId(),'Débiteur garantie ajouté')==true)
-                                                        // {
-                                                        //     $countv++;
-                                                        // }
-    
-                                                        if($numCreance[$i] != ""){
-                                                            $creanceExist = $this->integrationRepo->testCreanceDbi1($numCreance[$i], $porte_feuille->getId());
-                                                            // $query= $this->em->createQuery("select c from App\Entity\Creance c where c.numero_creance=:num and identity(c.id_ptf) =:idPtf");
-                                                            // $query->setParameter('num', $numCreance[$i]);
-                                                            // $query->setParameter('idPtf', $porte_feuille->getId());
-                                                            // $creance=$query->getSingleResult();
-                                                            if($creanceExist["exist"] == true)
-                                                            {
-                                                                $sql="insert into debt_force_integration.creance_garantie_dbi( `id_garantie`, `id_creance`, `origin_creance`,`id_import`) values(".$garantieMax.",".$creanceExist["creance"].",".$creanceExist["place"].",".$id_import.")";
-                                                                $stmt = $this->conn->prepare($sql)->executeQuery();
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                catch (\Exception $e) {
-                                                    if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),$e->getMessage())==true)
-                                                    {
-                                                        $countnv++;
-                                                    }
-                                                }   
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            //Set l'état d'importation d'import
-                            // $sql="SELECT l.* from logs_actions l where l.etat=0 and l.id_action_id in(select a.id from actions_import a where a.id_import_id = :id)";
-                            // $param=(array("id"=>$importByType->getId() ));
-                            // $error_import = $this->conn->fetchAllAssociative($sql , $param);
-                            // if(count($error_import) == 0){
-                            //     $importByType->setEtat(4);
-                            // }else{
-                            //     $importByType->setEtat(3);
-                            // }
-                            // $this->em->flush();
-                            // $this->verifecationDoublent($a->getId());
-                        }
-                    }
-                }
-
-                //Start
-                $importByType = $integrationRepo->getOneImportType($integrationId , "proc");
-
-                if($importByType){
-                    //Etat en cours
-                    $importByType->setEtat(2);
-                    $this->em->flush();
-    
-                    $id_import = $importByType->getId();
-    
-                    $detailsImp = $integrationRepo->getDetailsImprt($id_import , $ordre);
-    
-                    //grouping les tables by table_bdd 
-                    $query = $this->em->createQuery('SELECT t.table_bdd from App\Entity\ColumnsParams t where t.id
-                        in(select (c.id_col_params) from  App\Entity\CorresColu  c where  c.id_model_import=:idSchema and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type) )group by t.table_bdd');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','proc');
-                    $tables = $query->getResult();
-                    $tables_proc = $tables;
-    
-                    $query = $this->em->createQuery('SELECT t.column_name,(t.id_col_params) as id_col_params,t.required  , t.origine from App\Entity\CorresColu t where (t.id_model_import)=:idSchema and t.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type)');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','proc');
-                    $colFile = $query->getResult();
-
-                    $query = $this->em->createQuery('SELECT t.column_name,(t.id_col_params) as id_col_params,t.required  , t.origine from App\Entity\CorresColu t where t.origin_champ = 2 
-                    and (t.id_model_import)=:idSchema and t.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type )');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','proc');
-                    $colFileC = $query->getResult();
-    
-                    $query = $this->em->createQuery('SELECT t.table_bdd from App\Entity\ColumnsParams t where t.id in(select (c.id_col_params) 
-                    from App\Entity\CorresColu c where (c.id_model_import)=:idSchema and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type))');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','proc');
-                    $tableDb = $query->getResult();
-    
-                    $query = $this->em->createQuery('SELECT t.id from App\Entity\ColumnsParams t where t.id in(select (c.id_col_params) 
-                    from App\Entity\CorresColu c where (c.id_model_import)=:idSchema and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type))');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','proc');
-                    $colDb = $query->getResult();
-    
-                    $param=array();
-                    $val=array();
-                    $response="";
-    
-                    $filePath = $detailsImp->getUrl();
-                    if (($handle = fopen($filePath, "r")) !== FALSE)
-                    {
-                        while (($data = fgetcsv($handle, 1000000, ";")) !== FALSE)
-                        {
-                            break;
-                        }
-                        //Les entétes de fichier excel
-                        $data=array_map("utf8_encode",$data);
-                        $data=array_map('trim', $data);
-                        $data1=array_map("utf8_encode",str_replace(" ","_",$data));
-                        
-                        for ($i=0; $i < count($colFile); $i++) { 
-                            if(!in_array($colFile[$i]["column_name"],$data1))
-                            {
-                                $response="ENTETE_IDENTIQUE";
-                                $codeStatut="ENTETE_IDENTIQUE";
-                            }
-                        }
-
-                        if($response == ""){
-                            $a=new actionsImportDbi();
-                            $a->setEtat(0);
-                            $a->setCodeAction("Ajo");
-                            $a->setDateDebut(new \DateTime());
-                            $a->setIdImport($importByType->getId());
-                            $a->setTitre("Ajout");
-                            $emDbi->persist($a);
-                            $emDbi->flush();
-    
-                            // $a = $this->integrationRepo->createActionsImport
-    
-                            $importByType->setEtat(2);
-                            $this->em->flush(); 
-    
-                            foreach($tables as $ta){
-                                $val[$ta["table_bdd"]]="";
-                                if($ta["table_bdd"]=="debiteur")
-                                {
-                                    $val[$ta["table_bdd"]].="cin_formate";
-                                }
-                                for ($i = 0; $i < count($colFile); $i++)
-                                {   
-                                    if(($colFile[$i]["origine"] == 1)){
-                                        $colParam = $this->em->getRepository(ColumnsParams::class)->find($colFile[$i]["id_col_params"]);
-                                        
-                                        if ($colParam->getTableBdd() == $ta["table_bdd"] and $colParam->getTitreCol()!="cin_gestionnaire")
-                                        {
-                                            $val[$ta["table_bdd"]].=",".$colParam->getTitreCol();
-                                        }
-                                    }
-                                }
-                                if($ta["table_bdd"]=="creance")
-                                {
-                                    if(!$this->in_array_r(5,$colDb))
-                                    {
-                                        $val[$ta["table_bdd"]].=",numero_creance";
-                                    }
-                                }
-                            }
-    
-                            $data=$this->convert($filePath,";");
-                            $valCinF=array();
-                            $valCin=array();
-
-                            foreach ($tables as $ta){
-                                if($data){
-                                    $countRow=0;
-                                    foreach ($data as $row)
-                                    {
-                                        $valCin[$countRow]="";
-                                        $valCinF[$countRow]="";
-                                        $principale[$countRow]="";
-                                        $frais[$countRow]="";
-                                        $interet[$countRow]="";
-    
-                                        $valRaison[$countRow]="";
-                                        $cinGest[$countRow]="";
-                                        $param[$ta["table_bdd"]][$countRow]="";
-
-                                        $champ[$countRow]="";
-                                        
-                                        for ($i=0; $i <count($colFileC) ; $i++) 
-                                        { 
-                                            $champ[$countRow."-".$i] = $row[$colFileC[$i]["column_name"]];
-                                        }
-                                
-                                        for ($i = 0; $i < count($colFile); $i++)
-                                        {
-                                            if($colDb[$i]["id"]==75 and $row[$colFile[$i]["nomCol"]]!="")
-                                            {
-                                                $gest = $this->em->getRepository(Utilisateurs::class)->findOneBy(["cin"=>$row[$colFile[$i]["nomCol"]]]);
-                                                if($gest)
-                                                {
-                                                    $cinGest[$countRow]=$gest->getId();
-                                                }
-                                            }
-                                            if($colDb[$i]["id"]==23)
-                                            {
-                                                $cin=$row[$colFile[$i]["column_name"]];
-                                                $valCin[$countRow]=$cin;
-                                                $valCinF[$countRow]=strtoupper(preg_replace('/[^A-Za-z0-9]+/',"", $cin));
-                                                if(!$this->in_array_r(5,$colDb))
-                                                {
-                                                    $numCreance[$countRow]="Sys".$valCinF[$countRow]."-".($countRow+1);
-                                                }
-                                            }
-                                            if($colDb[$i]["id"]==5)
-                                            {
-                                                $numCreance[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==15)
-                                            {
-                                                $row[$colFile[$i]["column_name"]]=str_replace(" ","",$row[$colFile[$i]["column_name"]]);
-                                            }
-                                            if($colDb[$i]["id"]==65)
-                                            {
-                                                $numDossier[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==167)
-                                            {
-                                                $principale[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==168)
-                                            {
-                                                $frais[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==169)
-                                            {
-                                                $interet[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            $colParam = $this->em->getRepository(ColumnsParams::class)->find($colFile[$i]["id_col_params"]);
-                                            if ($colParam->getTableBdd() == $ta["table_bdd"])
-                                            {
-                                            $isDate = $this->em->getRepository(ColumnsParams::class)->find($colDb[$i]["id"]);
-                                                if ($isDate->getIsDate() == 1 and \DateTime::createFromFormat('d/m/Y', $row[$colFile[$i]["column_name"]])==true)
-                                                {
-                                                    $valueDate=\DateTime::createFromFormat('d/m/Y', $row[$colFile[$i]["column_name"]])->format("d-m-Y");
-                                                    $param[$ta["table_bdd"]][$countRow].= ",'" . date_format(new \DateTime($valueDate), 'Y-m-d H:i:s') . "'";
-                                                }
-                                                else
-                                                {
-                                                    if($colDb[$i]["id"]!=75)
-                                                    {
-                                                        $param[$ta["table_bdd"]][$countRow].= ",'" . $row[$colFile[$i]["column_name"]] . "'";
-                                                    }
-                                                }
-                                                if($colFile[$i]["required"] == 1 and empty($row[$colFile[$i]["column_name"]]))
-                                                {
-                                                    unset($param[$ta["table_bdd"]][$countRow]);
-                                                }
-                                            }
-                                        }
-                                        
-                                        if($ta["table_bdd"]=="creance" and $this->in_array_r("creance",$tableDb))
-                                        {
-                                            if(!$this->in_array_r(5,$colDb))
-                                            {
-                                                $param[$ta["table_bdd"]][$countRow].= ",'Sys" . $valCinF[$countRow] . "-".($countRow+1)."'";
-                                            }
-                                        }
-                                        $countRow++;
-                                    }
-                                }
-                            }
-                            
-                            if(count($val)>0 and count($param)>0)
-                            {
-    
-                                // /*
-                                //     ETAT Si creance d"ja exite 3
-                                //     ETAT Si exeption 2
-                                //     ETAT Si debiteur n'existe pas 4
-                                //     L'état debiteur si l'opération éffectue 
-                                // */
-                                $model = $importByType->getIdModel()->getId();
-                                $query = $this->em->createQuery('SELECT t from App\Entity\CorresColu t where t.id_model_import = :idSchema 
-                                and t.id_col_params is null 
-                                and t.id_model_import in (select m.id from App\Entity\ModelImport m where m.type = :type) ');
-                                $query->setParameter('idSchema', $model);
-                                $query->setParameter('type','proc');
-                                $champPersonalise = $query->getResult();
-                                
-                                foreach ($tables as $ta)
-                                {
-                                    $nameTable="proc_judicaire";
-                                    if($ta["table_bdd"]==$nameTable)
-                                    {
-                                        $lastKey = key(array_slice($param[$ta["table_bdd"]], -1, 1, true));
-                                        for($i=0;$i<($lastKey+1);$i++)
-                                        {
-                                            if(array_key_exists($i,$param[$ta["table_bdd"]]) and $valCinF[$i]!="")
-                                            {
-                                                try {
-                                                    $debExist = $this->integrationRepo->testDebiteurDbi1($valCinF[$i]);
-                                                    if($debExist["exist"] == false)
-                                                    {
-                                                        if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),'Debiteur avec cin '.$valCinF[$i].' n\'existe pas !!')==true)
-                                                        {
-                                                            $countnv++;
-                                                        }
-                                                    }
-                                                    else
-                                                    {
-                                                        // $idDeb=$idDeb->getId();
-                                                        $sql="insert into `debt_force_integration`.`proc_dbi`(id_import".$val[$ta["table_bdd"]].") values(".$id_import.$param[$ta["table_bdd"]][$i].")";
-                                                        $stmt = $this->conn->prepare($sql)->executeQuery();
-    
-                                                        // $query = $this->em->createQuery('SELECT max(t.id) from App\Entity\GarantieDbi t');
-                                                        // $garantieMax = $query->getSingleScalarResult();
-    
-                                                        $sql="SELECT max(t.id) FROM   `debt_force_integration`.`proc_dbi` t ";
-                                                        $stmt = $this->conn->prepare($sql);
-                                                        $stmt = $stmt->executeQuery();
-                                                        $garantieMax = $stmt->fetchOne();
-    
-                                                        
-                                                        if($this->integrationRepo->addToLogImportDbi(1,$a->getId(),'Garantie ajouté')==true)
-                                                        {
-                                                            $countv++;
-                                                        }
-                                                        $sql="insert into debt_force_integration.proc_debiteur_dbi( `id_proc`, `id_debiteur`, `origin_deb`,`id_import`) values(".$garantieMax.",".$debExist["deb"].",".$debExist["place"].",".$id_import.")";
-                                                        $stmt = $this->conn->prepare($sql)->executeQuery();
-                                                        // if($this->integrationRepo->addToLogImportDbi(1,$a->getId(),'Débiteur garantie ajouté')==true)
-                                                        // {
-                                                        //     $countv++;
-                                                        // }
-    
-                                                        if($numCreance[$i] != ""){
-                                                            $creanceExist = $this->integrationRepo->testCreanceDbi1($numCreance[$i], $porte_feuille->getId());
-                                                            // $query= $this->em->createQuery("select c from App\Entity\Creance c where c.numero_creance=:num and identity(c.id_ptf) =:idPtf");
-                                                            // $query->setParameter('num', $numCreance[$i]);
-                                                            // $query->setParameter('idPtf', $porte_feuille->getId());
-                                                            // $creance=$query->getSingleResult();
-                                                            if($creanceExist["exist"] == true){
-                                                                $sql="insert into debt_force_integration.proc_creance_dbi( `id_proc`, `id_creance`, `origin_creance`,`id_import`) values(".$garantieMax.",".$creanceExist["creance"].",".$creanceExist["place"].",".$id_import.")";
-                                                                $stmt = $this->conn->prepare($sql)->executeQuery();
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                catch (\Exception $e) {
-                                                    if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),$e->getMessage())==true)
-                                                    {
-                                                        $countnv++;
-                                                    }
-                                                }   
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            //Set l'état d'importation d'import
-                            // $sql="SELECT l.* from logs_actions l where l.etat=0 and l.id_action_id in(select a.id from actions_import a where a.id_import_id = :id)";
-                            // $param=(array("id"=>$importByType->getId() ));
-                            // $error_import = $this->conn->fetchAllAssociative($sql , $param);
-                            // if(count($error_import) == 0){
-                            //     $importByType->setEtat(4);
-                            // }else{
-                            //     $importByType->setEtat(3);
-                            // }
-                            // $this->em->flush();
-                            // $this->verifecationDoublent($a->getId());
-                        }
-                    }
-                }
-
-                //Start 
-                $importByType = $integrationRepo->getOneImportType($integrationId , "adresse");
-                if($importByType){
-                    //Etat en cours
-                    $importByType->setEtat(2);
-                    $this->em->flush();
-                    $id_import = $importByType->getId();
-                    $detailsImp = $integrationRepo->getDetailsImprt($id_import , $ordre);
-    
-                    //grouping les tables by table_bdd 
-                    $query = $this->em->createQuery('SELECT t.table_bdd from App\Entity\ColumnsParams t where t.id
-                        in(select (c.id_col_params) from  App\Entity\CorresColu  c where  c.id_model_import=:idSchema and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type) )group by t.table_bdd');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','adresse');
-                    $tables = $query->getResult();
-                    $tables_adresse = $tables;
-    
-                    $query = $this->em->createQuery('SELECT t.column_name,(t.id_col_params) as id_col_params,t.required  , t.origine from App\Entity\CorresColu t where (t.id_model_import)=:idSchema and t.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type)');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','adresse');
-
-                    $colFile = $query->getResult();
-    
-                    $query = $this->em->createQuery('SELECT t.column_name,(t.id_col_params) as id_col_params,t.required  , t.origine from App\Entity\CorresColu t where t.origin_champ = 2 
-                    and (t.id_model_import)=:idSchema and t.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type )');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','proc');
-                    $colFileC = $query->getResult();
-                    
-                    $query = $this->em->createQuery('SELECT t.table_bdd from App\Entity\ColumnsParams t where t.id in(select (c.id_col_params) 
-                    from App\Entity\CorresColu c where (c.id_model_import)=:idSchema and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type))');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','adresse');
-                    $tableDb = $query->getResult();
-    
-                    $query = $this->em->createQuery('SELECT t.id from App\Entity\ColumnsParams t where t.id in(select (c.id_col_params) 
-                    from App\Entity\CorresColu c where (c.id_model_import)=:idSchema and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type))');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','adresse');
-                    $colDb = $query->getResult();
-    
-                    $param=array();
-                    $val=array();
-                    $response="";
-                    $filePath = $detailsImp->getUrl();
-                    if (($handle = fopen($filePath, "r")) !== FALSE)
-                    {
-                        while (($data = fgetcsv($handle, 1000000, ";")) !== FALSE)
-                        {
-                            break;
-                        }
-                        //Les entétes de fichier excel
-                        $data=array_map("utf8_encode",$data);
-                        $data=array_map('trim', $data);
-                        $data1=array_map("utf8_encode",str_replace(" ","_",$data));
-                        
-                        for ($i=0; $i < count($colFile); $i++) { 
-                            if(!in_array($colFile[$i]["column_name"],$data1))
-                            {
-                                $response="ENTETE_IDENTIQUE";
-                                $codeStatut="ENTETE_IDENTIQUE";
-                            }
-                        }
-                        
-                        if($response == ""){
-                            $a=new actionsImportDbi();
-                            $a->setEtat(0);
-                            $a->setCodeAction("Ajo");
-                            $a->setDateDebut(new \DateTime());
-                            $a->setIdImport($importByType->getId());
-                            $a->setTitre("Ajout");
-                            $emDbi->persist($a);
-                            $emDbi->flush();
-    
-                            // $a = $this->integrationRepo->createActionsImport
-    
-                            $importByType->setEtat(2);
-                            $this->em->flush(); 
-                            foreach($tables as $ta){
-                                $val[$ta["table_bdd"]]="";
-                                if($ta["table_bdd"]=="debiteur")
-                                {
-                                    $val[$ta["table_bdd"]].="cin_formate";
-                                }
-                                for ($i = 0; $i < count($colFile); $i++)
-                                {   
-                                    if(($colFile[$i]["origine"] == 1)){
-                                        $colParam = $this->em->getRepository(ColumnsParams::class)->find($colFile[$i]["id_col_params"]);
-                                        
-                                        if ($colParam->getTableBdd() == $ta["table_bdd"] and $colParam->getTitreCol()!="cin_gestionnaire")
-                                        {
-                                            $val[$ta["table_bdd"]].=",".$colParam->getTitreCol();
-                                        }
-                                    }
-                                }
-                                if($ta["table_bdd"]=="creance")
-                                {
-                                    if(!$this->in_array_r(5,$colDb))
-                                    {
-                                        $val[$ta["table_bdd"]].=",numero_creance";
-                                    }
-                                }
-                            }
-    
-                            $data=$this->convert($filePath,";");
-                            $valCinF=array();
-                            $valCin=array();
-                            foreach ($tables as $ta){
-                                if($data){
-                                    $countRow=0;
-                                    foreach ($data as $row)
-                                    {
-                                        $valCin[$countRow]="";
-                                        $valCinF[$countRow]="";
-                                        $valRaison[$countRow]="";
-                                        $cinGest[$countRow]="";
-                                        $id_debiteur[$countRow]="";
-                                        $param[$ta["table_bdd"]][$countRow]="";
-
-                                        $champ[$countRow]="";
-                                        
-                                        for ($i=0; $i <count($colFileC) ; $i++) 
-                                        { 
-                                            $champ[$countRow."-".$i] = $row[$colFileC[$i]["column_name"]];
-                                        }
-                                        for ($i = 0; $i < count($colFile); $i++)
-                                        {
-                                            if($colDb[$i]["id"]==75 and $row[$colFile[$i]["nomCol"]]!="")
-                                            {
-                                                $gest = $this->em->getRepository(Utilisateurs::class)->findOneBy(["cin"=>$row[$colFile[$i]["nomCol"]]]);
-                                                if($gest)
-                                                {
-                                                    $cinGest[$countRow]=$gest->getId();
-                                                }
-                                            }
-                                            if($colDb[$i]["id"]==23)
-                                            {
-                                                $cin=$row[$colFile[$i]["column_name"]];
-                                                $valCin[$countRow]=$cin;
-                                                $valCinF[$countRow]=strtoupper(preg_replace('/[^A-Za-z0-9]+/',"", $cin));
-                                                if(!$this->in_array_r(5,$colDb))
-                                                {
-                                                    $numCreance[$countRow]="Sys".$valCinF[$countRow]."-".($countRow+1);
-                                                }
-                                            }
-                                            if($colDb[$i]["id"]==5)
-                                            {
-                                                $numCreance[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==15)
-                                            {
-                                                $row[$colFile[$i]["column_name"]]=str_replace(" ","",$row[$colFile[$i]["column_name"]]);
-                                            }
-                                            if($colDb[$i]["id"]==65)
-                                            {
-                                                $numDossier[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==167)
-                                            {
-                                                $principale[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==168)
-                                            {
-                                                $frais[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==185)
-                                            {
-                                                $id_debiteur[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==178)
-                                            {
-                                                $typeAdresse[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            $colParam = $this->em->getRepository(ColumnsParams::class)->find($colFile[$i]["id_col_params"]);
-                                            if ($colParam->getTableBdd() == $ta["table_bdd"])
-                                            {
-                                                $isDate = $this->em->getRepository(ColumnsParams::class)->find($colDb[$i]["id"]);
-                                                    if ($isDate->getIsDate() == 1 and \DateTime::createFromFormat('d/m/Y', $row[$colFile[$i]["column_name"]])==true)
-                                                    {
-                                                        $valueDate=\DateTime::createFromFormat('d/m/Y', $row[$colFile[$i]["column_name"]])->format("d-m-Y");
-                                                        $param[$ta["table_bdd"]][$countRow].= ",'" . date_format(new \DateTime($valueDate), 'Y-m-d H:i:s') . "'";
-                                                    }
-                                                    else
-                                                    {
-                                                        if($colDb[$i]["id"]!=75)
-                                                        {
-                                                            $param[$ta["table_bdd"]][$countRow].= ",'" . $row[$colFile[$i]["column_name"]] . "'";
-                                                        }
-                                                    }
-                                                    if($colFile[$i]["required"] == 1 and empty($row[$colFile[$i]["column_name"]]))
-                                                    {
-                                                        unset($param[$ta["table_bdd"]][$countRow]);
-                                                    }
-                                            }
-                                        }
-                                        
-                                        if($ta["table_bdd"]=="creance" and $this->in_array_r("creance",$tableDb))
-                                        {
-                                            if(!$this->in_array_r(5,$colDb))
-                                            {
-                                                $param[$ta["table_bdd"]][$countRow].= ",'Sys" . $valCinF[$countRow] . "-".($countRow+1)."'";
-                                            }
-                                        }
-                                        $countRow++;
-                                    }
-                                }
-                            }
-                            $model = $importByType->getIdModel()->getId();
-                            $query = $this->em->createQuery('SELECT t from App\Entity\CorresColu t where t.id_model_import = :idSchema 
-                            and t.id_col_params is null 
-                            and t.id_model_import in (select m.id from App\Entity\ModelImport m where m.type = :type) ');
-                            $query->setParameter('idSchema', $model);
-                            $query->setParameter('type','adresse');
-                            $champPersonalise = $query->getResult();
-
-                            if(count($val)>0 and count($param)>0)
-                            {
-                                $nameTable="adresse";
-                                if($ta["table_bdd"]==$nameTable)
-                                {
-                                    $lastKey = key(array_slice($param[$ta["table_bdd"]], -1, 1, true));
-                                    for($i=0;$i<($lastKey+1);$i++)
-                                    {
-                                        
-                                        // dump($param[$ta["table_bdd"]][$i]);
-                                        if(array_key_exists($i,$param[$ta["table_bdd"]]) and $id_debiteur[$i]!="")
-                                        {
-                                            try {
-                                                $debExist = $this->integrationRepo->testDebiteurIdDeb($id_debiteur[$i],$integrationId);
-                                                if($debExist["exist"] == false)
-                                                {
-                                                    if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),'Debiteur n\'existe pas !!')==true)
-                                                    {
-                                                        $countnv++;
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    $typeAd = 0;
-                                                    if($typeAdresse[$i] != ""){
-                                                        $type_adresse = $integrationRepo->findTypeAdresse($typeAdresse[$i]);
-                                                        if($type_adresse){
-                                                            $typeAd = $type_adresse->getId();
-                                                            $sql="insert into debt_force_integration.adresse_dbi(id_type_adresse,id_debiteur".$val[$ta["table_bdd"]].",origin_deb , id_import) values(".$typeAd.",".$debExist["deb"].$param[$ta["table_bdd"]][$i].",".$debExist["place"].",".$id_import.")";
-
-                                                            $stmt = $this->conn->prepare($sql)->executeQuery();
-                                                            if($this->integrationRepo->addToLogImportDbi(1,$a->getId(),'Adresse ajouté')==true)
-                                                            {
-                                                                $countv++;
-                                                            }
-                                                        }
-                                                    }else{
-                                                        if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),'Type adresse '.$typeAdresse[$i].' n\'existe pas !!')==true)
-                                                        {
-                                                            $countnv++;
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            catch (\Exception $e) {
-                                                if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),$e->getMessage())==true)
-                                                {
-                                                    $countnv++;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            
-                            if(1)
-                            {
-    
-                                // /*
-                                //     ETAT Si creance d"ja exite 3
-                                //     ETAT Si exeption 2
-                                //     ETAT Si debiteur n'existe pas 4
-                                //     L'état debiteur si l'opération éffectue 
-                                // */
-
-                                $idSchema = $importByType->getIdModel()->getId();
-                                $colDb=$this->em
-                                    ->createQuery("select t.champs from App\Entity\ImportType t where t.id_model=:idSchema")
-                                    ->setParameter("idSchema",$idSchema)
-                                    ->getResult();
-                                $colFile=$this->em
-                                    ->createQuery("select t.nom_col,t.tableBdd from App\Entity\ImportType t where t.id_model=:idSchema")
-                                    ->setParameter("idSchema",$idSchema)
-                                    ->getResult();
-                                $ville=array();
-                                $pays=array();
-                                $status=array();
-                                $region=array();
-                                $cp=array();
-                                $codePostal=array();
-                                $province=array();
-                                $source=array();
-                                $note=array();
-                                $note2=array();
-                                $note3=array();
-                                $numero2=array();
-                                $numero3=array();
-                                $status2=array();
-                                $status3=array();
-
-                            }
-                        }
-                    }
-                }
-
-                //END
-
-                //Start
-                $importByType = $integrationRepo->getOneImportType($integrationId , "telephone");
-    
-
-                if($importByType){
-                    //Etat en cours
-                    $importByType->setEtat(2);
-                    $this->em->flush();
-    
-                    $id_import = $importByType->getId();
-    
-                    $detailsImp = $integrationRepo->getDetailsImprt($id_import , $ordre);
-    
-                    //grouping les tables by table_bdd 
-                    $query = $this->em->createQuery('SELECT t.table_bdd from App\Entity\ColumnsParams t where t.id
-                        in(select (c.id_col_params) from  App\Entity\CorresColu  c where  c.id_model_import=:idSchema and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type) )group by t.table_bdd');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','telephone');
-                    $tables = $query->getResult();
-                    $tables_telephone = $tables;
-    
-                    $query = $this->em->createQuery('SELECT t.column_name,(t.id_col_params) as id_col_params,t.required  , t.origine from App\Entity\CorresColu t where (t.id_model_import)=:idSchema and t.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type)');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','telephone');
-                    $colFile = $query->getResult();
-
-                    $query = $this->em->createQuery('SELECT t.column_name,(t.id_col_params) as id_col_params,t.required  , t.origine from App\Entity\CorresColu t where t.origin_champ = 2 
-                    and (t.id_model_import)=:idSchema and t.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type )');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','telephone');
-                    $colFileC = $query->getResult();
-    
-                    $query = $this->em->createQuery('SELECT t.table_bdd from App\Entity\ColumnsParams t where t.id in(select (c.id_col_params) 
-                    from App\Entity\CorresColu c where (c.id_model_import)=:idSchema and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type))');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','telephone');
-                    $tableDb = $query->getResult();
-    
-                    $query = $this->em->createQuery('SELECT t.id from App\Entity\ColumnsParams t where t.id in(select (c.id_col_params) 
-                    from App\Entity\CorresColu c where (c.id_model_import)=:idSchema and c.id_model_import in(select m.id from App\Entity\ModelImport m where m.type = :type))');
-                    $query->setParameter('idSchema', $importByType->getIdModel()->getId());
-                    $query->setParameter('type','telephone');
-                    $colDb = $query->getResult();
-
-                    $param=array();
-                    $val=array();
-                    $response="";
-    
-                    $filePath = $detailsImp->getUrl();
-                    if (($handle = fopen($filePath, "r")) !== FALSE)
-                    {
-                        while (($data = fgetcsv($handle, 1000000, ";")) !== FALSE)
-                        {
-                            break;
-                        }
-                        //Les entétes de fichier excel
-                        $data=array_map("utf8_encode",$data);
-                        $data=array_map('trim', $data);
-                        $data1=array_map("utf8_encode",str_replace(" ","_",$data));
-                        
-                        for ($i=0; $i < count($colFile); $i++) { 
-                            if(!in_array($colFile[$i]["column_name"],$data1))
-                            {
-                                $response="ENTETE_IDENTIQUE";
-                                $codeStatut="ENTETE_IDENTIQUE";
-                            }
-                        }
-                        if($response == ""){
-                            $a=new actionsImportDbi();
-                            $a->setEtat(0);
-                            $a->setCodeAction("Ajo");
-                            $a->setDateDebut(new \DateTime());
-                            $a->setIdImport($importByType->getId());
-                            $a->setTitre("Ajout");
-                            $emDbi->persist($a);
-                            $emDbi->flush();
-                            // $a = $this->integrationRepo->createActionsImport
-                            $importByType->setEtat(2);
-                            $this->em->flush(); 
-                            foreach($tables as $ta){
-                                $val[$ta["table_bdd"]]="";
-                                if($ta["table_bdd"]=="debiteur")
-                                {
-                                    $val[$ta["table_bdd"]].="cin_formate";
-                                }
-                                for ($i = 0; $i < count($colFile); $i++)
-                                {   
-                                    if(($colFile[$i]["origine"] == 1)){
-                                        $colParam = $this->em->getRepository(ColumnsParams::class)->find($colFile[$i]["id_col_params"]);
-                                        
-                                        if ($colParam->getTableBdd() == $ta["table_bdd"] and $colParam->getTitreCol()!="cin_gestionnaire")
-                                        {
-                                            $val[$ta["table_bdd"]].=",".$colParam->getTitreCol();
-                                        }
-                                    }
-                                }
-                                if($ta["table_bdd"]=="creance")
-                                {
-                                    if(!$this->in_array_r(5,$colDb))
-                                    {
-                                        $val[$ta["table_bdd"]].=",numero_creance";
-                                    }
-                                }
-                            }
-    
-                            $data=$this->convert($filePath,";");
-                            $valCinF=array();
-                            $valCin=array();
-                            foreach ($tables as $ta){
-                                if($data){
-                                    $countRow=0;
-                                    foreach ($data as $row)
-                                    {
-                                        $valCin[$countRow]="";
-                                        $valCinF[$countRow]="";
-                                        $valRaison[$countRow]="";
-                                        $cinGest[$countRow]="";
-                                        $id_debiteur[$countRow]="";
-                                        $param[$ta["table_bdd"]][$countRow]="";
-
-                                        $champ[$countRow]="";
-                                        
-                                        for ($i=0; $i <count($colFileC) ; $i++) 
-                                        { 
-                                            $champ[$countRow."-".$i] = $row[$colFileC[$i]["column_name"]];
-                                        }
-
-                                        for ($i = 0; $i < count($colFile); $i++)
-                                        {
-                                            if($colDb[$i]["id"]==75 and $row[$colFile[$i]["nomCol"]]!="")
-                                            {
-                                                $gest = $this->em->getRepository(Utilisateurs::class)->findOneBy(["cin"=>$row[$colFile[$i]["nomCol"]]]);
-                                                if($gest)
-                                                {
-                                                    $cinGest[$countRow]=$gest->getId();
-                                                }
-                                            }
-                                            if($colDb[$i]["id"]==23)
-                                            {
-                                                $cin=$row[$colFile[$i]["column_name"]];
-                                                $valCin[$countRow]=$cin;
-                                                $valCinF[$countRow]=strtoupper(preg_replace('/[^A-Za-z0-9]+/',"", $cin));
-                                                if(!$this->in_array_r(5,$colDb))
-                                                {
-                                                    $numCreance[$countRow]="Sys".$valCinF[$countRow]."-".($countRow+1);
-                                                }
-                                            }
-                                            if($colDb[$i]["id"]==5)
-                                            {
-                                                $numCreance[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==15)
-                                            {
-                                                $row[$colFile[$i]["column_name"]]=str_replace(" ","",$row[$colFile[$i]["column_name"]]);
-                                            }
-                                            if($colDb[$i]["id"]==65)
-                                            {
-                                                $numDossier[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==167)
-                                            {
-                                                $principale[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==168)
-                                            {
-                                                $frais[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==178)
-                                            {
-                                                $typeTelephone[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            if($colDb[$i]["id"]==185)
-                                            {
-                                                $id_debiteur[$countRow]=$row[$colFile[$i]["column_name"]];
-                                            }
-                                            $colParam = $this->em->getRepository(ColumnsParams::class)->find($colFile[$i]["id_col_params"]);
-                                            if ($colParam->getTableBdd() == $ta["table_bdd"])
-                                            {
-                                                $isDate = $this->em->getRepository(ColumnsParams::class)->find($colDb[$i]["id"]);
-                                                    if ($isDate->getIsDate() == 1 and \DateTime::createFromFormat('d/m/Y', $row[$colFile[$i]["column_name"]])==true)
-                                                    {
-                                                        $valueDate=\DateTime::createFromFormat('d/m/Y', $row[$colFile[$i]["column_name"]])->format("d-m-Y");
-                                                        $param[$ta["table_bdd"]][$countRow].= ",'" . date_format(new \DateTime($valueDate), 'Y-m-d H:i:s') . "'";
-                                                    }
-                                                    else
-                                                    {
-                                                        if($colDb[$i]["id"]!=75)
-                                                        {
-                                                            $param[$ta["table_bdd"]][$countRow].= ",'" . $row[$colFile[$i]["column_name"]] . "'";
-                                                        }
-                                                    }
-                                                    if($colFile[$i]["required"] == 1 and empty($row[$colFile[$i]["column_name"]]))
-                                                    {
-                                                        unset($param[$ta["table_bdd"]][$countRow]);
-                                                    }
-                                            }
-                                        }
-                                        
-                                        if($ta["table_bdd"]=="creance" and $this->in_array_r("creance",$tableDb))
-                                        {
-                                            if(!$this->in_array_r(5,$colDb))
-                                            {
-                                                $param[$ta["table_bdd"]][$countRow].= ",'Sys" . $valCinF[$countRow] . "-".($countRow+1)."'";
-                                            }
-                                        }
-                                        $countRow++;
-                                    }
-                                }
-                            }
-                            $model = $importByType->getIdModel()->getId();
-                            $query = $this->em->createQuery('SELECT t from App\Entity\CorresColu t where t.id_model_import = :idSchema 
-                            and t.id_col_params is null 
-                            and t.id_model_import in (select m.id from App\Entity\ModelImport m where m.type = :type) ');
-                            $query->setParameter('idSchema', $model);
-                            $query->setParameter('type','telephone');
-                            $champPersonalise = $query->getResult();
-                            if(count($val)>0 and count($param)>0)
-                            {
-                                $nameTable="telephone";
-                                if($ta["table_bdd"]==$nameTable)
-                                {
-                                    $lastKey = key(array_slice($param[$ta["table_bdd"]], -1, 1, true));
-                                    for($i=0;$i<($lastKey+1);$i++)
-                                    {
-                                        // dump($param[$ta["table_bdd"]][$i]);
-                                        if(array_key_exists($i,$param[$ta["table_bdd"]]) and $valCinF[$i]!="")
-                                        {
-                                            try {
-                                                $debExist = $this->integrationRepo->testDebiteurIdDeb($id_debiteur[$i],$integrationId);
-                                                if($debExist["exist"] == false)
-                                                {
-                                                    if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),'Debiteur n\'existe pas !!')==true)
-                                                    {
-                                                        $countnv++;
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    if($typeTelephone[$i] != ""){
-                                                        $type_telephone = $integrationRepo->findtypeTelephone($typeTelephone[$i]);
-                                                        if($type_telephone){
-                                                            $typeTel = $type_telephone->getId();
-                                                            $sql="insert into debt_force_integration.telephone_dbi(id_type_telephone,id_debiteur".$val[$ta["table_bdd"]].",origin_deb , id_import) values(".$typeTel.",".$debExist["deb"].$param[$ta["table_bdd"]][$i].",".$debExist["place"].",".$id_import.")";
-                                                            $stmt = $this->conn->prepare($sql)->executeQuery();
-                                                            if($this->integrationRepo->addToLogImportDbi(1,$a->getId(),'Téléphone ajouté')==true)
-                                                            {
-                                                                $countv++;
-                                                            }
-                                                        }
-                                                    }else{
-                                                        if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),'Type adresse '.$typeAdresse[$i].' n\'existe pas !!')==true)
-                                                        {
-                                                            $countnv++;
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            catch (\Exception $e) {
-                                                if($this->integrationRepo->addToLogImportDbi(0,$a->getId(),$e->getMessage())==true)
-                                                {
-                                                    $countnv++;
-                                                }
-                                            }   
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            //Set l'état d'importation d'import
-                            // $sql="SELECT l.* from logs_actions l where l.etat=0 and l.id_action_id in(select a.id from actions_import a where a.id_import_id = :id)";
-                            // $param=(array("id"=>$importByType->getId() ));
-                            // $error_import = $this->conn->fetchAllAssociative($sql , $param);
-                            // if(count($error_import) == 0){
-                            //     $importByType->setEtat(4);
-                            // }else{
-                            //     $importByType->setEtat(3);
-                            // }
-                            // $this->em->flush();
-                            // $this->verifecationDoublent($a->getId());
-                        }
-                    }
-                }
-
-                //END
-                //END
-
-                
-
-                
-
-                // Set l'état d'integration d'import
-                // $sql = "SELECT l.* from import l where l.id_integration_id  = :id AND l.etat = 3 or l.etat = 4 ";
-                // $param=(array("id"=>$integrationId ));
-                // $imports = $this->conn->fetchAllAssociative($sql , $param);
-                // if(count($imports) == 3){
-                //     $sql="SELECT l.* from logs_actions l where l.etat=0 and l.id_action_id in(select a.id from actions_import a where a.id_import_id in (select i.id FROM import i where i.id_integration_id  = :id ))";
-                //     $param=(array("id"=>$integrationId ));
-                //     $error = $this->conn->fetchAllAssociative($sql , $param);
-                    
-                //     if(count($error) == 0){
-                //         $IntegrationNonCommencer[$t]->setEtat(4);
-                //     }else{
-                //         $IntegrationNonCommencer[$t]->setEtat(3);
-                //     }
-                //     $this->em->flush();
-                // }
-                // $IntegrationNonCommencer[$t]->setEtat(4);
-                // $this->em->flush();
-
-                //todo
-                $sql="update integration set status_id = 4 , `date_fin_execution_".$ordre."`=now() where id = ".$IntegrationNonCommencer[$t]->getId()."";
-                $stmt = $this->conn->prepare($sql)->executeQuery();
-            }
-        }
-        $respObjects["codeStatut"] = $codeStatut;
-        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
-        return $this->json($respObjects);
-    }
+  
 
     #[Route('/importToPROD', methods : ["POST"])]
     public function startIntegrationToDBPROD(integrationRepo $integrationRepo , SerializerInterface $serializer , Request $request ): JsonResponse
@@ -5317,7 +2000,6 @@ class IntegrationController extends AbstractController
                 $sql="UPDATE `integration` SET `status_id` = '6' WHERE `integration`.`id` = ".$integrationId.";";
                 $stmt = $integrationRepo->executeSQL($sql);
                 
-
                 $importByType = $integrationRepo->getOneImportType($integrationId , "debiteur");
                 $a=new ActionsImport();
                 $a->setEtat(0);
@@ -6207,18 +2889,27 @@ class IntegrationController extends AbstractController
             $integration = $integrationRepo->findIntegration($id);
             if($integration){
                 $integration =  $this->em->getRepository(Integration::class)->findOneBy(["id"=>$id]);
-                $models = $this->em->getRepository(Import::class)->findBy(["id_integration"=>$id]);
-                foreach ($models as $m) {
-                    $this->em->remove($m );
+                if($integration->getStatus()->getId() == 1){
+                    $models = $this->em->getRepository(Import::class)->findBy(["id_integration"=>$id]);
+                    foreach ($models as $m) {
+                        $detailsImport = $this->em->getRepository(DetailsImport::class)->findBy(["id_import"=>$m->getId()]);
+                        foreach ($detailsImport as $d) {
+                            $this->em->remove($d);
+                        }
+                        $this->em->remove($m );
+                    }
+                    $this->em->remove($integration);
+                    $this->em->flush();
+                    $codeStatut="OK";
+                }else{
+                    $codeStatut="ACCESS_DELETE";
                 }
-                $this->em->remove($integration);
-                $this->em->flush();
-                $codeStatut="OK";
             }else{
                 $codeStatut="NOT_EXIST_ELEMENT";
             }
         }catch(\Exception $e){
             $codeStatut="ERROR";
+        $respObjects["e"] = $e->getMessage();
         }
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
@@ -6524,6 +3215,7 @@ class IntegrationController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
     
     function in_array_r($needle, $haystack) {
         foreach ($haystack as $item) {
@@ -6723,6 +3415,380 @@ class IntegrationController extends AbstractController
             $codeStatut = "ERREUR";
             $respObjects["err"] = $e->getMessage();
         }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/getPtfForMaj')]
+    public function getPtfForMaj(integrationRepo $integrationRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $data = $integrationRepo->getListePtfForMaj();
+            $codeStatut = "OK";
+            $respObjects["data"] = $data;
+        }catch(\Exception $e){
+            $codeStatut = "ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/importMAJToDBI', methods : ["POST"])]
+    public function importMAJToDBI(integrationRepo $integrationRepo ,ManagerRegistry $doctrine ,  SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        ini_set('memory_limit','-1');
+        ini_set('memory_size','-1');
+        ini_set('max_execution_time','-1');
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        $emDbi = $doctrine->getManager('customer');
+
+        try{
+            $IntegrationNonCommencer = $integrationRepo->getAllIntegrationMAJ();
+            if($IntegrationNonCommencer){
+                for ($t=0; $t <count($IntegrationNonCommencer);$t++) {
+                    try {
+                        $porte_feuille = $IntegrationNonCommencer[$t]->getIdPtf()->getId(); 
+                        $integrationId =  $IntegrationNonCommencer[$t]->getId();
+
+                        if($IntegrationNonCommencer[$t]->getStatus()->getId() == 2){
+                            $sql = 'CALL debt_force_integration.PROC_ROOLBACK_DBI('.$integrationId.');';
+                            $stmt = $integrationRepo->executeSQL($sql);
+
+                            $sql="INSERT INTO `logs_actions_integration`( `id_integration`, `logs`, `date_creation`,`etat`) VALUES (".$integrationId.",'Relancer l\'intégration',now(),1)";
+                            $stmt = $integrationRepo->executeSQL($sql);
+                        }else{
+                            $sql="INSERT INTO `logs_actions_integration`( `id_integration`, `logs`, `date_creation`,`etat`) VALUES (".$integrationId.",'Import dans la base d\'intégration',now(),1)";
+                            $stmt = $integrationRepo->executeSQL($sql);
+                        }
+
+                        $sql="UPDATE `integration` SET `status_id` = '2' WHERE `integration`.`id` = ".$integrationId.";";
+                        $stmt = $integrationRepo->executeSQL($sql);
+                        
+                        $IntegrationNonCommencer[$t]->setDateExecution(new \DateTime()); 
+                        $emDbi->flush();
+                        $this->sauvguardeDataCSV($integrationId);
+                        $importByType = $integrationRepo->getOneImportType($integrationId , "debiteur");
+                        $idModelDeb = $importByType->getIdModel()->getId();
+                        
+                        $a=new actionsImportDbi();
+                        $a->setEtat(0);
+                        $a->setCodeAction("Ajo_deb");
+                        $a->setDateDebut(new \DateTime());
+                        $a->setIdImport($importByType->getId());
+                        $a->setTitre("Ajout");
+                        $emDbi->persist($a);
+                        $emDbi->flush();
+
+                        $sql = 'CALL debt_force_integration.PROC_MAJ_INSERT_DEB_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().');';
+                        
+                        $stmt = $integrationRepo->executeSQL($sql);
+                        $importByType = $integrationRepo->getOneImportType($integrationId , "dossier");
+                        $a=new actionsImportDbi();
+                        $a->setEtat(0);
+                        $a->setCodeAction("Ajo_doss");
+                        $a->setDateDebut(new \DateTime());
+                        $a->setIdImport($importByType->getId());
+                        $a->setTitre("Ajout");
+                        $emDbi->persist($a);
+                        $emDbi->flush();
+                        $sql = 'CALL debt_force_integration.PROC_MAJ_INSERT_DOSSIERS_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.') ;';
+                        $stmt = $integrationRepo->executeSQL($sql);
+                        $importByType = $integrationRepo->getOneImportType($integrationId , "creance");
+        
+                        $a=new actionsImportDbi();
+                        $a->setEtat(0);
+                        $a->setCodeAction("Ajo_creance");
+                        $a->setDateDebut(new \DateTime());
+                        $a->setIdImport($importByType->getId());
+                        $a->setTitre("Ajout");
+                        $emDbi->persist($a);
+                        $emDbi->flush();
+        
+                        $sql = 'CALL debt_force_integration.PROC_MAJ_INSERT_CREANCE_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';                            
+                        $stmt = $integrationRepo->executeSQL($sql);
+                        //TODO:Dossier 
+
+                        //Emploi
+                        $importByType = $integrationRepo->getOneImportType($integrationId , "emploi");
+                        if($importByType){
+                            $a=new actionsImportDbi();
+                            $a->setEtat(0);
+                            $a->setCodeAction("Ajo_emploi");
+                            $a->setDateDebut(new \DateTime());
+                            $a->setIdImport($importByType->getId());
+                            $a->setTitre("Ajout");
+                            $emDbi->persist($a);
+                            $emDbi->flush();
+            
+                            $sql = 'CALL debt_force_integration.PROC_INSERT_EMPLOI_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
+                            $stmt = $integrationRepo->executeSQL($sql);
+                        }
+        
+                        $importByType = $integrationRepo->getOneImportType($integrationId , "employeur");
+                        if($importByType){
+                            $a=new actionsImportDbi();
+                            $a->setEtat(0);
+                            $a->setCodeAction("Ajo_employeur");
+                            $a->setDateDebut(new \DateTime());
+                            $a->setIdImport($importByType->getId());
+                            $a->setTitre("Ajout");
+                            $emDbi->persist($a);
+                            $emDbi->flush();
+            
+                            $sql = 'CALL debt_force_integration.PROC_INSERT_EMPLOYEUR_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
+                            $stmt = $integrationRepo->executeSQL($sql);
+                        }
+
+                        $importByType = $integrationRepo->getOneImportType($integrationId , "proc");
+                        if($importByType){
+                            $a=new actionsImportDbi();
+                            $a->setEtat(0);
+                            $a->setCodeAction("Ajo_proc");
+                            $a->setDateDebut(new \DateTime());
+                            $a->setIdImport($importByType->getId());
+                            $a->setTitre("Ajout");
+                            $emDbi->persist($a);
+                            $emDbi->flush();
+            
+                            $sql = 'CALL debt_force_integration.PROC_INSERT_PROC_JUDU_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
+                            $stmt = $integrationRepo->executeSQL($sql);
+                        }
+        
+                        $importByType = $integrationRepo->getOneImportType($integrationId , "garantie");
+                        if($importByType){
+                            $a=new actionsImportDbi();
+                            $a->setEtat(0);
+                            $a->setCodeAction("Ajo_garantie");
+                            $a->setDateDebut(new \DateTime());
+                            $a->setIdImport($importByType->getId());
+                            $a->setTitre("Ajout");
+                            $emDbi->persist($a);
+                            $emDbi->flush();
+
+                            $sql = 'CALL debt_force_integration.PROC_INSERT_GARANTIE_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
+                            $stmt = $integrationRepo->executeSQL($sql);
+                        }
+
+                        $importByType = $integrationRepo->getOneImportType($integrationId , "telephone");
+                        if($importByType){
+                            $a=new actionsImportDbi();
+                            $a->setEtat(0);
+                            $a->setCodeAction("Ajo_telephone");
+                            $a->setDateDebut(new \DateTime());
+                            $a->setIdImport($importByType->getId());
+                            $a->setTitre("Ajout");
+                            $emDbi->persist($a);
+                            $emDbi->flush();
+
+                            $sql = 'CALL debt_force_integration.PROC_INSERT_TEL_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
+                            dump($sql);
+                            $stmt = $integrationRepo->executeSQL($sql);
+                        }
+
+                        $importByType = $integrationRepo->getOneImportType($integrationId , "adresse");
+                        if($importByType){
+                            $a=new actionsImportDbi();
+                            $a->setEtat(0);
+                            $a->setCodeAction("Ajo_adresse");
+                            $a->setDateDebut(new \DateTime());
+                            $a->setIdImport($importByType->getId());
+                            $a->setTitre("Ajout");
+                            $emDbi->persist($a);
+                            $emDbi->flush();
+            
+                            $sql = 'CALL debt_force_integration.PROC_INSERT_ADRESSE_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
+                            
+                            $stmt = $integrationRepo->executeSQL($sql);
+                        }
+                        $importByType = $integrationRepo->getOneImportType($integrationId , "email");
+                        if($importByType){
+                            $a=new actionsImportDbi();
+                            $a->setEtat(0);
+                            $a->setCodeAction("Ajo_email");
+                            $a->setDateDebut(new \DateTime());
+                            $a->setIdImport($importByType->getId());
+                            $a->setTitre("Ajout");
+                            $emDbi->persist($a);
+                            $emDbi->flush();
+                            $sql = 'CALL debt_force_integration.PROC_INSERT_EMAIL_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
+                            $stmt = $integrationRepo->executeSQL($sql);
+                        }
+                        
+                        $sql="update integration set status_id = 4 , `date_fin_execution_1`=now() where id = ".$IntegrationNonCommencer[$t]->getId()."";
+                        $stmt = $this->conn->prepare($sql)->executeQuery();
+                        $sql="INSERT INTO `logs_actions_integration`( `id_integration`, `logs`, `date_creation`,`etat`) VALUES (".$integrationId.",'Intégration terminée',now(),1)";
+                        $stmt = $integrationRepo->executeSQL($sql);
+                        $codeStatut="OK";
+
+                    } catch (\Exception $e) {
+                        $sql="UPDATE `integration` SET `status_id` = '3' WHERE `integration`.`id` = ".$integrationId.";";
+                        $stmt = $integrationRepo->executeSQL($sql);
+                        $sql="INSERT INTO `logs_actions_integration`( `id_integration`, `logs`, `date_creation`,`etat`) VALUES (".$integrationId.",'".$e->getMessage()."',now(),0)";
+                        $stmt = $integrationRepo->executeSQL($sql);
+                    }
+                }
+            }
+        }
+        catch(\Exception $e){
+            $codeStatut = "ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/importMAJToPROD', methods : ["POST"])]
+    public function startIntegrationMAJToDBPROD(integrationRepo $integrationRepo , SerializerInterface $serializer , Request $request ): JsonResponse
+    {
+        ini_set('memory_limit','-1');
+        ini_set('memory_size','-1');
+        ini_set('max_execution_time','-1');
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        $IntegrationNonCommencer = $integrationRepo->getAllInegrationByStatus6();
+
+        if($IntegrationNonCommencer){
+            for ($t=0; $t <count($IntegrationNonCommencer) ; $t++) { 
+                $integrationId =  $IntegrationNonCommencer[$t]->getId();
+
+                if($IntegrationNonCommencer[$t]->getStatus()->getId() == 6){
+                    $sql = 'CALL debt_force_integration.PROC_ROOLBACK('.$integrationId.');';
+                    $stmt = $integrationRepo->executeSQL($sql);
+
+                    $sql="INSERT INTO `logs_actions_integration`( `id_integration`, `logs`, `date_creation`,`etat`) VALUES (".$integrationId.",'Relancer l\'intégration',now(),1)";
+                    $stmt = $integrationRepo->executeSQL($sql);
+                }else{
+                    $sql="INSERT INTO `logs_actions_integration`( `id_integration`, `logs`, `date_creation`,`etat`) VALUES (".$integrationId.",'Import dans la base production',now(),1)";
+                    $stmt = $integrationRepo->executeSQL($sql);
+                }
+
+                $sql="UPDATE `integration` SET `status_id` = '6' WHERE `integration`.`id` = ".$integrationId.";";
+                $stmt = $integrationRepo->executeSQL($sql);
+                
+                $importByType = $integrationRepo->getOneImportType($integrationId , "debiteur");
+                $a=new ActionsImport();
+                $a->setEtat(0);
+                $a->setCodeAction("Ajo");
+                $a->setDateDebut(new \DateTime());
+                $a->setIdImport($importByType);
+                $a->setTitre("Ajout");
+                $this->em->persist($a);
+                $this->em->flush();
+
+                $integrationRepo->insertDebFromDbiToProd($integrationId,$importByType->getId(),$a->getId());
+
+                $importByType = $integrationRepo->getOneImportType($integrationId , "dossier");
+                $a=new ActionsImport();
+                $a->setEtat(0);
+                $a->setCodeAction("Ajo");
+                $a->setDateDebut(new \DateTime());
+                $a->setIdImport($importByType);
+                $a->setTitre("Ajout");
+                $this->em->persist($a);
+                $this->em->flush();
+
+                $integrationRepo->insertDossierFromDbiToProd($integrationId ,$importByType->getId() , $a->getId());
+
+                $importByType = $integrationRepo->getOneImportType($integrationId , "creance");
+                $a=new ActionsImport();
+                $a->setEtat(0);
+                $a->setCodeAction("Ajo");
+                $a->setDateDebut(new \DateTime());
+                $a->setIdImport($importByType);
+                $a->setTitre("Ajout");
+                $this->em->persist($a);
+                $this->em->flush();
+
+                $integrationRepo->insertCreanceMAJFromDbiToProd($integrationId ,$importByType->getId() , $a->getId());
+                
+                $importByType = $integrationRepo->getOneImportType($integrationId , "emploi");
+                if($importByType){
+                    $a=new ActionsImport();
+                    $a->setEtat(0);
+                    $a->setCodeAction("Ajo");
+                    $a->setDateDebut(new \DateTime());
+                    $a->setIdImport($importByType);
+                    $a->setTitre("Ajout");
+                    $this->em->persist($a);
+                    $this->em->flush();
+    
+                    $integrationRepo->insertEmploiFromDbiToProd($integrationId ,$importByType->getId() , $a->getId());
+                }
+
+                $importByType = $integrationRepo->getOneImportType($integrationId , "employeur");
+                if($importByType){
+                    $a=new ActionsImport();
+                    $a->setEtat(0);
+                    $a->setCodeAction("Ajo");
+                    $a->setDateDebut(new \DateTime());
+                    $a->setIdImport($importByType);
+                    $a->setTitre("Ajout");
+                    $this->em->persist($a);
+                    $this->em->flush();
+                    
+                    $integrationRepo->insertEmployeurFromDbiToProd($integrationId ,$importByType->getId() , $a->getId());
+                }
+
+                $importByType = $integrationRepo->getOneImportType($integrationId , "telephone");
+                if($importByType){
+                    $a=new ActionsImport();
+                    $a->setEtat(0);
+                    $a->setCodeAction("Ajo");
+                    $a->setDateDebut(new \DateTime());
+                    $a->setIdImport($importByType);
+                    $a->setTitre("Ajout");
+                    $this->em->persist($a);
+                    $this->em->flush();
+                    
+                    $integrationRepo->insertTelephoneFromDbiToProd($integrationId ,$importByType->getId() , $a->getId());
+                }
+                $importByType = $integrationRepo->getOneImportType($integrationId , "adresse");
+                if($importByType){
+                    $a=new ActionsImport();
+                    $a->setEtat(0);
+                    $a->setCodeAction("Ajo");
+                    $a->setDateDebut(new \DateTime());
+                    $a->setIdImport($importByType);
+                    $a->setTitre("Ajout");
+                    $this->em->persist($a);
+                    $this->em->flush();
+
+                    $integrationRepo->insertAdresseFromDbiToProd($integrationId ,$importByType->getId() , $a->getId());
+                }
+
+                /*$importByType = $integrationRepo->getOneImportType($integrationId , "emploi");
+                $integrationRepo->insertEmploiFromDbiToProd($importByType->getId());
+
+                $importByType = $integrationRepo->getOneImportType($integrationId , "dossier");
+                $integrationRepo->insertDossierFromDbiToProd($importByType->getId());
+
+                $importByType = $integrationRepo->getOneImportType($integrationId , "creance");
+                $integrationRepo->insertCreanceFromDbiToProd($importByType->getId());
+
+                $importByType = $integrationRepo->getOneImportType($integrationId , "garantie");
+                $integrationRepo->insertGarantieDebiteurFromDbiToProd($importByType->getId());
+                $integrationRepo->insertGarantieFromDbiToProd($importByType->getId());
+
+                $integrationRepo->insertGarantieCreanceFromDbiToProd($importByType->getId());
+                $importByType = $integrationRepo->getOneImportType($integrationId , "proc");
+                $integrationRepo->insertProcFromDbiToProd($importByType->getId());
+                $integrationRepo->insertProcDebiteurFromDbiToProd($importByType->getId());
+                $integrationRepo->insertProcCreanceFromDbiToProd($importByType->getId());*/
+                //todo
+                $sql="update integration set status_id = 8 , `date_fin_execution_2`=now() where id = ".$IntegrationNonCommencer[$t]->getId()."";
+                $stmt = $this->conn->prepare($sql)->executeQuery();
+
+                $sql="INSERT INTO `logs_actions_integration`( `id_integration`, `logs`, `date_creation`,`etat`) VALUES (".$integrationId.",'Intégration production terminée',now(),1)";
+                $stmt = $integrationRepo->executeSQL($sql);
+
+                $codeStatut='OK';
+            }
+        }
+
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);

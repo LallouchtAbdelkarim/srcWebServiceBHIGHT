@@ -78,7 +78,8 @@ class MessageService
          "RESPONSABILITY_ERROR"=>"Veuillez vérifier la responsabilité de l'utilisateur!",
          "FORMAT_INCORRECT"=>"Veuillez vérifier que le format du téléphone !",
          "INVALID_EMAIL"=>"Veuillez vérifier que le format du email !",
-         "IN_DONNEUR"=>"Votre modèle exist dans un donneur ordre !"
+         "IN_DONNEUR"=>"Votre modèle exist dans un donneur ordre !",
+         "ACCESS_DELETE"=>"Impossible de supprimer cet élément !"
         );
         return $listMessage[$CODEERROR];
     }

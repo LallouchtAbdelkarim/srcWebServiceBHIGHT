@@ -55,7 +55,6 @@ class competencesController extends AbstractController
     public function index(competenceRepo $competenceRepo , Request $request): JsonResponse
     {
         $this->AuthService->checkAuth(0,$request);
-
         $respObjects =array();
         $codeStatut = "ERREUR";
         try{

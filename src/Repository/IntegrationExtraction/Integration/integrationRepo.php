@@ -380,7 +380,7 @@ class integrationRepo extends ServiceEntityRepository
         }
     }
     public function getAllInegrationByStatus2(){
-        $resultList = $this->em->getRepository(Integration::class)->findBy(["status" => [1, 2]]);
+        $resultList = $this->em->getRepository(Integration::class)->findBy(["status" => [1, 2] , "isMaj"=>0]);
         if($resultList){
             return $resultList; 
         }else{
@@ -1229,5 +1229,29 @@ class integrationRepo extends ServiceEntityRepository
     public function getListeModelExport($type){
         $entity = $this->em->getRepository(ModelExport::class)->findBy(['type'=>$type]);
         return $entity;
+    }
+    public function getListePtfForMaj(){
+        $query = $this->em->createQuery('SELECT t from App\Entity\Portefeuille t where t.id in (SELECT identity(i.id_ptf) from App\Entity\Integration i )');
+        $tables = $query->getResult();
+
+        if($tables){
+            return $tables;
+        }else{
+            return null;
+        }
+    }
+    public function getAllIntegrationMAJ(){
+        $resultList = $this->em->getRepository(Integration::class)->findBy(["status" => [1, 2] , "isMaj"=>1]);
+        if($resultList){
+            return $resultList; 
+        }else{
+            return null;
+        }
+    }
+
+    function insertCreanceMAJFromDbiToProd($idIntegration ,$id_import , $id_action){
+        $sql = "CALL debt_force_integration.PROC_MAJ_INSERT_CREANCE_PROD(".$idIntegration." , ".$id_import." , ".$id_action.")";
+        $stmt = $this->conn->prepare($sql); 
+        $stmt = $stmt->executeQuery();
     }
 }

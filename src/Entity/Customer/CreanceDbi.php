@@ -58,6 +58,12 @@ class CreanceDbi
 
     #[ORM\Column(nullable: true)]
     private ?int $id_creance_import = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $isExist = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $id_creance_exist = null;
     public function getId(): ?int
     {
         return $this->id;
@@ -237,6 +243,30 @@ class CreanceDbi
     public function setIdCreanceImport(?int $id_creance_import): static
     {
         $this->id_creance_import = $id_creance_import;
+
+        return $this;
+    }
+
+    public function getIsExist(): ?int
+    {
+        return $this->isExist;
+    }
+
+    public function setIsExist(?int $isExist): static
+    {
+        $this->isExist = $isExist;
+
+        return $this;
+    }
+
+    public function getIdCreanceExist(): ?int
+    {
+        return $this->id_creance_exist;
+    }
+
+    public function setIdCreanceExist(?int $id_creance_exist): static
+    {
+        $this->id_creance_exist = $id_creance_exist;
 
         return $this;
     }
