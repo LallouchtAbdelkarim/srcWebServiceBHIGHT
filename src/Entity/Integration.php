@@ -50,6 +50,9 @@ class Integration
 
     #[ORM\Column]
     private ?int $isMaj = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $type = null;
     public function getId(): ?int
     {
         return $this->id;
@@ -194,6 +197,18 @@ class Integration
     public function setIsMaj(int $isMaj): static
     {
         $this->isMaj = $isMaj;
+
+        return $this;
+    }
+
+    public function getType(): ?int
+    {
+        return $this->type;
+    }
+
+    public function setType(?int $type): static
+    {
+        $this->type = $type;
 
         return $this;
     }

@@ -8,6 +8,7 @@ use App\Service\AuthService;
 use App\Service\FileService;
 use App\Service\GeneralService;
 use App\Service\MessageService;
+use App\Service\typeService;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -28,6 +29,7 @@ class ExtractionController extends AbstractController
     private $conn;
     public $AuthService;
     public $MessageService;
+    public $typeService;
     public function __construct(
         
         EntityManagerInterface $em,
@@ -36,7 +38,8 @@ class ExtractionController extends AbstractController
         Connection $conn,
         AuthService $AuthService,
         GeneralService $generalService,
-        extractionRepo $extractionRepo
+        extractionRepo $extractionRepo,
+        typeService $typeService,
         )
     {
         $this->conn = $conn;
@@ -46,6 +49,7 @@ class ExtractionController extends AbstractController
         $this->FileService = $FileService;
         $this->generalService = $generalService;
         $this->extractionRepo = $extractionRepo;
+        $this->typeService = $typeService;
     
     }
     #[Route('/exportCadrage/{typeCreance}/{typeCadrage}/{ptf}/{maxTotal}/{minTotal}/{maxRestant}/{minRestant}')]
@@ -99,6 +103,7 @@ class ExtractionController extends AbstractController
     public function getHistoriqueCadrage(Request $request )
     {
         $codeStatut= "ERROR";
+        $respObjects =array();
         try{
 
             $this->AuthService->checkAuth(0,$request);
@@ -106,6 +111,59 @@ class ExtractionController extends AbstractController
             $data = $this->extractionRepo->getHistoriqueCadrage();
             $codeStatut="OK";
             $respObjects["data"] = $data;
+
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"]=$codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects );
+    }
+
+    #[Route('/getDataForImport')]
+    public function importCadrage(Request $request )
+    {
+        $codeStatut= "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $table=array();
+            $tableObj=array();
+            $j=0;
+            
+            $demandesCadrages=$this->extractionRepo->getHistoriqueCadrage();
+
+            $typesAdresses=$this->typeService->getListeType("adresse");
+            for ($a = 0 ; $a < count($typesAdresses) ; $a++)
+            {
+                $tableObj["table"][$j]="Adresse";
+                $tableObj["obj"][$j]=$typesAdresses[$a]->getType();
+                $j++;
+            }
+
+            $typesTel=$this->typeService->getListeType("telephone");
+            for ($a = 0 ; $a < count($typesTel) ; $a++)
+            {
+                $tableObj["table"][$j]="Tel";
+                $tableObj["obj"][$j]=$typesTel[$a]->getType();
+                $j++;
+            }
+
+            $tableObj["table"][$j]="Banque";
+            $tableObj["obj"][$j]="Banque";$j++;
+            $tableObj["table"][$j]="Titre foncier";
+            $tableObj["obj"][$j]="Titre foncier";$j++;
+            $tableObj["table"][$j]="Cnss";
+            $tableObj["obj"][$j]="Cnss";
+            $table[0]="Adresse";
+            $table[1]="Tel";
+            $table[2]="Banque";
+            $table[3]="Cnss";
+            $table[4]="Titre foncier";
+
+            $respObjects['columns'] = $table;
+            $respObjects['col2'] = $tableObj;
+            $respObjects['demandesCadrages'] = $demandesCadrages;
 
         }catch(\Exception $e){
             $codeStatut="ERROR";

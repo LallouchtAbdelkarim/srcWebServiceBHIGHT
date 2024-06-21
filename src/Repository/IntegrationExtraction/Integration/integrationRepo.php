@@ -273,6 +273,31 @@ class integrationRepo extends ServiceEntityRepository
                 return null;
         }    
     }
+
+    public function getAllColumnsParams2($type){
+        switch ($type) {
+            case 'adresse':
+                $query = $this->em->createQuery('SELECT t.table_bdd, t.id, t.titre_col FROM App\Entity\ColumnsParams t WHERE t.table_bdd = :tb1 OR ( t.table_bdd = :tb3 and t.titre_col = :cin)')
+                    ->setParameters([
+                        'tb1' => 'adresse',
+                        'tb3' => 'debiteur',
+                        'cin' => 'cin',
+                    ]);
+                $tables = $query->getResult();
+                return $tables ?: null;
+            case 'telephone':
+                $query = $this->em->createQuery('SELECT t.table_bdd, t.id, t.titre_col FROM App\Entity\ColumnsParams t WHERE t.table_bdd = :tb1 OR ( t.table_bdd = :tb3 and t.titre_col = :cin)')
+                    ->setParameters([
+                        'tb1' => 'telephone',
+                        'tb3' => 'debiteur',
+                        'cin' => 'cin',
+                    ]);
+                $tables = $query->getResult();
+                return $tables ?: null;
+            default:
+                return null;
+        }    
+    }
     public function getAllModels(){
         $resultList = $this->em->getRepository(ModelImport::class)->findBy([],['id' => 'DESC'] );
         if($resultList){
@@ -380,7 +405,7 @@ class integrationRepo extends ServiceEntityRepository
         }
     }
     public function getAllInegrationByStatus2(){
-        $resultList = $this->em->getRepository(Integration::class)->findBy(["status" => [1, 2] , "isMaj"=>0]);
+        $resultList = $this->em->getRepository(Integration::class)->findBy(["status" => [1, 2] , "isMaj"=>0 ,"type"=>1]);
         if($resultList){
             return $resultList; 
         }else{
@@ -1241,7 +1266,7 @@ class integrationRepo extends ServiceEntityRepository
         }
     }
     public function getAllIntegrationMAJ(){
-        $resultList = $this->em->getRepository(Integration::class)->findBy(["status" => [1, 2] , "isMaj"=>1]);
+        $resultList = $this->em->getRepository(Integration::class)->findBy(["status" => [1, 2] , "isMaj"=>1 , "type"=>1]);
         if($resultList){
             return $resultList; 
         }else{
@@ -1253,5 +1278,13 @@ class integrationRepo extends ServiceEntityRepository
         $sql = "CALL debt_force_integration.PROC_MAJ_INSERT_CREANCE_PROD(".$idIntegration." , ".$id_import." , ".$id_action.")";
         $stmt = $this->conn->prepare($sql); 
         $stmt = $stmt->executeQuery();
+    }
+    public function getAllInegrationCadrageByStatus2(){
+        $resultList = $this->em->getRepository(Integration::class)->findBy(["status" => [1, 2] , "isMaj"=>0 ,"type"=>2]);
+        if($resultList){
+            return $resultList; 
+        }else{
+            return null;
+        }
     }
 }

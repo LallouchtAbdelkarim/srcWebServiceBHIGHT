@@ -173,6 +173,7 @@ class affichageRepo extends ServiceEntityRepository
         return $resultList;
     }
 
+ 
     public function groupingListDetailsModels($id,$type){
         // $sql2 = "SELECT d.table_name FROM `detail_model_affichage` d where d.table_name = :tb1 and d.table_name = :tb2 and d.id_model_affichage_id in (select m.id from model_affichage m where m.id_ptf_id = :id) group by d.table_name";
         // $stmt = $this->conn->prepare($sql2);
