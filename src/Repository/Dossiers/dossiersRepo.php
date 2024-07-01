@@ -365,4 +365,37 @@ class dossiersRepo extends ServiceEntityRepository
         $resulat = $stmt->fetchAllAssociative();
         return $resulat;
     }
+    public function getProcessByIdUser($idDossier , $idUser){
+        $sql="select * from queue_event_user where id_user_id =:idUser and id_status_id = 2 and id_queue_event_id in (select q.id from queue_event q where q.id_element = :idDossier);";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('idUser', $idUser);
+        $stmt->bindParam('idDossier', $idDossier);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAll();
+        
+        for ($i=0; $i < count($resulat); $i++) { 
+            $sql="select * from queue_event where id =:id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam('id', $resulat[$i]['id_queue_event_id']);
+            $stmt = $stmt->executeQuery();
+            $queue = $stmt->fetchAssociative();
+            $resulat[$i]['queue_event'] = $queue; 
+
+            $sql="select * from event_action where id =:id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam('id', $queue['id_event_action_id']);
+            $stmt = $stmt->executeQuery();
+            $action = $stmt->fetchAssociative();
+            $resulat[$i]['event_action'] = $action; 
+
+            $sql="select * from evenement_workflow where id =:id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam('id', $action['id_event_id']);
+            $stmt = $stmt->executeQuery();
+            $evenement = $stmt->fetchAssociative();
+            $resulat[$i]['evenement'] = $evenement; 
+        }
+
+        return $resulat;
+    }
 }

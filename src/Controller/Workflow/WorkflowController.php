@@ -67,15 +67,14 @@ class WorkflowController extends AbstractController
     {
         $respObjects =array();
         $codeStatut = "ERROR";
-        try{
-            $this->AuthService->checkAuth(0,$request);
-
+        // try{
+            // $this->AuthService->checkAuth(0,$request);
             $data = $workflowRepo->getListeWorkflow();
             $codeStatut = "OK";
             $respObjects["data"] = $data;
-        }catch(\Exception $e){
-            $codeStatut = "ERREUR";
-        }
+        // }catch(\Exception $e){
+        //     $codeStatut = "ERREUR";
+        // }
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);

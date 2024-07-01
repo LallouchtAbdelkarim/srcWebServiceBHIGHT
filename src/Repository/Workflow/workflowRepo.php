@@ -42,12 +42,23 @@ class workflowRepo extends ServiceEntityRepository
         $this->em = $em;
     }
     public function getListeWorkflow(){
-        // $resultList = $this->em->getRepository(Workflow::class)->findAll();
-
-        $sql2 = "select * from workflow";
+        $sql2 = "select * from workflow ORDER BY `id` DESC";
         $stmt = $this->conn->prepare($sql2);
         $stmt = $stmt->executeQuery();
         $resultList = $stmt->fetchAll();
+        for ($i=0; $i < count($resultList); $i++) { 
+            if($resultList[$i]['id_status_id']){
+                $sql="select * from status_workflow where id = ".$resultList[$i]['id_status_id']."";
+                $stmt = $this->conn->prepare($sql);
+                $stmt = $stmt->executeQuery();
+                $statut = $stmt->fetchAssociative();
+                $resultList[$i]['status'] = $statut;
+            }else{
+                $resultList[$i]['status'] = null;
+            }
+
+        }
+
         if($resultList){
             return $resultList;
         }else{
@@ -506,7 +517,7 @@ class workflowRepo extends ServiceEntityRepository
                 $stmt = $stmt->executeQuery();
             }*/
 
-            if(in_array('dossier',$listeEntities)){dump($idQueue);
+            if(in_array('dossier',$listeEntities)){
                 $persistDetailQueue = "
                     INSERT INTO queue_event (`id_event_action_id`,`id_statut_id`, `id_queue_detail`, `statut_workflow`,`type`, `id_element`) 
                     SELECT 

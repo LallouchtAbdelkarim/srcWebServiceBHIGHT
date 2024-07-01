@@ -4203,8 +4203,6 @@ class IntegrationController extends AbstractController
                         $this->sauvguardeDataCSV($integrationId);
                         $importByType = $integrationRepo->getOneImportType($integrationId , "debiteur");
                         $idModelDeb = $importByType->getIdModel()->getId();
-                        
-                       
 
                         $importByType = $integrationRepo->getOneImportType($integrationId , "telephone");
                         if($importByType){
@@ -4255,6 +4253,25 @@ class IntegrationController extends AbstractController
         catch(\Exception $e){
             $codeStatut = "ERROR";
             $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/getAllIntegrationCadrage')]
+    public function getAllIntegrationCadrage(Request $request , integrationRepo $integrationRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data = $integrationRepo->getAllInegrationCadrage();
+            $codeStatut = "OK";
+            $respObjects["data"] = $data;
+            
+        }catch(\Exception $e){
+            $respObjects["err"] = $e->getMessage();
+            $codeStatut = "ERREUR";
         }
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);

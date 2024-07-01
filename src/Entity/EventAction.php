@@ -27,6 +27,13 @@ class EventAction
     #[ORM\Column(nullable: true)]
     private ?int $type = null;
 
+    //simple event : type = 1;
+    //Delay : type = 3;
+    //Split flow step : type = 2;
+    //Decision step : type = 4;
+    //Split activity : type = 5;
+
+
     #[ORM\Column(nullable: true)]
     private ?int $delayAction = null;
 

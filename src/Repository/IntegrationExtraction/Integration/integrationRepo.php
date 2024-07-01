@@ -423,7 +423,7 @@ class integrationRepo extends ServiceEntityRepository
     
     public function getAllInegration(){
         // $resultList = $this->em->getRepository(Integration::class)->findAll();
-        $sql="SELECT t.* from integration t WHERE t.status_id != 15 ORDER BY t.id DESC";
+        $sql="SELECT t.* from integration t WHERE t.status_id != 15 and type = 1 ORDER BY t.id DESC";
         $resultList = $this->conn->fetchAllAssociative($sql);
         if($resultList){
             return $resultList;
@@ -1283,6 +1283,16 @@ class integrationRepo extends ServiceEntityRepository
         $resultList = $this->em->getRepository(Integration::class)->findBy(["status" => [1, 2] , "isMaj"=>0 ,"type"=>2]);
         if($resultList){
             return $resultList; 
+        }else{
+            return null;
+        }
+    }
+    public function getAllInegrationCadrage(){
+        // $resultList = $this->em->getRepository(Integration::class)->findAll();
+        $sql="SELECT t.* from integration t WHERE t.status_id != 15 and type = 2 ORDER BY t.id DESC";
+        $resultList = $this->conn->fetchAllAssociative($sql);
+        if($resultList){
+            return $resultList;
         }else{
             return null;
         }

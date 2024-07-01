@@ -96,6 +96,8 @@ class DossiersController extends AbstractController
         $codeStatut="ERROR";
         try{
             $this->AuthService->checkAuth(0,$request);
+            $idUser = $this->AuthService->returnUserId($request);
+            
             $id = $request->get("id");
             $check_doss = $dossiersRepo->findDossier($id);
             if(!$check_doss){
@@ -134,7 +136,8 @@ class DossiersController extends AbstractController
                 $tel = $dossiersRepo->getListesTel($id);
                 $notes = $dossiersRepo->getListeNote($id);
                 $creance = $dossiersRepo->getCreanceByIdDossier($id);
-
+                $process = $dossiersRepo->getProcessByIdUser($id , $idUser);
+                
                 $respObjects["total"]  = $dossiersRepo->getDetailsCreanceByIdDossier($id);
                 $respObjects["dossier"] = $array_doss;
                 $respObjects["allDebiteur"] = $array_deb;
@@ -145,6 +148,7 @@ class DossiersController extends AbstractController
                 $respObjects["debiteur"] = $debiteur;
                 $respObjects["notes"] = $notes;
                 $respObjects["creance"] = $creance;
+                $respObjects["process"] = $process;
 
                 if(isset($debiteur[0])){
                     $respObjects["debiteur"] = $debiteur[0];
