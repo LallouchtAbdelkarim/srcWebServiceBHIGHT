@@ -80,4 +80,8 @@ class extractionRepo extends ServiceEntityRepository
         $portefeuille = $this->em->getRepository(HistoriqueDemandeCadrage::class)->findBy([],["id"=>"DESC"]);
         return $portefeuille;
     }
+    public function getDemandeHistoriqueCadrage($id){
+        $portefeuille = $this->em->getRepository(HistoriqueDemandeCadrage::class)->find($id);
+        return $portefeuille;
+    }
 }

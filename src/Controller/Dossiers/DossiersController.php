@@ -111,7 +111,7 @@ class DossiersController extends AbstractController
                 
                 if($dossier["id_users_id"]){
                     $array_doss["user"] = $userRepo->getOneUser($dossier["id_users_id"]);
-                }
+                }   
                 if($dossier["id_ptf_id"]){
                     $array_doss["ptf"] = $donneurRepo->getOnePtf($dossier["id_ptf_id"]);
                 } 

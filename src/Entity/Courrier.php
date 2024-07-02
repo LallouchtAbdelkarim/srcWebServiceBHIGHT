@@ -34,6 +34,10 @@ class Courrier
     #[ORM\JoinColumn(nullable: false)]
     private ?dossier $id_dossier = null;
 
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Adresse $id_adresse = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -107,6 +111,18 @@ class Courrier
     public function setIdDossier(?dossier $id_dossier): static
     {
         $this->id_dossier = $id_dossier;
+
+        return $this;
+    }
+
+    public function getIdAdresse(): ?Adresse
+    {
+        return $this->id_adresse;
+    }
+
+    public function setIdAdresse(?Adresse $id_adresse): static
+    {
+        $this->id_adresse = $id_adresse;
 
         return $this;
     }

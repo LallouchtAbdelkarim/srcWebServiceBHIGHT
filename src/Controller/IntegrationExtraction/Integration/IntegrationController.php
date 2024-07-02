@@ -14,10 +14,12 @@ use App\Entity\Integration;
 use App\Entity\ImportDonneurOrdreBack;
 use App\Entity\ModelImport;
 use App\Entity\ColumnsParams;
+use App\Entity\RetourCadrage;
 use App\Entity\TypeDebiteur;
 use App\Entity\TypeTel;
 use App\Entity\Utilisateurs;
 use App\Repository\DonneurOrdreAndPTF\donneurRepo;
+use App\Repository\IntegrationExtraction\Extraction\extractionRepo;
 use App\Repository\IntegrationExtraction\Integration\integrationRepo;
 use App\Repository\Parametrages\affichages\affichageRepo;
 use App\Service\GeneralService;
@@ -54,6 +56,7 @@ class IntegrationController extends AbstractController
     private $conn;
     public $AuthService;
     public $MessageService;
+    private  $extractionRepo;
     public function __construct(
         integrationRepo $integrationRepo,
         affichageRepo $affichageRepo,
@@ -64,7 +67,8 @@ class IntegrationController extends AbstractController
         FileService $FileService,
         Connection $conn,
         AuthService $AuthService,
-        GeneralService $generalService
+        GeneralService $generalService,
+        extractionRepo $extractionRepo
         )
     {
         $this->conn = $conn;
@@ -77,6 +81,7 @@ class IntegrationController extends AbstractController
         $this->MessageService = $MessageService;
         $this->FileService = $FileService;
         $this->generalService = $generalService;
+        $this->extractionRepo = $extractionRepo;
     
     }
     #[Route('/checkStepsIntegration', methods: ['POST'])]
@@ -3919,6 +3924,9 @@ class IntegrationController extends AbstractController
         $emploi_champ = $request->get("emploi_champ");
         $employeur_champ = $request->get("employeur_champ");
         $isMaj = $request->get("isMaj");
+        $typeCadrage = $request->get('typeCadrage');
+        $idDemande = $request->get('idDemande');
+        
 
         try{
             if(!empty($titre) || $titre != ""  || $ptf != "" || empty($ptf) != ""){
@@ -3940,107 +3948,20 @@ class IntegrationController extends AbstractController
                 $integration->setType(2);
                 $this->em->persist($integration);
                 $this->em->flush();
-                $test=false ;
+                
+                if($typeCadrage == 3){
+                    //Type integration is retour cadrage
+                    $integration->setType(3);
 
-                if($codeStatut!="OK"){
-                    if($request->get("telephone_in_step") == "1"){
-                        if(!empty($_FILES['telephone_file']['name'])){
-                            $requiredHeaders=array();
-                            $file = $_FILES['telephone_file'];
-                            $fileCheckTelephone=$this->FileService->checkFile($file);
-                            if($fileCheckTelephone["codeStatut"] == "OK" ){
-                                $ptf_ = $donneurRepo->getOnePtf($ptf);
-                                //Check donneurordre
-                                $nom = $fileCheckTelephone["nom"];
-                                $extension_upload=$fileCheckTelephone["extension_upload"];
-                                $fileTmpLoc=$fileCheckTelephone["fileTmpLoc"];
-                                $details_model_telephone  = json_decode($request->get("details_model_telephone"), true);
-
-                                $model_import = $integrationRepo->createModel($details_model_telephone , "telephone");
-                                if($model_import){
-                                    //Create import debiteur
-                                    $import = new Import();
-                                    $import->setDateCreation(new \DateTime());
-                                    $import->setEtat(0);
-                                    $import->setIdModel($model_import);
-                                    $import->setIdIntegration($integration);
-                                    $import->setOrderImport(1);
-                                    $import->setUrl("");
-                                    $import->setType("telephone");
-                                    $this->em->persist($import);
-                                    $this->em->flush();
-                                    //Import CR
-                                    $filesystem = new Filesystem();
-                                    $publicDirectory = $this->getParameter('kernel.project_dir') . '/public/fichiers/import/';
-                                    $folderPath = $publicDirectory . 'integration-num-'.$integration->getId()."/import-telephone-num-".$import->getId();
-                                    $fileStore = "fichiers/import/integration-num-".$integration->getId() ."/import-telephone-num-".$import->getId()."/". $nom . '.' . $extension_upload;
-                                    //----Create file if n'existe pas
-                                    $filesystem->mkdir($folderPath);
-                                    move_uploaded_file($fileTmpLoc, $fileStore);
-                                    $import->setUrl($fileStore);
-                                    $this->em->flush();
-                                    
-
-                                    $csvData = file_get_contents($import->getUrl());
-                                    $rows = array_map('str_getcsv', explode("\n", $csvData));
-                                    $numberOfFiles = 3;
-                                    $rowsPerFile = ceil(count($rows) / $numberOfFiles);
-                                    $chunks = array_chunk($rows, $rowsPerFile);
-                                    $header = array_shift($rows);
-
-                                    $import->setNbrLignes(count($rows) - 2);
-                                    $this->em->flush();
-                                    if (!is_dir($folderPath)) {
-                                        mkdir($folderPath);
-                                    }
-                                    $order=1;
-                                    for ($i = 0; $i < count($chunks); $i++) {
-                                        $outputFileName = sprintf('output_file_%d.csv', $i + 1);
-                                        $folderPath = "fichiers/import/integration-num-".$integration->getId()."/import-telephone-num-".$import->getId()."/split_files/";
-                                        $filesystem->mkdir($folderPath);
-                                        $outputFilePath = $folderPath . $outputFileName;
-
-                                        if($order == 1){
-                                            $outputCsvData = implode("\n", array_map('implode', $chunks[$i]));
-                                        }else{
-                                            // Convert header and data rows to strings
-                                            $headerString = implode(",", $header);
-                                            $dataStrings = array_map(function ($row) {
-                                                return implode(",", $row);
-                                            }, $chunks[$i]);
-                                            // Combine header and data rows as CSV lines
-                                            $outputCsvLines = array_merge(array($headerString), $dataStrings);
-                                            // Convert the CSV lines to a single CSV string
-                                            $outputCsvData = implode("\n", $outputCsvLines);
-                                        }
-                                        try {
-                                            // Move the file to the public/split_files directory
-                                            file_put_contents($outputFilePath, $outputCsvData);
-                                            $detail = new DetailsImport();
-                                            $filesystem = new Filesystem();
-                                            $detail->setUrl($outputFilePath);
-                                            $detail->setIdImport($import);
-                                            $detail->setEtat(0);
-                                            $detail->setOrdre($order);
-                                            $this->em->persist($detail);
-                                            $this->em->flush();
-                                            $order++;
-                                            $codeStatut="OK";
-                                        } catch (\Exception $e) {
-                                            $codeStatut="ERROR";
-                                        }
-                                    }
-                                }else{
-                                    $codeStatut="EMPTY_FILE";
-                                }
-                            }else{
-                                $codeStatut=$fileCheckTelephone["codeStatut"] ;
-                            }
-                        }else{
-                            $codeStatut="EMPTY_FILE";
-                        }
-                    }
+                    $demandeCadrages = $this->extractionRepo->getDemandeHistoriqueCadrage($idDemande);
+                    $retour = new RetourCadrage();
+                    $retour->setIdDemande($demandeCadrages);
+                    $this->em->persist($retour);
+                    $this->em->flush();
                 }
+
+                $test=false ;
+                
                 if($codeStatut!="OK"){
                     if($request->get("adresse_in_step") == "1"){
                         if(!empty($_FILES['adresse_file']['name'])){
@@ -4123,6 +4044,7 @@ class IntegrationController extends AbstractController
                                             $this->em->flush();
                                             $order++;
                                             $codeStatut="OK";
+                                            
                                         } catch (\Exception $e) {
                                             $codeStatut="ERROR";
                                         }
@@ -4141,8 +4063,18 @@ class IntegrationController extends AbstractController
 
                 if($codeStatut == "OK"){
                     $codeStatut = $this->createTableDBI($integration->getId() , $isMaj);
-                    $codeStatut="OK";
-                    $respObjects["data"] = $integration->getId();
+                    if($typeCadrage == 3){
+                        $importByType = $integrationRepo->getOneImportType($integration->getId() , "adresse");
+                        $idModelDeb = $importByType->getIdModel()->getId();
+                        $this->sauvguardeDataCSV($integration->getId());
+
+                        $sql = 'CALL debt_force_integration.PROC_RETOUR_CADRAGE('.$integration->getId().', '.$idModelDeb.');';
+                        $stmt = $integrationRepo->executeSQL($sql);
+                        $codeStatut="OK";
+                    }else{
+                        $codeStatut="OK";
+                        $respObjects["data"] = $integration->getId();
+                    }
                 }
             }   
             else{
@@ -4166,6 +4098,8 @@ class IntegrationController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects );
     }
+
+    
     #[Route('/importCadrageToDBI', methods : ["POST"])]
     public function importCadrageToDBI(integrationRepo $integrationRepo ,ManagerRegistry $doctrine ,  SerializerInterface $serializer , Request $request): JsonResponse
     {
