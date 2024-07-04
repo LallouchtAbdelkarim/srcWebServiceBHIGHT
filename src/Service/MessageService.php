@@ -13,6 +13,7 @@ class MessageService
          "ERROR-AUTHENTICATION" => "Username ou mot de passe incorrect !",
          "ERROR-NO-ACCOUNT" => "Aucun compte n\'as été trouvé, Voulez-vous créer un compte ?",
          "ERROR-EMPTY-PARAMS" => "Veuillez vérifier vos informations, un des champs est vide !",
+         "EMPTY-PARAMS"=>"Veuillez vérifier vos informations, un des champs est vide !",
          "OK|NO-FILE" => "",
          "ERROR_EXCEPETION" => "Une erreur s'est produite",
          "ERROR" => "Une erreur s'est produite",

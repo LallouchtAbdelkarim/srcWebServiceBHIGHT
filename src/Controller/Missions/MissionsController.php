@@ -113,8 +113,7 @@ class MissionsController extends AbstractController
                                 $data=array_map("utf8_encode",$data);
                                 $data=array_map('trim', $data);
                                 $data1=array_map("utf8_encode",str_replace(" ","_",$data));
-                                $data=$this->FileService->convert($fileStore,";");
-
+                                $data=$this->FileService->convert2($fileStore,";");
                                 if(count($data)>0){
                                     if($data)
                                     {
@@ -139,7 +138,6 @@ class MissionsController extends AbstractController
                                             $sql = "INSERT INTO details_file (`id_file_missions_id`, `numero_dossier`, `adresse`, `is_in_missions`) VALUES (" . $import->getId() . ", '" . $numeroDossier . "', '" . $adresse . "', 0)";
                                             $respObjects["data1"]=$sql;
                                             $stmt = $this->conn->prepare($sql)->executeQuery();
-
                                         }
                                     }
                                 }

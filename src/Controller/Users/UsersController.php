@@ -444,7 +444,6 @@ class UsersController extends AbstractController
             //throw $th;
             $codeStatut="ERROR";
         }
-            
         
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);

@@ -2,35 +2,45 @@
 
 namespace App\Controller\Models;
 
+use App\Entity\BackgroundCourrier;
+use App\Entity\DetailModelAffichage;
 use App\Entity\ModelCourier;
 use App\Entity\ModelEmail;
 use App\Entity\ModelSMS;
+use App\Repository\ModelCourierRepository;
 use App\Service\AuthService;
 use App\Service\MessageService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use App\Service\ValidationService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Serializer\SerializerInterface;
-
+use Spipu\Html2Pdf\Html2Pdf;
 #[Route('/API')]
 
 class ModelsController extends AbstractController
 {
     private $MessageService;
+    public $serializer;
+    public $modelCourierRepo;
 
     public function __construct(
         AuthService $AuthService,
         EntityManagerInterface $em,
         MessageService $MessageService,
+        SerializerInterface $serializer,
+        ModelCourierRepository $modelCourierRepository
     )
     {
         $this->em = $em;
         $this->AuthService = $AuthService;
         $this->MessageService = $MessageService;
+        $this->serializer = $serializer;
+        $this->modelCourierRepository = $modelCourierRepository;
     }
 
     #[Route('/models/SMS', name: 'app_models')]
@@ -149,6 +159,7 @@ class ModelsController extends AbstractController
         $message = $request->get("message");
         $titre = $request->get("titre");
         $objet = $request->get("objet");
+        $background = $request->get("background");
 
         $contraintes = array(
             "message" => array("val" => $message, "length" => 80, "type" => "string"),
@@ -162,11 +173,16 @@ class ModelsController extends AbstractController
             if ($message == "" or $titre == "" or $objet == "") {
                 $codeStatut = "EMPTY-PARAMS";
             } else {
+                $backgroundImg = null;
+                if($background != ""){
+                    $backgroundImg =  $entityManager->getRepository(BackgroundCourrier::class)->find($background);
+                }
                 $courier = new ModelCourier();
                 $courier->setMessage($message);
                 $courier->setTitre($titre);
                 $courier->setObjet($objet);
                 $courier->setDateCreation(new \DateTime());
+                $courier->setIdBackground($backgroundImg);
                 $entityManager->persist($courier);
                 $entityManager->flush();
                 $codeStatut = "OK";
@@ -361,4 +377,170 @@ class ModelsController extends AbstractController
         $jsonContent = $serializer->serialize($email,  'json');
         return new JsonResponse($jsonContent);
     }
+
+    #[Route("/previewPdf")]
+    public function getContrat(Request $request): JsonResponse
+    {
+        $response = new Response();
+        $response->headers->set('Content-Type', 'application/json');
+
+        try {
+            $data = json_decode($request->getContent(), true);
+            $objet = $data['objet'];
+            $message = $data['message'];
+            $background = $data['background'];
+        
+            
+            // Header
+            $header = '<style>
+            .background{
+                        width:100px;height:100px;
+                    }
+            </style><div style="text-align:center"><img src="profile_img/logoCourrier/header2.png"  /></div>';
+            $html = "<div style='font-family:dejavusans'>";
+            $html .= $header;
+            $html .= "<h1 class='title'>Object :" . htmlspecialchars($objet, ENT_QUOTES, 'UTF-8') . "</h1>";
+            $html .= '<div style="text-align:right"><img src="profile_img/barcode.gif"  /></div>';
+            $html .= '
+                <div style="margin-top: 20px; margin-bottom: 50px;">
+                    <table style="width: 100%;">
+                        <tr>
+                        <td style="width: 70%;">
+                             <div>
+                            <b>Réference : 123456789</b>
+                            </div>
+                        </td>
+                        <td style="width: 30%;">
+                            <div>
+                                <b>Prenom NOM</b><br><br>
+                                <b>Adresse complet</b><br><br>
+                                <b>Code postale Ville</b><br><br>
+                                <b>Pays</b><br><br>
+                            </div>
+                        </td>
+                        </tr>
+                    </table>
+                </div>
+            ';
+           
+            
+            if($background != ""){
+                $background = $this->em->getRepository(BackgroundCourrier::class)->find($background);
+                $background = $background->getUrl();
+                $html .= "<div style='position:relative;width:100%;min-height:1000px'>
+                    <div style='position:absolute; top:0; bottom:0; left:0; right:0; z-index:-1;'>
+                    <img src='".$background."' style='width:100%; height:100%; object-fit:cover;'>
+                    </div>
+                    <p>" . html_entity_decode($message) . "</p>
+                </div>";
+                $html .="</div>";
+            }else{
+                $html .= "<div style='position:relative;width:100%;min-height:1000px'>
+                    <p>" . html_entity_decode($message) . "</p>
+                </div>";
+                $html .="</div>";
+            }
+
+
+            $html2pdf = new Html2Pdf('P', 'A4', 'fr', true, 'UTF-8', array(10, 10, 10, 10),false); 
+            $html2pdf->pdf->SetFont('dejavusans', '', 12); 
+
+            // Write HTML to PDF
+            $html2pdf->writeHTML($html);
+        
+            // Output PDF as string
+            $pdfContent = $html2pdf->output('', 'S');
+        
+            // Encode PDF content to base64
+            $base64Content = base64_encode($pdfContent);
+        
+            // Prepare response data
+            $file = [
+                'content' => $base64Content,
+                'filename' => 'previewPdf.pdf',
+                'type' => 'application/pdf'
+            ];
+        
+            // Serialize response to JSON
+            $json = $this->serializer->serialize($file, 'json');
+        
+            // Return JsonResponse with PDF data
+            return new JsonResponse($json, Response::HTTP_OK, [], true);
+        
+        } catch (\Exception $e) {
+            // Handle exceptions
+            $response = "Exception- " . $e->getMessage();
+        
+            // Return error response
+            return new JsonResponse($response, Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    #[Route('/addBackground')]
+    public function addBackground(Request $request, EntityManagerInterface $entityManager): Response
+    {
+        $respObjects = array();
+        $codeStatut ="ERROR";
+
+        try {
+            
+            // Get the image file from the request
+            $img = $request->files->get('img');
+            if ($img) {
+                $destination = $this->getParameter('kernel.project_dir') . '/public/profile_img';
+                $newFilename = uniqid() . '.' . $img->guessExtension();
+                $img->move($destination, $newFilename);
+
+                $back = new BackgroundCourrier();
+                $back->setUrl('profile_img/'.$newFilename);
+                $this->em->persist($back);
+                $this->em->flush();
+                $codeStatut = "OK";
+            }
+            } catch (\Exception $e) {
+                $respObjects["msg"] = $e->getMessage();
+                $codeStatut="ERROR";
+        }
+        
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/getListeBackground')]
+    public function getListeBackground(Request $request, EntityManagerInterface $entityManager): Response
+    {
+        $respObjects = array();
+        $codeStatut ="ERROR";
+
+        try {
+            $image = $entityManager->getRepository(BackgroundCourrier::class)->findAll();
+            $respObjects['data']= $image;
+        } catch (\Exception $e) {
+            $respObjects["msg"] = $e->getMessage();
+            $codeStatut="ERROR";
+        }
+        
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/getInfosCompl')]
+    public function getInfosCompl(Request $request, EntityManagerInterface $entityManager): Response
+    {
+        $respObjects = array();
+        $codeStatut ="ERROR";
+
+        try {
+            $respObjects['data']= $this->modelCourierRepository->getListeInfos();
+        } catch (\Exception $e) {
+            $respObjects["msg"] = $e->getMessage();
+            $codeStatut="ERROR";
+        }
+        
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    
 }

@@ -4,6 +4,8 @@ namespace App\Repository;
 
 use App\Entity\ModelCourier;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Connection;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -16,11 +18,14 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class ModelCourierRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    private $conn;
+    public $em;
+    public function __construct(ManagerRegistry $registry , Connection $conn , EntityManagerInterface $em)
     {
         parent::__construct($registry, ModelCourier::class);
+        $this->conn = $conn;
+        $this->em = $em;
     }
-
     public function save(ModelCourier $entity, bool $flush = false): void
     {
         $this->getEntityManager()->persist($entity);
@@ -63,4 +68,13 @@ class ModelCourierRepository extends ServiceEntityRepository
 //            ->getOneOrNullResult()
 //        ;
 //    }
+
+    public function getListeInfos(){
+        $sql="SELECT * FROM `detail_model_affichage` ;";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAll();
+        return $resulat;
+    }
+
 }

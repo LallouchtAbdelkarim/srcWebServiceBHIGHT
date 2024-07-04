@@ -26,6 +26,9 @@ class ModelCourier
     #[ORM\Column(length: 255)]
     private ?string $objet = null;
 
+    #[ORM\ManyToOne]
+    private ?BackgroundCourrier $idBackground = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -75,6 +78,18 @@ class ModelCourier
     public function setObjet(string $objet): self
     {
         $this->objet = $objet;
+
+        return $this;
+    }
+
+    public function getIdBackground(): ?BackgroundCourrier
+    {
+        return $this->idBackground;
+    }
+
+    public function setIdBackground(?BackgroundCourrier $idBackground): static
+    {
+        $this->idBackground = $idBackground;
 
         return $this;
     }

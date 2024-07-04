@@ -49,8 +49,8 @@ class Utilisateurs
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $pays = null;
 
-    #[ORM\ManyToOne(inversedBy: 'utilisateurs')]
-    #[ORM\JoinColumn(onDelete:"CASCADE")]
+    // #[ORM\ManyToOne(inversedBy: 'utilisateurs')]
+    // #[ORM\JoinColumn(onDelete:"CASCADE")]
     private ?Groupe $id_group = null;
 
     #[ORM\Column(length: 255, nullable: true)]

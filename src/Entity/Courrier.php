@@ -38,6 +38,9 @@ class Courrier
     #[ORM\JoinColumn(nullable: false)]
     private ?Adresse $id_adresse = null;
 
+    #[ORM\ManyToOne]
+    private ?BackgroundCourrier $id_background = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -123,6 +126,18 @@ class Courrier
     public function setIdAdresse(?Adresse $id_adresse): static
     {
         $this->id_adresse = $id_adresse;
+
+        return $this;
+    }
+
+    public function getIdBackground(): ?BackgroundCourrier
+    {
+        return $this->id_background;
+    }
+
+    public function setIdBackground(?BackgroundCourrier $id_background): static
+    {
+        $this->id_background = $id_background;
 
         return $this;
     }
