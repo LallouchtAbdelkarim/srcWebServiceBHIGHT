@@ -246,7 +246,7 @@ class DossiersController extends AbstractController
         try{
             $this->AuthService->checkAuth(0,$request);
             $data_list = json_decode($request->getContent(), true);
-            $file = $request->get('file');
+            
 
         }catch(\Exception $e){
             $codeStatut="ERROR";

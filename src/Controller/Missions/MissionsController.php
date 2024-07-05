@@ -136,7 +136,6 @@ class MissionsController extends AbstractController
                                                 }
                                             }
                                             $sql = "INSERT INTO details_file (`id_file_missions_id`, `numero_dossier`, `adresse`, `is_in_missions`) VALUES (" . $import->getId() . ", '" . $numeroDossier . "', '" . $adresse . "', 0)";
-                                            $respObjects["data1"]=$sql;
                                             $stmt = $this->conn->prepare($sql)->executeQuery();
                                         }
                                     }
@@ -217,6 +216,229 @@ class MissionsController extends AbstractController
             $respObjects["err"] = $e->getMessage();
             $codeStatut = "ERREUR";
         }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    
+    #[Route('/createMission', methods:"POST")]
+    public function createMission(missionsRepo $missionsRepo ,Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $dataJson = json_decode($request->getContent(), true);
+            $idFile = $dataJson['idFile'];
+            $idAgent = $dataJson['idAgent'];
+            $data = $dataJson['data'];
+            if($idFile != "" && $idAgent != "" && count($data)>0){
+
+                $agent = $missionsRepo->getAgent($idAgent);
+                $file = $missionsRepo->getFile($idFile);
+                $missions = $missionsRepo->createMission($agent , $file);
+            
+                for ($i=0; $i < count($data); $i++) { 
+                    if($data[$i]['is_in_missions'] == 0 ){
+                        $sql = "INSERT INTO `detail_mission`( `id_detail_file_id`, `id_mission_id`, `etat`) VALUES (".$data[$i]['id'].",".$missions->getId().",0)";
+                        $stmt = $this->conn->prepare($sql)->executeQuery();
+                    }
+                }
+
+                //Delete the old data 
+                // $oldData = $missionsRepo->getDetailsByFileAndUser($idAgent , $idFile);
+                // $checkIfExist = false;
+
+                // for ($i=0; $i < count($oldData); $i++) { 
+                //     for ($j=0; $j < count($data); $j++) { 
+                //         if($oldData[$j]['id'] == $data[$i]['id'] ){
+                //             $checkIfExist = true;
+                //         }
+                //     }
+                //     // if is the last element
+                //     if(($i == count($oldData)) && ($checkIfExist == true) ){
+                //         $sql = "UPDATE `details_file` d SET d.`is_in_missions`=2 WHERE d.id = ".$oldData[$i]['id'].";";
+                //         $stmt = $this->conn->prepare($sql)->executeQuery();
+
+                //         $sql = "DELETE FROM `detail_mission` WHERE  d.id_detail_file_id = ".$oldData[$i]['id'].";";
+                //         $stmt = $this->conn->prepare($sql)->executeQuery();
+                //     } 
+                // }
+
+                
+
+                $sql = "UPDATE `details_file` d SET d.`is_in_missions`=2 WHERE d.id in (select dm.id_detail_file_id from detail_mission dm where dm.id_mission_id = ".$missions->getId().");";
+                $stmt = $this->conn->prepare($sql)->executeQuery();
+                $codeStatut="OK";
+
+            }else{
+                $codeStatut = "ERROR-EMPTY-PARAMS";
+            }
+
+
+        }catch(\Exception $e){
+            $respObjects["err"] = $e->getMessage();
+            $codeStatut = "ERREUR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    
+    #[Route('/getListeMissions')]
+    public function getListeMissions(missionsRepo $missionsRepo ,Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $id = $request->get("id");
+            $data = $missionsRepo->getListeMissions();
+            $codeStatut = "OK";
+            $respObjects["data"] = $data;
+        }catch(\Exception $e){
+            $respObjects["err"] = $e->getMessage();
+            $codeStatut = "ERREUR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/getMissionsByFile')]
+    public function getMissionsByFile(missionsRepo $missionsRepo ,Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $id = $request->get("idFile");
+            $data = $missionsRepo->getMissionsByFile($id);
+            $codeStatut = "OK";
+            $respObjects["data"] = $data;
+
+        }catch(\Exception $e){
+            $respObjects["err"] = $e->getMessage();
+            $codeStatut = "ERREUR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/getMissionsDetails')]
+    public function getMissionsDetails(missionsRepo $missionsRepo ,Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+
+        try{
+            $id = $request->get("id");
+            $data = $missionsRepo->getMissionsDetails($id);
+            $missions = $missionsRepo->getOneMissions($id);
+            $codeStatut = "OK";
+            $respObjects["missions"] = $missions;
+            $respObjects["data"] = $data;
+        }catch(\Exception $e){
+            $respObjects["err"] = $e->getMessage();
+            $codeStatut = "ERREUR";
+        }
+
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+
+    #[Route('/getDetailsFileByUser')]
+    
+    public function getDetailsFileByUser(missionsRepo $missionsRepo ,Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $id = $request->get("id");
+            $idFile = $request->get("idFile");
+            $data = $missionsRepo->getDetailsByFileAndUser($id , $idFile);
+
+            $codeStatut = "OK";
+            $respObjects["data"] = $data;
+
+
+        }catch(\Exception $e){
+            $respObjects["err"] = $e->getMessage();
+            $codeStatut = "ERREUR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    
+    #[Route('/modifierMisssion', methods:"POST")]
+    public function modifierMission(missionsRepo $missionsRepo ,Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $dataJson = json_decode($request->getContent(), true);
+            $idFile = $dataJson['idFile'];
+            $idMission = $dataJson['idMission'];
+            $idAgent = $dataJson['idAgent'];
+            $data = $dataJson['data'];
+            if($idFile != "" && $idAgent != "" && count($data)>0){
+
+                // $agent = $missionsRepo->getAgent($idAgent);
+                // $file = $missionsRepo->getFile($idFile);
+                // $missions = $missionsRepo->createMission($agent , $file);
+                
+                $sql = "UPDATE `details_file` d SET d.`is_in_missions` = 0 WHERE d.id in (select dm.id_detail_file_id from detail_mission dm where dm.id_mission_id = ".$idMission.");";
+                $stmt = $this->conn->prepare($sql)->executeQuery();
+
+                $sql = "DELETE FROM `detail_mission`  WHERE  id_mission_id = ".$idMission.";";
+                $stmt = $this->conn->prepare($sql)->executeQuery();
+
+                for ($i=0; $i < count($data); $i++) { 
+                    $sql = "INSERT INTO `detail_mission`( `id_detail_file_id`, `id_mission_id`, `etat`) VALUES (".$data[$i]['id'].",".$idMission.",0)";
+                    $stmt = $this->conn->prepare($sql)->executeQuery();
+                }
+
+                $sql = "UPDATE `details_file` d SET d.`is_in_missions`=2 WHERE d.id in (select dm.id_detail_file_id from detail_mission dm where dm.id_mission_id = ".$idMission.");";
+                $stmt = $this->conn->prepare($sql)->executeQuery();
+                $codeStatut="OK";
+
+            }else{
+                $codeStatut = "ERROR-EMPTY-PARAMS";
+            }
+        }catch(\Exception $e){
+            $respObjects["err"] = $e->getMessage();
+            $codeStatut = "ERREUR";
+        }
+
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/deleteMission', methods:"POST")]
+    public function deleteMission(missionsRepo $missionsRepo ,Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $dataJson = json_decode($request->getContent(), true);
+            $idMission = $dataJson['idMission'];
+            if($idMission){
+                $sql = "DELETE FROM `detail_mission`  WHERE  id_mission_id = ".$idMission.";";
+                $stmt = $this->conn->prepare($sql)->executeQuery();
+
+                $sql = "DELETE FROM `mission`  WHERE  id = ".$idMission.";";
+                $stmt = $this->conn->prepare($sql)->executeQuery();
+                
+                $codeStatut="OK";
+
+            }else{
+                $codeStatut = "ERROR-EMPTY-PARAMS";
+            }
+        }catch(\Exception $e){
+            $respObjects["err"] = $e->getMessage();
+            $codeStatut = "ERREUR";
+        }
+        
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);

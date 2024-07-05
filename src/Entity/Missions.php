@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\MissionsRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: MissionsRepository::class)]
@@ -15,7 +16,7 @@ class Missions
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
-    private ?DetailsFile $id_details_file = null;
+    private ?FileMissions $id_file = null;
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
@@ -25,19 +26,22 @@ class Missions
     #[ORM\JoinColumn(nullable: false)]
     private ?Utilisateurs $id_users = null;
 
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $dateCreation = null;
+
     public function getId(): ?int
     {
         return $this->id;
     }
 
-    public function getIdDetailsFile(): ?DetailsFile
+    public function getIdFile(): ?FileMissions
     {
-        return $this->id_details_file;
+        return $this->id_file;
     }
 
-    public function setIdDetailsFile(?DetailsFile $id_details_file): static
+    public function setIdFile(?FileMissions $id_file): static
     {
-        $this->id_details_file = $id_details_file;
+        $this->id_file = $id_file;
 
         return $this;
     }
@@ -62,6 +66,18 @@ class Missions
     public function setIdUsers(?Utilisateurs $id_users): static
     {
         $this->id_users = $id_users;
+
+        return $this;
+    }
+
+    public function getDateCreation(): ?\DateTimeInterface
+    {
+        return $this->dateCreation;
+    }
+
+    public function setDateCreation(?\DateTimeInterface $dateCreation): static
+    {
+        $this->dateCreation = $dateCreation;
 
         return $this;
     }
