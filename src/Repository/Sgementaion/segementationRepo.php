@@ -63,7 +63,14 @@ class segementationRepo extends ServiceEntityRepository
         return $statut;
     }
 
-    
+    public function getListeSegmentation(){
+        $sql="SELECT * FROM `segmentation` s";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $statut = $stmt->fetchAll();
+        return $statut;
+    }
+
     
     public function getListeSgementationByGroupe($id_type,$id_groupe){
         $sql="SELECT * FROM `segmentation` s WHERE s.id in (SELECT q.id_segmentation_id from queue q WHERE q.id_type_id = '".$id_type."' and q.queue_groupe_id = '".$id_groupe."')";
@@ -1787,5 +1794,35 @@ class segementationRepo extends ServiceEntityRepository
             }
         }
         return ["queryConditions"=>$queryConditions ,"queryEntities"=>$queryEntities , 'param'=>$param ];
+    }
+    
+    public function deleteSegmentation($id){
+        $data =  array();
+        $sql="
+        -- Delete from seg_values
+            DELETE seg_values
+            FROM seg_values
+            INNER JOIN seg_critere ON seg_values.id_critere_id = seg_critere.id
+            INNER JOIN seg_groupe_critere ON seg_critere.id_groupe_id = seg_groupe_critere.id
+            WHERE seg_groupe_critere.id_seg_id = :id;
+
+            -- Delete from seg_critere
+            DELETE seg_critere
+            FROM seg_critere
+            INNER JOIN seg_groupe_critere ON seg_critere.id_groupe_id = seg_groupe_critere.id
+            WHERE seg_groupe_critere.id_seg_id = :id;
+
+            -- Delete from seg_groupe_critere
+            DELETE FROM seg_groupe_critere
+            WHERE id_seg_id = :id;
+
+            -- Delete from segmentation
+            DELETE FROM segmentation
+            WHERE id = :id;
+        ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(":id",$id);
+        $stmt = $stmt->executeQuery();
+        // return $data;
     }
 }

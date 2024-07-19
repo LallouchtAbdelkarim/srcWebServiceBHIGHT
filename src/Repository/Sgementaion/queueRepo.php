@@ -323,4 +323,20 @@ class queueRepo extends ServiceEntityRepository
         
     }
     
+    public function getAllQueue(){
+        $sql="SELECT * FROM `queue` s ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $statut = $stmt->fetchAll();
+        return $statut;
+    }
+
+    public function getQueueBy($queueId){
+        $sql="SELECT * FROM `queue` s WHERE s.id = :queueId";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(":queueId",$queueId);
+        $stmt = $stmt->executeQuery();
+        $statut = $stmt->fetchAll();
+        return $statut;
+    }
 }

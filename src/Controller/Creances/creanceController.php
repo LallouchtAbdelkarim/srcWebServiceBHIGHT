@@ -2,6 +2,7 @@
 
 namespace App\Controller\Creances;
 
+use App\Entity\Creance;
 use App\Repository\DonneurOrdreAndPTF\donneurRepo;
 use App\Repository\Creances\creancesRepo;
 use App\Repository\Encaissement\paiementRepo;
@@ -117,6 +118,8 @@ class creanceController extends AbstractController
             $creance = $creancesRepo->getOneCreance($id);
             if($creance){
                 $respObjects["data"] = $creance;
+                $respObjects["ptf"] = $creancesRepo->getPtf($creance['id_ptf_id']);
+                $respObjects["donneur"] = $creancesRepo->getDonneurByPtf($creance['id_ptf_id']);
                 $typePaiement = $this->TypeService->getListeType("paiement");
                 $respObjects["type_paiemennt"] = $typePaiement;
                 $respObjects["status_paiement"] =$creancesRepo->getStatusPaiement();
@@ -126,8 +129,8 @@ class creanceController extends AbstractController
                 $respObjects["accord"] =$creancesRepo->getAccords($id);
                 $respObjects["activite_creance"] =$creancesRepo->getActiviteCreance($id);
                 $respObjects["paiement"] =$creancesRepo->getPaiement($id);
+                $respObjects["list_creance"] =$creancesRepo->getListeOtherCreance($creance['id_dossier_id']);
                 $codeStatut="OK";
-
             }else{
                 $codeStatut = "NOT_EXIST_ELEMENT";
             }
@@ -260,8 +263,7 @@ class creanceController extends AbstractController
                                 if($totalP == $montant_a_Payer)
                                 {
                                     $lastElementPaiment = end($dataPaiement);
-                                    
-    
+
                                     $dataAccord = [
                                         "id_users_id"=>$this->AuthService->returnUserId($request),
                                         "id_type_paiement_id"=>$type_paiement,
@@ -274,6 +276,7 @@ class creanceController extends AbstractController
                                         "montant_a_payer"=>$montant_a_Payer,
                                     ];
                                     $createAccord = $creancesRepo->CreateAccord($dataAccord);
+                                    $createAccord = $creancesRepo->createCreanceAccord(['id_accord_id'=>$createAccord , 'id_creance_id'=>$id]);
 
                                     for ($i=0; $i < count($dataPaiement); $i++) { 
                                         $dataDetailsAccord = [

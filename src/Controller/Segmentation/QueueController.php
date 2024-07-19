@@ -283,7 +283,7 @@ class QueueController extends AbstractController
                                 }
                             }
                             $codeStatut="OK";
-                            $this->sauvguardeQueue($request,$segementationRepo , $queueRepo);
+                            $this->sauvguardeQueue($request,$segementationRepo , $queueRepo , $queueId);
                         }
                     }else{
                         $codeStatut = "ERROR-EMPTY-PARAMS";
@@ -395,14 +395,14 @@ class QueueController extends AbstractController
         return $this->json($respObjects);
     }
     #[Route('/sauvguardeQueue', methods: ['POST'])]
-    public function sauvguardeQueue(Request $request,segementationRepo $segementationRepo , queueRepo $queueRepo): JsonResponse
+    public function sauvguardeQueue(Request $request,segementationRepo $segementationRepo , queueRepo $queueRepo , $queueId): JsonResponse
     {
         $respObjects =array();
         $codeStatut = "ERROR";
         // try{
             // $this->AuthService->checkAuth(0,$request);
             $data = json_decode($request->getContent(), true);
-            $queue = $queueRepo->getListeQueueByStatus(1);
+            $queue = $queueRepo->getQueueBy($queueId);
             for ($s=0; $s < count($queue) ; $s++) { 
                 $queryEntities = "debt_force_seg.dt_Debiteur deb,debt_force_seg.dt_Creance c";
                 $queryConditions = " ";
@@ -628,6 +628,289 @@ class QueueController extends AbstractController
                         {
                             $sql="UPDATE `segmentation` SET `id_status_id`='3' WHERE  id = ".$id."";
                             $stmt = $this->conn->prepare($sql)->executeQuery(); 
+                            for ($r=0; $r < count($resultDebi); $r++) { 
+                                if($queueRepo->checkDebiteurSegment($id_segment , $resultDebi[$r]["id"]) != null){
+                                    $sql="insert into `debt_force_seg`.`queue_debiteur`(id_queue,id_debiteur,id_seg) values(".$id.",".$resultDebi[$r]["id"].",".$id_segment.")";
+                                    $stmt = $this->conn->prepare($sql)->executeQuery();
+                                }
+                            }
+                        }else{
+                            $sql="UPDATE `segmentation` SET `id_status_id`='4' WHERE  id = ".$id."";
+                            $stmt = $this->conn->prepare($sql)->executeQuery(); 
+                        }
+                    }   
+                }
+               
+            }
+        // }catch(\Exception $e){
+        //     $codeStatut = "ERROR";
+        //     $respObjects["msg"] = $e->getMessage();
+        // }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/updateQueue', methods: ['POST'])]
+    public function updateQueue(Request $request,segementationRepo $segementationRepo , queueRepo $queueRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        // try{
+            // $this->AuthService->checkAuth(0,$request);
+            $data = json_decode($request->getContent(), true);
+            $queue = $queueRepo->getAllQueue();
+            for ($s=0; $s < count($queue) ; $s++) { 
+                $queryEntities = "debt_force_seg.dt_Debiteur deb,debt_force_seg.dt_Creance c";
+                $queryConditions = " ";
+                $param = array();
+                $id = $queue[$s]["id"];
+                $id_segment = $queue[$s]["id_segmentation_id"];
+                $seg = $segementationRepo->getOneSegment($id_segment);
+                $groupe = $queueRepo->getCritereQueue($id);
+                $entities = json_decode($seg['entities']);
+                if(in_array('creance',$entities))
+                {
+                    $queryEntities = "debt_force_seg.dt_Debiteur deb,debt_force_seg.dt_Creance c";
+                    $queryConditions = " ";
+                    $param = array();
+                    $id = $queue[$s]["id"];
+                    $groupe = $queueRepo->getCritereQueue($id);
+                    $queryConditions = " ";
+                    $queryConditions = $this->getRequeteCreance($id , $groupe , $queryEntities,$queryConditions, $param)["queryConditions"];
+                    $queryEntities = $this->getRequeteCreance($id , $groupe , $queryEntities,$queryConditions,$param)["queryEntities"];
+                    $param = $this->getRequeteCreance($id , $groupe , $queryEntities,$queryConditions,$param)["param"];
+                    
+                    if($queryConditions != " "){
+                        $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. " " ; 
+                        $stmt = $this->conn->prepare($rqCreance);
+                        foreach ($param as $key => $value) {
+                            $stmt->bindValue($key, $value); // Assuming parameters are 1-indexed
+                        }
+                        $stmt = $stmt->executeQuery();
+                        $resultCreance = $stmt->fetchAll();
+                        if(count($resultCreance) >= 1)
+                        {
+                            $sql="UPDATE `queue` SET `id_status_id`='3' WHERE  id = ".$id."";
+                            $stmt = $this->conn->prepare($sql)->executeQuery(); 
+                            
+                            $sql="DELETE FROM `debt_force_seg`.`queue_creance` WHERE id_queue = ".$id.";";
+                            $stmt = $this->conn->prepare($sql)->executeQuery();
+
+                            for ($r=0; $r < count($resultCreance); $r++) { 
+                                if($queueRepo->checkCreanceSegment($id_segment , $resultCreance[$r]["id"]) != null){
+                                    $sql="insert into debt_force_seg.queue_creance(id_queue,id_creance,id_seg) 
+                                    values (".$id.",".$resultCreance[$r]["id"].",".$id_segment.")";
+                                    $stmt = $this->conn->prepare($sql)->executeQuery();
+                                }
+                            }
+
+                        }else{
+                            $sql="UPDATE `segmentation` SET `id_status_id`='4' WHERE  id = ".$id."";
+                            $stmt = $this->conn->prepare($sql)->executeQuery(); 
+                        }
+                    }
+                }
+                if(in_array('dossier',$entities))
+                {
+                    $queryEntities = "debt_force_seg.dt_Debiteur deb,debt_force_seg.dt_Creance c";
+                    $queryConditions = " ";
+                    $param = array();
+                    $id = $queue[$s]["id"];
+                    $groupe = $queueRepo->getCritereQueue($id);
+                    $queryConditions = " ";
+                    $queryConditions = $this->getRequeteCreance($id , $groupe , $queryEntities,$queryConditions, $param)["queryConditions"];
+                    $queryEntities = $this->getRequeteCreance($id , $groupe , $queryEntities,$queryConditions,$param)["queryEntities"];
+                    $param = $this->getRequeteCreance($id , $groupe , $queryEntities,$queryConditions,$param)["param"];
+                    $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ; 
+
+                    $rqDossier = "SELECT doss.id FROM debt_force_seg.dt_Dossier doss WHERE doss.id IN (
+                        SELECT (c1.id_dossier_id) from debt_force_seg.dt_Creance c1 where c1.id in (".$rqCreance.")
+                    )";
+                    $stmt = $this->conn->prepare($rqDossier);
+                    foreach ($param as $key => $value) {
+                        $stmt->bindValue($key, $value);
+                    }
+                    $stmt = $stmt->executeQuery();
+                    $resultDossier = $stmt->fetchAll();
+                    if(count($resultDossier) >= 1)
+                    {
+                        $sql="UPDATE `segmentation` SET `id_status_id`='3' WHERE  id = ".$id."";
+                        $stmt = $this->conn->prepare($sql)->executeQuery(); 
+
+                        $sql="DELETE FROM `debt_force_seg`.`queue_dossier` WHERE id_queue = ".$id.";";
+                        $stmt = $this->conn->prepare($sql)->executeQuery();
+
+                        for ($r=0; $r < count($resultDossier); $r++) { 
+                            // if($queueRepo->checkDossierSegment($id_segment , $resultDossier[$r]["id"]) != null){
+                                $sql="insert into `debt_force_seg`.`queue_dossier`(id_queue,id_dossier,id_seg) values(".$id.",".$resultDossier[$r]["id"].",".$id_segment.")";
+                                $stmt = $this->conn->prepare($sql)->executeQuery();
+                            // }
+                        }
+                    }else{
+                        $sql="UPDATE `segmentation` SET `id_status_id`='4' WHERE  id = ".$id."";
+                        $stmt = $this->conn->prepare($sql)->executeQuery(); 
+                    }
+                }
+                if(in_array('telephone',$entities))
+                {
+                    $queryEntities = "debt_force_seg.dt_Debiteur deb,debt_force_seg.dt_Creance c";
+                    $queryConditions = " ";
+                    $param = array();
+                    $id = $queue[$s]["id"];
+                    $groupe = $queueRepo->getCritereQueue($id);
+                    $queryConditions = " ";
+                    $queryConditions = $this->getRequeteCreance($id , $groupe , $queryEntities,$queryConditions, $param)["queryConditions"];
+                    $queryEntities = $this->getRequeteCreance($id , $groupe , $queryEntities,$queryConditions,$param)["queryEntities"];
+                    $param = $this->getRequeteCreance($id , $groupe , $queryEntities,$queryConditions,$param)["param"];
+                    $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ; 
+
+                    $rqTelephone = "SELECT tel1.id FROM debt_force_seg.dt_Telephone tel1 WHERE (tel1.id_debiteur_id) IN (
+                        SELECT debi.id FROM debt_force_seg.dt_Debiteur debi WHERE debi.id IN (
+                        SELECT (t1.id_debiteur_id) 
+                        FROM debt_force_seg.dt_Type_Debiteur t1 
+                        WHERE t1.id_creance_id IN (".$rqCreance."))
+                    )";
+
+                    $stmt = $this->conn->prepare($rqTelephone);
+                    foreach ($param as $key => $value) {
+                        $stmt->bindValue($key, $value);
+                    }
+                    $stmt = $stmt->executeQuery();
+                    $resultTelephone = $stmt->fetchAll();
+
+                    if(count($resultTelephone) >= 1)
+                    {
+                        $sql="UPDATE `segmentation` SET `id_status_id`='3' WHERE  id = ".$id."";
+                        $stmt = $this->conn->prepare($sql)->executeQuery(); 
+
+                        $sql="DELETE FROM `debt_force_seg`.`queue_telephone` WHERE id_queue = ".$id.";";
+                        $stmt = $this->conn->prepare($sql)->executeQuery();
+
+                        for ($r=0; $r < count($resultTelephone); $r++) { 
+                            if($queueRepo->checkTelephoneSegment($id_segment , $resultTelephone[$r]["id"]) != null){
+                                $sql="insert into `debt_force_seg`.`queue_telephone`(id_queue,id_telephone,id_seg) values(".$id.",".$resultTelephone[$r]["id"].",".$id_segment.")";
+                                $stmt = $this->conn->prepare($sql)->executeQuery();
+                            }
+                            
+                        }
+                    }else{
+                        $sql="UPDATE `segmentation` SET `id_status_id`='4' WHERE  id = ".$id."";
+                        $stmt = $this->conn->prepare($sql)->executeQuery(); 
+                    }
+                }
+                if(in_array('adresse',$entities))
+                {
+                    $queryEntities = "debt_force_seg.dt_Debiteur deb,debt_force_seg.dt_Creance c";
+                    $queryConditions = " ";
+                    $param = array();
+                    $id = $queue[$s]["id"];
+                    $groupe = $queueRepo->getCritereQueue($id);
+                    $queryConditions = " ";
+                    $queryConditions = $this->getRequeteCreance($id , $groupe , $queryEntities,$queryConditions, $param)["queryConditions"];
+                    $queryEntities = $this->getRequeteCreance($id , $groupe , $queryEntities,$queryConditions,$param)["queryEntities"];
+                    $param = $this->getRequeteCreance($id , $groupe , $queryEntities,$queryConditions,$param)["param"];
+                    $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ; 
+
+                    $rqAdresse = "SELECT tel1.id FROM debt_force_seg.dt_Adresse tel1 WHERE (tel1.id_debiteur_id) IN (
+                        SELECT debi.id FROM debt_force_seg.dt_Debiteur debi WHERE debi.id IN (
+                        SELECT (t1.id_debiteur_id) 
+                        FROM debt_force_seg.dt_type_debiteur t1 
+                        WHERE t1.id_creance_id IN (".$rqCreance."))
+                    )";
+
+                    $stmt = $this->conn->prepare($rqAdresse);
+                    foreach ($param as $key => $value) {
+                        $stmt->bindValue($key, $value);
+                    }
+                    $stmt = $stmt->executeQuery();
+                    $resultAdresse = $stmt->fetchAll();
+                    if(count($resultAdresse) >= 1)
+                    {
+                        $sql="UPDATE `segmentation` SET `id_status_id`='3' WHERE  id = ".$id."";
+                        $stmt = $this->conn->prepare($sql)->executeQuery(); 
+
+                        $sql="DELETE FROM `debt_force_seg`.`queue_adresse` WHERE id_queue = ".$id.";";
+                        $stmt = $this->conn->prepare($sql)->executeQuery();
+
+                        for ($r=0; $r < count($resultAdresse); $r++) { 
+                            if($queueRepo->checkAdresseSegment($id_segment , $resultAdresse[$r]["id"]) != null){
+                                $sql="insert into `debt_force_seg`.`queue_adresse`(id_queue,id_adresse,id_seg) values(".$id.",".$resultAdresse[$r]["id"].",".$id_segment.")";
+                                $stmt = $this->conn->prepare($sql)->executeQuery();
+                            }
+                        }
+                    }else{
+                        $sql="UPDATE `segmentation` SET `id_status_id`='4' WHERE  id = ".$id."";
+                        $stmt = $this->conn->prepare($sql)->executeQuery(); 
+                    }
+                }
+                if(in_array('debiteur',$entities))
+                {
+                    if(in_array('creance',$entities))
+                    {
+                        $rqDeb = "SELECT debi.id FROM debt_force_seg.dt_Debiteur debi WHERE debi.id IN (
+                            SELECT (t1.id_debiteur_id) 
+                            FROM debt_force_seg.dt_Type_Debiteur t1 
+                            WHERE t1.id_creance_id IN (".$rqCreance.")
+                        )";
+                        $stmt = $this->conn->prepare($rqDeb);
+                        foreach ($param as $key => $value) {
+                            $stmt->bindValue($key, $value);
+                        }
+                        $stmt = $stmt->executeQuery();
+                        $resultDebi = $stmt->fetchAll();
+    
+                        if(count($resultDebi) >= 1)
+                        {
+                            $sql="UPDATE `segmentation` SET `id_status_id`='3' WHERE  id = ".$id."";
+                            $stmt = $this->conn->prepare($sql)->executeQuery(); 
+
+                            $sql="DELETE FROM `debt_force_seg`.`queue_debiteur` WHERE id_queue = ".$id.";";
+                            $stmt = $this->conn->prepare($sql)->executeQuery();
+    
+    
+                            for ($r=0; $r < count($resultDebi); $r++) { 
+                                if($queueRepo->checkDebiteurSegment($id_segment , $resultDebi[$r]["id"]) != null){
+                                    $sql="insert into `debt_force_seg`.`queue_debiteur`(id_queue,id_debiteur,id_seg) values(".$id.",".$resultDebi[$r]["id"].",".$id_segment.")";
+                                    $stmt = $this->conn->prepare($sql)->executeQuery();
+                                }
+                            }
+                        }else{
+                            $sql="UPDATE `segmentation` SET `id_status_id`='4' WHERE  id = ".$id."";
+                            $stmt = $this->conn->prepare($sql)->executeQuery(); 
+                        }
+                    }
+                    else{
+                        $queryEntities = "debt_force_seg.dt_Debiteur deb,debt_force_seg.dt_Creance c";
+                        $queryConditions = " ";
+                        $param = array();
+                        $id = $queue[$s]["id"];
+                        $groupe = $queueRepo->getCritereQueue($id);
+                        $queryConditions = " ";
+                        $queryConditions = $this->getRequeteCreance($id , $groupe , $queryEntities,$queryConditions, $param)["queryConditions"];
+                        $queryEntities = $this->getRequeteCreance($id , $groupe , $queryEntities,$queryConditions,$param)["queryEntities"];
+                        $param = $this->getRequeteCreance($id , $groupe , $queryEntities,$queryConditions,$param)["param"];
+                        $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ; 
+
+                        $rqDeb = "SELECT debi.id FROM debt_force_seg.dt_Debiteur debi WHERE debi.id IN (
+                            SELECT (t1.id_debiteur_id) 
+                            FROM debt_force_seg.dt_type_debiteur t1 
+                            WHERE t1.id_creance_id IN (".$rqCreance.")
+                        )";
+                        $stmt = $this->conn->prepare($rqDeb);
+                        foreach ($param as $key => $value) {
+                            $stmt->bindValue($key, $value);
+                        }
+                        $stmt = $stmt->executeQuery();
+                        $resultDebi = $stmt->fetchAll();
+                        if(count($resultDebi) >= 1)
+                        {
+                            $sql="UPDATE `segmentation` SET `id_status_id`='3' WHERE  id = ".$id."";
+                            $stmt = $this->conn->prepare($sql)->executeQuery();
+
+                            $sql="DELETE FROM `debt_force_seg`.`queue_debiteur` WHERE id_queue = ".$id.";";
+                            $stmt = $this->conn->prepare($sql)->executeQuery();
+
                             for ($r=0; $r < count($resultDebi); $r++) { 
                                 if($queueRepo->checkDebiteurSegment($id_segment , $resultDebi[$r]["id"]) != null){
                                     $sql="insert into `debt_force_seg`.`queue_debiteur`(id_queue,id_debiteur,id_seg) values(".$id.",".$resultDebi[$r]["id"].",".$id_segment.")";

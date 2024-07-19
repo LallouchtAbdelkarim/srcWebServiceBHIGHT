@@ -82,8 +82,8 @@ class IntegrationController extends AbstractController
         $this->FileService = $FileService;
         $this->generalService = $generalService;
         $this->extractionRepo = $extractionRepo;
-    
     }
+    
     #[Route('/checkStepsIntegration', methods: ['POST'])]
     public function checkStep(integrationRepo $integrationRepo , Request $request , SerializerInterface $serializer): JsonResponse
     {
@@ -244,6 +244,7 @@ class IntegrationController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects );
     }
+
     #[Route('/verificationCountRow', methods: ['POST'])]
     public function verificationCountRow(integrationRepo $integrationRepo , donneurRepo $donneurRepo , Request $request , SerializerInterface $serializer): JsonResponse
     {
@@ -1556,8 +1557,6 @@ class IntegrationController extends AbstractController
                 $realPath = str_replace("\\", "/", $file->getRealPath());
                 // Open the CSV file for reading
                 $fileHandle = fopen($realPath, 'r');
-                $url = 'C:/Users/HP/Desktop/dt_force_work/ws_debt_force/public/'.$url.''; 
-                
 
                 $header = fgetcsv($fileHandle, 0, ';');
                 fclose($fileHandle);

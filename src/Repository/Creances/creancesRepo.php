@@ -4,6 +4,7 @@ namespace App\Repository\Creances;
 
 use App\Entity\Creance;
 use App\Entity\Paiement;
+use App\Entity\Portefeuille;
 use App\Entity\TypeDebiteur;
 use App\Entity\TypePaiement;
 use App\Repository\Encaissement\paiementRepo;
@@ -227,6 +228,7 @@ class creancesRepo extends ServiceEntityRepository
         foreach ($data as $key => $value) {
             // Enclose column names within backticks if needed
             $values[] = "`$key`";
+            
         }
         $sql .= implode(', ', $values) . ')';
         
@@ -235,7 +237,11 @@ class creancesRepo extends ServiceEntityRepository
         $params = [];
         foreach ($data as $key => $value) {
             // Enclose column names within backticks if needed
-            $params[] = '"'.$value.'"';
+            if($key != "date_creation"){
+                $params[] = '"'.$value.'"';
+            }else{
+                $params[] = 'now()';
+            }
         }
         $sql .= implode(', ', $params) . ')';
         $stmt = $this->conn->prepare($sql);
@@ -339,6 +345,7 @@ class creancesRepo extends ServiceEntityRepository
         $typePaiement = $this->em->getRepository(TypePaiement::class)->findOneBy(["id" => $idTypePaiement]);
         $nbrConfirme=0;
         $numCreance = $creance->getNumeroCreance();
+        $montantConfirme=0;
         if(!$accord and !$paiement){
             //TODO:Validé
             //Restant dialo
@@ -604,4 +611,45 @@ class creancesRepo extends ServiceEntityRepository
         }
         
     }
+    public function getPtf($id){
+        return $this->em->getRepository(Portefeuille::class)->find($id);
+    }
+
+    public function getListeOtherCreance($id){
+        $sql="select * from creance where id_dossier_id = ".$id." and total_restant != '0'";
+        $stmt = $this->conn->prepare($sql)->executeQuery();
+        $resultat = $stmt->fetchAll();
+        return $resultat;
+    }
+
+    public function createCreanceAccord($data){
+        $sql = "INSERT INTO `creance_accord` (";
+        $values = [];
+        foreach ($data as $key => $value) {
+            // Enclose column names within backticks if needed
+            $values[] = "`$key`";
+        }
+        $sql .= implode(', ', $values) . ')';
+        
+        $sql .= ' VALUES (';  
+
+        $params = [];
+        foreach ($data as $key => $value) {
+            // Enclose column names within backticks if needed
+            $params[] = '"'.$value.'"';
+        }
+        $sql .= implode(', ', $params) . ')';
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        if($stmt){
+            $sql="SELECT max(id) FROM `accord`";
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $resulat = $stmt->fetchOne();
+            return $resulat;
+        }else{
+            return null;
+        }
+    }
+    
 }

@@ -1035,6 +1035,7 @@ class WorkflowController extends AbstractController
                                 $workflowRepo->assignTask($userLibre , $listQueue[$i]['id'] , 2);
                                 $workflowRepo->updateStatutQueueEvent( $listQueue[$i]['id'], 3);
                             }
+
                         }
                     }
                 }
@@ -1710,6 +1711,5 @@ class WorkflowController extends AbstractController
         }
         return null;
     }
-    
-  
+
 }

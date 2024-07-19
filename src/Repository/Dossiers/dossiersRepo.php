@@ -398,4 +398,8 @@ class dossiersRepo extends ServiceEntityRepository
 
         return $resulat;
     }
+
+    public function getProcessWorkflow(){
+        
+    }
 }

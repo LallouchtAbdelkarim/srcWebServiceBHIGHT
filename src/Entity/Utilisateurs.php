@@ -73,6 +73,10 @@ class Utilisateurs
     #[ORM\JoinColumn(nullable: true)]
     private ?TypeUtilisateur $responsable = null;
 
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?Departement $id_departement = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -302,6 +306,18 @@ class Utilisateurs
     public function setResponsable(?TypeUtilisateur $responsable): static
     {
         $this->responsable = $responsable;
+
+        return $this;
+    }
+
+    public function getIdDepartement(): ?Departement
+    {
+        return $this->id_departement;
+    }
+
+    public function setIdDepartement(?Departement $id_departement): static
+    {
+        $this->id_departement = $id_departement;
 
         return $this;
     }
