@@ -246,6 +246,7 @@ class creancesRepo extends ServiceEntityRepository
         $sql .= implode(', ', $params) . ')';
         $stmt = $this->conn->prepare($sql);
         $stmt = $stmt->executeQuery();
+        
         if($stmt){
             $sql="SELECT max(id) FROM `accord`";
             $stmt = $this->conn->prepare($sql);
@@ -652,4 +653,31 @@ class creancesRepo extends ServiceEntityRepository
         }
     }
     
+    public function getListeAccordByDossier($id){
+        $query = $this->em->createQuery('SELECT a  from App\Entity\Accord a   where a.id in (SELECT identity(ca.id_accord) from App\Entity\CreanceAccord ca  where identity(ca.id_creance) in (select c.id from App\Entity\Creance c where identity(c.id_dossier) = :id) )')
+        ->setParameters([
+            'id' => $id
+        ]);
+        $result = $query->getResult();
+        return $result;
+    }
+    public function getListeCreanceByDoss($id){
+        $sql="select * from creance where id_dossier_id = ".$id." and total_restant != '0'";
+        $stmt = $this->conn->prepare($sql)->executeQuery();
+        $resultat = $stmt->fetchAll();
+
+        $resultatArray = array();
+        for ($i=0; $i <count($resultat) ; $i++) { 
+            $resultatArray[$i] = $resultat[$i];
+    
+            $sql="SELECT * FROM `details_type_creance` where id = ".$resultat[$i]['id_type_creance_id']."";
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $type = $stmt->fetchAssociative();
+            $resultatArray[$i]['type_creance'] = $type;
+
+        }
+
+        return $resultatArray;
+    }
 }

@@ -176,6 +176,7 @@ class creanceController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
     #[Route('/getTypeCreanceByTypeDn')]
     public function getTypeCreanceByTypeDn(Request $request,creancesRepo $creancesRepo): JsonResponse
     {
@@ -194,6 +195,7 @@ class creanceController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
     #[Route('/getTypeDetailsCreance')]
     public function getTypeDetailsCreance(Request $request,creancesRepo $creancesRepo): JsonResponse
     {
@@ -212,6 +214,7 @@ class creanceController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
     #[Route('/getTypeDetailsCreanceMultiple')]
     public function getTypeDetailsCreanceMultiple(Request $request,creancesRepo $creancesRepo): JsonResponse
     {
@@ -377,6 +380,145 @@ class creanceController extends AbstractController
         return $this->json($respObjects);
     }
 
+    #[Route('/getAccordByDossier')]
+    public function getAccord(Request $request,creancesRepo $creancesRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $id = $request->get("id");
+            
+            $data = $creancesRepo->getListeAccordByDossier($id);
+            $respObjects["data"] = $data;
+            $codeStatut="OK";
+
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/getListeCreanceByDoss')]
+    public function getListeCreanceByDoss(Request $request,creancesRepo $creancesRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $id = $request->get("id");
+            
+            $data = $creancesRepo->getListeCreanceByDoss($id);
+            $respObjects["data"] = $data;
+            $codeStatut="OK";
+
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    
+    #[Route('/calculateLastDate')]
+    public function calculateLastDate(Request $request, creancesRepo $creancesRepo): JsonResponse
+    {
+        $respObjects = array();
+        $codeStatut = "ERROR";
+        try {
+            $this->AuthService->checkAuth(0, $request);
+            
+            $instalment = $request->get("instalment");
+            $firstDate = $request->get("date");
+
+            
+            // Parse the first date and calculate the last date
+            $firstDateTime = new \DateTime($firstDate);
+            $lastDateTime = clone $firstDateTime;
+            $lastDateTime->modify('+' . ($instalment - 1) . ' months');
+
+            $respObjects["lastDate"] = $lastDateTime->format('d-m-Y');
+            $codeStatut = "OK";
+
+        } catch (\Exception $e) {
+            $codeStatut = "ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/savePhaseListe')]
+    public function savePhaseListe(Request $request, creancesRepo $creancesRepo): JsonResponse
+    {
+        $respObjects = array();
+        $codeStatut = "ERROR";
+        try {
+            $this->AuthService->checkAuth(0, $request);
+            $data = json_decode($request->getContent(), true);
+            
+            if(isset($data['list_creance']) || isset($data['creance'])){
+                $codeStatut="OK";dump($data['phaseList']);
+                for ($i=0; $i < count($data['phaseList']) ; $i++) { 
+                    $d['id_type_paiement_id'] = 1;
+                    $d['id_status_id'] = 1;
+                    $d['date_premier_paiement'] = $data['phaseList'][$i]['firstDateInstalement'];
+                    $d['date_fin_paiement'] = $data['phaseList'][$i]['lastDateInstalement'];
+                    $d['montant'] = $data['phaseList'][$i]['instalmentAmount'];
+                    $d['frequence'] = $data['phaseList'][$i]['instalment'];
+                    $d['etat'] =0;
+                    $d['montant_a_payer'] =0;
+                    $d["id_user_id"] = $this->AuthService->returnUserId($request);
+
+                    $createAccord = $creancesRepo->createAccord($d);
+                    if(isset($data["list_creance"])){
+                        for ($j=0; $j < count($data['list_creance']); $j++) { 
+                            $creancesRepo->createCreanceAccord(['id_creance_id'=>$data["list_creance"][$j]['id'] ,'id_accord_id'=>$createAccord]);
+
+
+
+                        }
+                    }
+
+                    // for ($o=0; $o < $data['phaseList'][$i]['instalment']; $o++) { 
+                    //     # code...
+                    //     $dataDetailsAccord = [
+                    //         "id_accord_id"=>$createAccord,
+                    //         "montant"=>["montant"],
+                    //         "id_status_id"=>1,
+                    //         "id_user_id"=>$this->AuthService->returnUserId($request),
+                    //         "date_prev_paiement"=>$dataPaiement[$i]["date"],
+                    //         "montant_restant"=>$dataPaiement[$i]["montant"],
+                    //         "montant_paiement"=>0,
+                    //         "id_type_paiement_id"=>$type_paiement,
+                    //     ];
+                    //     $createDt = $creancesRepo->createDetailsAccord($dataDetailsAccord);
+                    // }
+
+
+                }
+            }else{
+                $codeStatut="EMPTY_DATA";
+            }
+
+            
+
+        } catch (\Exception $e) {
+            $codeStatut = "ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
     
 
+    
 }
