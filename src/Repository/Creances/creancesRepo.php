@@ -2,11 +2,14 @@
 
 namespace App\Repository\Creances;
 
+use App\Entity\Bookmarks;
 use App\Entity\Creance;
 use App\Entity\Paiement;
 use App\Entity\Portefeuille;
+use App\Entity\ReglePortefeuille;
 use App\Entity\TypeDebiteur;
 use App\Entity\TypePaiement;
+use App\Entity\Utilisateurs;
 use App\Repository\Encaissement\paiementRepo;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Connection;
@@ -105,12 +108,13 @@ class creancesRepo extends ServiceEntityRepository
         $stmt = $this->conn->prepare($sql);
         $stmt = $stmt->executeQuery();
         $resulat = $stmt->fetchAssociative();
-
-        $sql="SELECT * FROM `details_type_creance` where id = ".$resulat['id_type_creance_id']."";
-        $stmt = $this->conn->prepare($sql);
-        $stmt = $stmt->executeQuery();
-        $type = $stmt->fetchAssociative();
-        $resulat['type_creance'] = $type;
+        if($resulat){
+            $sql="SELECT * FROM `details_type_creance` where id = ".$resulat['id_type_creance_id']."";
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $type = $stmt->fetchAssociative();
+            $resulat['type_creance'] = $type;
+        }
 
         return $resulat;
     }
@@ -679,5 +683,40 @@ class creancesRepo extends ServiceEntityRepository
         }
 
         return $resultatArray;
+    }
+
+    public function checkBookmark($id , $idUser){
+        $checkBookMark  = $this->em->getRepository(Bookmarks::class)->findOneBy(['id_creance'=>$id , 'id_user'=>$idUser  ]);
+        return $checkBookMark;
+    }
+
+    public function deleteBookMark($id){
+        $bookMark  = $this->em->getRepository(Bookmarks::class)->find($id);
+        $this->em->remove($bookMark);
+        $this->em->flush();
+    }
+    public function getCreance($id){
+        $entity  = $this->em->getRepository(Creance::class)->find($id);
+        return $entity;
+    }
+    public function getUser($id){
+        $entity  = $this->em->getRepository(Utilisateurs::class)->find($id);
+        return $entity;
+    }
+
+    public function addBookmark($idCreance , $idUser){
+        $creance = $this->getCreance($idCreance);
+        $user = $this->getUser($idUser);
+        $bookMark  = new Bookmarks();
+        $bookMark->setIdCreance($creance);
+        $bookMark->setIdUser($user);
+        $this->em->persist($bookMark);
+        $this->em->flush();
+        return $bookMark;
+    }
+
+    public function getReglePtf($id){
+        $entity  = $this->em->getRepository(ReglePortefeuille::class)->findBy(['idPtf'=>$id]);
+        return $entity;
     }
 }

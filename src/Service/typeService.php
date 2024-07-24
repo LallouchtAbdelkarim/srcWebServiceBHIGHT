@@ -285,6 +285,13 @@ class typeService
                     return $resultList;
                 }
                 break;
+            case 'promise':
+                $query = $this->em->createQuery('SELECT r FROM App\Entity\TypePromise r ');
+                $resultList = $query->getResult();
+                if ($resultList) {
+                    return $resultList;
+                }
+                break;
 
             default:
                 // If $type doesn't match any expected types, return false
