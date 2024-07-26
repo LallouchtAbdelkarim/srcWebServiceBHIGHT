@@ -80,7 +80,8 @@ class MessageService
          "FORMAT_INCORRECT"=>"Veuillez vérifier que le format du téléphone !",
          "INVALID_EMAIL"=>"Veuillez vérifier que le format du email !",
          "IN_DONNEUR"=>"Votre modèle exist dans un donneur ordre !",
-         "ACCESS_DELETE"=>"Impossible de supprimer cet élément !"
+         "ACCESS_DELETE"=>"Impossible de supprimer cet élément !",
+         "ERROR_DATA_PROMISE"=>"Veuillez respecter les conditions !"
         );
         return $listMessage[$CODEERROR];
     }

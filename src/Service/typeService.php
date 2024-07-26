@@ -234,6 +234,18 @@ class typeService
                     return true;
                 }
                 break;
+            case 'promise':
+                // Check if $id matches 'paiement' type
+                $query = $this->em->createQuery('SELECT p FROM App\Entity\Promise p where p.id = :id')
+                    ->setParameters([
+                        'id' => $id
+                    ])
+                    ->setMaxResults(1);
+                $resultList = $query->getOneOrNullResult();
+                if ($resultList) {
+                    return true;
+                }
+                break;
 
             default:
                 // If $type doesn't match any expected types, return false

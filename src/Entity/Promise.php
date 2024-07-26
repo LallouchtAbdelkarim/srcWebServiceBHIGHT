@@ -28,9 +28,19 @@ class Promise
     #[ORM\Column]
     private ?float $montant = null;
 
-    #[ORM\ManyToOne(targetEntity: self::class)]
+    #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
-    private ?self $id_type = null;
+    private ?TypePromise $id_type = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $date_creation = null;
+
+    #[ORM\Column(length: 1000, nullable: true)]
+    private ?string $commentaire = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?StatusPromise $id_status = null;
 
     public function getId(): ?int
     {
@@ -85,14 +95,50 @@ class Promise
         return $this;
     }
 
-    public function getIdType(): ?self
+    public function getIdType(): ?TypePromise
     {
         return $this->id_type;
     }
 
-    public function setIdType(?self $id_type): static
+    public function setIdType(?TypePromise $id_type): static
     {
         $this->id_type = $id_type;
+
+        return $this;
+    }
+
+    public function getDateCreation(): ?\DateTimeInterface
+    {
+        return $this->date_creation;
+    }
+
+    public function setDateCreation(?\DateTimeInterface $date_creation): static
+    {
+        $this->date_creation = $date_creation;
+
+        return $this;
+    }
+
+    public function getCommentaire(): ?string
+    {
+        return $this->commentaire;
+    }
+
+    public function setCommentaire(?string $commentaire): static
+    {
+        $this->commentaire = $commentaire;
+
+        return $this;
+    }
+
+    public function getIdStatus(): ?StatusPromise
+    {
+        return $this->id_status;
+    }
+
+    public function setIdStatus(?StatusPromise $id_status): static
+    {
+        $this->id_status = $id_status;
 
         return $this;
     }

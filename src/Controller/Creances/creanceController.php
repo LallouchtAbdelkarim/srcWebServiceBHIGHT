@@ -272,7 +272,7 @@ class creanceController extends AbstractController
                                     $dataAccord = [
                                         "id_users_id"=>$this->AuthService->returnUserId($request),
                                         "id_type_paiement_id"=>$type_paiement,
-                                        "id_status_id"=>1,
+                                        "id_status_id"=>0,
                                         "date_premier_paiement"=>$date_debut,
                                         "date_fin_paiement"=>$lastElementPaiment["date"],
                                         "date_creation"=>"now()",
@@ -287,7 +287,7 @@ class creanceController extends AbstractController
                                         $dataDetailsAccord = [
                                             "id_accord_id"=>$createAccord,
                                             "montant"=>$dataPaiement[$i]["montant"],
-                                            "id_status_id"=>1,
+                                            "id_status_id"=>0,
                                             "id_user_id"=>$this->AuthService->returnUserId($request),
                                             "date_prev_paiement"=>$dataPaiement[$i]["date"],
                                             "montant_restant"=>$dataPaiement[$i]["montant"],
@@ -328,7 +328,7 @@ class creanceController extends AbstractController
                                     $dataAccord = [
                                         "id_users_id"=>$this->AuthService->returnUserId($request),
                                         "id_type_paiement_id"=>$type_paiement,
-                                        "id_status_id"=>1,
+                                        "id_status_id"=>0,
                                         "date_premier_paiement"=>$date_debut,
                                         "date_fin_paiement"=>$lastElementPaiment["date"],
                                         "date_creation"=>"now()",
@@ -345,7 +345,7 @@ class creanceController extends AbstractController
                                         $dataDetailsAccord = [
                                             "id_accord_id"=>$createAccord,
                                             "montant"=>$dataPaiement[$i]["montant"],
-                                            "id_status_id"=>1,
+                                            "id_status_id"=>0,
                                             "id_user_id"=>$this->AuthService->returnUserId($request),
                                             "date_prev_paiement"=>$dataPaiement[$i]["date"],
                                             "montant_restant"=>$dataPaiement[$i]["montant"],
@@ -649,11 +649,11 @@ class creanceController extends AbstractController
             $creance = $creancesRepo->getOneCreance($id);
             $idPtf = $creance['id_ptf_id'];
             $getReglePtf = $creancesRepo->getReglePtf($idPtf);
-            
+
             $respObjects['regle'] =$getReglePtf;
             $respObjects['data'] =$typePaiement;
             $respObjects['creance'] =$creance;
-            
+
             $codeStatut="OK";
 
         }catch(\Exception $e){
@@ -664,5 +664,263 @@ class creanceController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
+    #[Route('/createPromise' , methods:['POST'])]
+    public function createPromise(Request $request,creancesRepo $creancesRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data = json_decode($request->getContent(), true);
+            $date = $data['date'] ;
+            $montant = $data['montant']; 
+            $commentaire = $data['commentaire']; 
+            $idCreance = $data['idCreance'] ;
+            $type = $data['type'] ;
+
+            if(is_numeric($montant) && !empty($date)){
+
+                $creance = $creancesRepo->getOneCreance($idCreance);
+                $idPtf = $creance['id_ptf_id'];
+                $getReglePtf = $creancesRepo->getReglePtf($idPtf);
+
+                $checkCondition = true;
+                for ($i=0; $i < count($getReglePtf) ; $i++) { 
+
+                    if($getReglePtf[$i]->getTypeColumn() == 'Montant' && $getReglePtf[$i]->getAction() == 'supOuEgal' && $getReglePtf[$i]->getValue1() > $montant && $getReglePtf[$i]->getType() == "Promesse" ){
+                        $checkCondition = false;
+                        break;
+                    }
+
+                    if($getReglePtf[$i]->getTypeColumn() == 'Montant' && $getReglePtf[$i]->getAction() == 'infOuEgal' && $getReglePtf[$i]->getValue1() < $montant && $getReglePtf[$i]->getType() == "Promesse" ){
+                        $checkCondition = false;
+                        break;
+                    }
+
+                    if($getReglePtf[$i]->getTypeColumn() == 'Montant' && $getReglePtf[$i]->getAction() == 'egal' && $getReglePtf[$i]->getValue1() != $montant && $getReglePtf[$i]->getType() == "Promesse" ){
+                        $checkCondition = false;
+                        break;
+                    }
+                    
+                    if($getReglePtf[$i]->getTypeColumn() == 'Pourcentage' && $getReglePtf[$i]->getType() == "Promesse"){
+                        $montantByTaux =  ($getReglePtf[$i]->getValue1() * $creance['total_creance'] )/100 ;
+                        
+                        if( $getReglePtf[$i]->getAction() == 'supOuEgal' && $montantByTaux > $montant ){
+                            $checkCondition = false;
+                            break;
+                        }
+
+                        if( $getReglePtf[$i]->getAction() == 'infOuEgal' && $montantByTaux < $montant ){
+                            $checkCondition = false;
+                            break;
+                        }
+
+                        if( $getReglePtf[$i]->getAction() == 'egal' && $montantByTaux != $montant ){
+                            $checkCondition = false;
+                            break;
+                        }
+                    }
+                }
+
+                if($checkCondition){
+                    $dateInsert = [
+                        'id_type_id'=> $type,
+                        'id_creance_id'=> $idCreance,
+                        'id_user_id'=> $this->AuthService->returnUserId($request),
+                        'date'=> $date,
+                        'montant'=> $montant,
+                        'commentaire'=> $commentaire,
+                        'date_creation'=> 'now()',
+                        'id_status_id'=> 1,
+                    ];
+                    $creancesRepo->createPromise($dateInsert);
+                    $codeStatut="OK";
+
+                }else{
+                    $codeStatut="ERROR_DATA_PROMISE";
+                }
+
+            }else{
+                $codeStatut="EMPTY_DATA";
+            }
+
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
     
+    #[Route('/updatePromise/{id}' , methods:['POST'])]
+    public function updatePromise( $id, Request $request, creancesRepo $creancesRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data = json_decode($request->getContent(), true);
+            $date = $data['date'] ;
+            $montant = $data['montant']; 
+            $commentaire = $data['commentaire']; 
+            $idCreance = $data['idCreance'] ;
+            $type = $data['type'] ;
+
+            if(is_numeric($montant) && !empty($date)){
+
+                $creance = $creancesRepo->getOneCreance($idCreance);
+                $idPtf = $creance['id_ptf_id'];
+                $getReglePtf = $creancesRepo->getReglePtf($idPtf);
+
+                $checkCondition = true;
+                for ($i=0; $i < count($getReglePtf) ; $i++) { 
+
+                    if($getReglePtf[$i]->getTypeColumn() == 'Montant' && $getReglePtf[$i]->getAction() == 'supOuEgal' && $getReglePtf[$i]->getValue1() > $montant && $getReglePtf[$i]->getType() == "Promesse" ){
+                        $checkCondition = false;
+                        break;
+                    }
+
+                    if($getReglePtf[$i]->getTypeColumn() == 'Montant' && $getReglePtf[$i]->getAction() == 'infOuEgal' && $getReglePtf[$i]->getValue1() < $montant && $getReglePtf[$i]->getType() == "Promesse" ){
+                        $checkCondition = false;
+                        break;
+                    }
+
+                    if($getReglePtf[$i]->getTypeColumn() == 'Montant' && $getReglePtf[$i]->getAction() == 'egal' && $getReglePtf[$i]->getValue1() != $montant && $getReglePtf[$i]->getType() == "Promesse" ){
+                        $checkCondition = false;
+                        break;
+                    }
+                    
+                    if($getReglePtf[$i]->getTypeColumn() == 'Pourcentage' && $getReglePtf[$i]->getType() == "Promesse"){
+                        $montantByTaux =  ($getReglePtf[$i]->getValue1() * $creance['total_creance'] )/100 ;
+                        
+                        if( $getReglePtf[$i]->getAction() == 'supOuEgal' && $montantByTaux > $montant ){
+                            $checkCondition = false;
+                            break;
+                        }
+
+                        if( $getReglePtf[$i]->getAction() == 'infOuEgal' && $montantByTaux < $montant ){
+                            $checkCondition = false;
+                            break;
+                        }
+
+                        if( $getReglePtf[$i]->getAction() == 'egal' && $montantByTaux != $montant ){
+                            $checkCondition = false;
+                            break;
+                        }
+                    }
+                }
+
+                if($checkCondition){
+                    $dateInsert = [
+                        'id_type_id'=> $type,
+                        'id_creance_id'=> $idCreance,
+                        'id_user_id'=> $this->AuthService->returnUserId($request),
+                        'date'=> $date,
+                        'montant'=> $montant,
+                        'commentaire'=> $commentaire,
+                        'date_creation'=> 'now()',
+                        'id_status_id'=> 1,
+                    ];
+    
+                    $creancesRepo->createPromise($dateInsert);
+                    $codeStatut="OK";
+
+                }else{
+                    $codeStatut="ERROR_DATA_PROMISE";
+                }
+            }else{
+                $codeStatut="EMPTY_DATA";
+            }
+
+
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/getListePromise/{idCreance}' )]
+    public function getListePromise( $idCreance, Request $request, creancesRepo $creancesRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            
+            $data = $creancesRepo->getListPromise($idCreance);
+            $arrayData = [];
+            for ($i=0; $i < count($data); $i++) { 
+                $arrayData[$i]['type']= $data[$i]->getIdType();
+                $arrayData[$i]['user']= $data[$i]->getIdUser();
+                $arrayData[$i]['montant']= $data[$i]->getMontant();
+                $arrayData[$i]['status']= $data[$i]->getIdStatus();
+                $arrayData[$i]['date']= $data[$i]->getDate();
+            }
+            $respObjects["data"] = $arrayData;
+            $codeStatut="OK";
+            
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/addTask', methods: ['POST'])]
+    public function addTask(Request $request, CreancesRepo $creancesRepo): JsonResponse
+    {
+        $respObjects = [];
+        $codeStatut = "ERROR";
+
+        try {
+            $this->AuthService->checkAuth(0, $request);
+
+            $data = json_decode($request->getContent(), true);
+            $idQualification = $data['qualification'];
+            $dateEcheance = new \DateTime($data['dateEcheance']);
+            $assigned = $data['assigned'];
+           
+            $idCreance = $data['idCreance'];
+            $comment = $data['comment'];
+
+            $time = \DateTime::createFromFormat('g:i A', $data['time']);
+
+            $qualification = $creancesRepo->getParamActivity($idQualification);
+            $creance = $creancesRepo->getCreance($idCreance);
+
+            if($dateEcheance && $idQualification){
+                
+                $idUser = $this->AuthService->returnUserId($request);
+                $task = $creancesRepo->addTask($creance, $qualification, $dateEcheance, $time, $assigned , $idUser , $comment);
+    
+                if($assigned == 1){dump($assigned);
+                    $assignedTask = $creancesRepo->addAssignedTask($task , $idUser);
+                }else if ($assigned == 2){
+                    $assignedTo = $data['assignedTo'];
+                    $assignedTask = $creancesRepo->addAssignedTask($task , $assignedTo);
+                }
+                $codeStatut = "OK";
+                
+            }else{
+                $codeStatut="EMPTY-DATA";
+            }
+
+        } catch (\Exception $e) {
+            $codeStatut = "ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+
+        return new JsonResponse($respObjects);
+    }
+
 }

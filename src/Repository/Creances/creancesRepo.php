@@ -5,8 +5,12 @@ namespace App\Repository\Creances;
 use App\Entity\Bookmarks;
 use App\Entity\Creance;
 use App\Entity\Paiement;
+use App\Entity\ParamActivite;
 use App\Entity\Portefeuille;
+use App\Entity\Promise;
 use App\Entity\ReglePortefeuille;
+use App\Entity\Task;
+use App\Entity\TaskAssigned;
 use App\Entity\TypeDebiteur;
 use App\Entity\TypePaiement;
 use App\Entity\Utilisateurs;
@@ -719,4 +723,86 @@ class creancesRepo extends ServiceEntityRepository
         $entity  = $this->em->getRepository(ReglePortefeuille::class)->findBy(['idPtf'=>$id]);
         return $entity;
     }
+
+    public function createPromise($data){
+        $sql = "INSERT INTO `promise` (";
+        $values = [];
+        foreach ($data as $key => $value) {
+            // Enclose column names within backticks if needed
+            $values[] = "`$key`";
+            
+        }
+        $sql .= implode(', ', $values) . ')';
+        
+        $sql .= ' VALUES (';  
+
+        $params = [];
+        foreach ($data as $key => $value) {
+            // Enclose column names within backticks if needed
+            if($key != "date_creation"){
+                $params[] = '"'.$value.'"';
+            }else{
+                $params[] = 'now()';
+            }
+        }
+        $sql .= implode(', ', $params) . ')';
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        
+        if($stmt){
+            $sql="SELECT max(id) FROM `promise`";
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $resulat = $stmt->fetchOne();
+            return $resulat;
+        }else{
+            return null;
+        }
+    }
+
+    
+    public function getListPromise($id){
+        $entity  = $this->em->getRepository(Promise::class)->findBy(['id_creance'=>$id]);
+        return $entity;
+    }
+
+    public function getParamActivity($id){
+        $entity  = $this->em->getRepository(ParamActivite::class)->find($id);
+        return $entity;
+    }
+
+    public function addTask($creance, $activity, $dateEcheance, $time, $assigned , $user , $comment)
+    {
+        $user = $this->getUser($user);
+        $task = new Task();
+        $task->setIdCreance($creance);
+        $task->setIdActivity($activity);
+        $task->setDateEcheance($dateEcheance);
+        $task->setTemps($time);
+        $task->setAssignedType($assigned);
+        $task->setDateCreation(new \DateTime());
+        $task->setCreatedBy($user);
+        $task->setCommentaire($comment);
+        $this->em->persist($task);
+        $this->em->flush();
+
+        return $task;
+    }
+
+    public function addAssignedTask($task,  $user)
+    {
+        $user = $this->getUser($user);
+        $taskAssigned = new TaskAssigned();
+        $taskAssigned->setIdTask($task);
+        $taskAssigned->setIdUser($user);
+        $this->em->persist($taskAssigned);
+        $this->em->flush();
+
+        return $taskAssigned;
+    }
+    public function getUtilisateurs($id){
+        $entity  = $this->em->getRepository(Utilisateurs::class)->findAll();
+        return $entity;
+    }
+    
 }
