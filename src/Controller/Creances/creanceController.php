@@ -765,12 +765,12 @@ class creanceController extends AbstractController
             $date = $data['date'] ;
             $montant = $data['montant']; 
             $commentaire = $data['commentaire']; 
-            $idCreance = $data['idCreance'] ;
             $type = $data['type'] ;
 
             if(is_numeric($montant) && !empty($date)){
+                $promise = $creancesRepo->getPromise($id);
 
-                $creance = $creancesRepo->getOneCreance($idCreance);
+                $creance = $creancesRepo->getOneCreance($promise->getId());
                 $idPtf = $creance['id_ptf_id'];
                 $getReglePtf = $creancesRepo->getReglePtf($idPtf);
 
@@ -815,7 +815,6 @@ class creanceController extends AbstractController
                 if($checkCondition){
                     $dateInsert = [
                         'id_type_id'=> $type,
-                        'id_creance_id'=> $idCreance,
                         'id_user_id'=> $this->AuthService->returnUserId($request),
                         'date'=> $date,
                         'montant'=> $montant,
@@ -823,8 +822,7 @@ class creanceController extends AbstractController
                         'date_creation'=> 'now()',
                         'id_status_id'=> 1,
                     ];
-    
-                    $creancesRepo->createPromise($dateInsert);
+                    $creancesRepo->updatePromise($dateInsert , $id);
                     $codeStatut="OK";
 
                 }else{
@@ -855,6 +853,7 @@ class creanceController extends AbstractController
             $data = $creancesRepo->getListPromise($idCreance);
             $arrayData = [];
             for ($i=0; $i < count($data); $i++) { 
+                $arrayData[$i]['id']= $data[$i]->getId();
                 $arrayData[$i]['type']= $data[$i]->getIdType();
                 $arrayData[$i]['user']= $data[$i]->getIdUser();
                 $arrayData[$i]['montant']= $data[$i]->getMontant();
@@ -900,7 +899,7 @@ class creanceController extends AbstractController
                 $idUser = $this->AuthService->returnUserId($request);
                 $task = $creancesRepo->addTask($creance, $qualification, $dateEcheance, $time, $assigned , $idUser , $comment);
     
-                if($assigned == 1){dump($assigned);
+                if($assigned == 1){
                     $assignedTask = $creancesRepo->addAssignedTask($task , $idUser);
                 }else if ($assigned == 2){
                     $assignedTo = $data['assignedTo'];
@@ -923,4 +922,93 @@ class creanceController extends AbstractController
         return new JsonResponse($respObjects);
     }
 
+    #[Route('/getListeTask/{idCreance}' )]
+    public function getListeTask( $idCreance, Request $request, creancesRepo $creancesRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            
+            $data = $creancesRepo->getListTask($idCreance);
+            $arrayData = [];
+            for ($i=0; $i < count($data); $i++) { 
+                $arrayData[$i]['activity']= $data[$i]->getIdActivity();
+                $arrayData[$i]['date_echeance']= $data[$i]->getDateEcheance();
+                $arrayData[$i]['temps']= $data[$i]->getTemps();
+                $arrayData[$i]['assigned_type']= $data[$i]->getAssignedType();
+                $arrayData[$i]['date_creation']= $data[$i]->getDateCreation();
+                $arrayData[$i]['user']= $data[$i]->getCreatedBy();
+                $arrayData[$i]['assigned_user']= $creancesRepo->getAssignedTask($data[$i]->getId());
+            }
+            $respObjects["data"] = $arrayData;
+            $codeStatut="OK";
+            
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/getPromise/{id}' )]
+    public function getListePromisse( $id, Request $request, creancesRepo $creancesRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            
+            $data = $creancesRepo->getPromise($id);
+            $arrayData = [];
+
+            $arrayData['type']= $data->getIdType();
+            $arrayData['user']= $data->getIdUser();
+            $arrayData['montant']= $data->getMontant();
+            $arrayData['status']= $data->getIdStatus();
+            $arrayData['date']= $data->getDate();
+
+            $respObjects["data"] = $arrayData;
+            $codeStatut="OK";
+            
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/getTask/{idCreance}' )]
+    public function getTask( $idCreance, Request $request, creancesRepo $creancesRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            
+            $data = $creancesRepo->getTask($idCreance);
+
+            $arrayData['activity']= $data->getIdActivity();
+            $arrayData['date_echeance']= $data->getDateEcheance();
+            $arrayData['temps']= $data->getTemps();
+            $arrayData['assigned_type']= $data->getAssignedType();
+            $arrayData['date_creation']= $data->getDateCreation();
+            $arrayData['user']= $data->getCreatedBy();
+            $arrayData['assigned_user']= $creancesRepo->getAssignedTask($data->getId());
+            $respObjects["data"] = $arrayData;
+
+            $codeStatut="OK";
+            
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
 }

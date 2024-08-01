@@ -760,9 +760,34 @@ class creancesRepo extends ServiceEntityRepository
         }
     }
 
+    public function updatePromise($data , $id){
+        // $primaryKey = "id";
+        $sql = "UPDATE `promise` SET ";
+        $setClauses = [];
+        foreach ($data as $key => $value) {
+            // Enclose column names within backticks if needed
+                $setClauses[] = "`$key` = :$key";
+        }
+        $sql .= implode(', ', $setClauses);
+        // You need to specify which row to update, typically using the primary key
+        $sql .= " WHERE `id` = :id";
+        $stmt = $this->conn->prepare($sql);
+        // Bind parameters for the SET clauses
+        foreach ($data as $key => $value) {
+            $stmt->bindParam($key, $value);  // Use $key directly as the parameter name
+            // Bind the primary key parameter
+        }
+        $stmt->bindParam("id", $id);
+        $stmt = $stmt->executeQuery();
+    }
+
     
     public function getListPromise($id){
         $entity  = $this->em->getRepository(Promise::class)->findBy(['id_creance'=>$id]);
+        return $entity;
+    }
+    public function getPromise($id){
+        $entity  = $this->em->getRepository(Promise::class)->find(['id'=>$id]);
         return $entity;
     }
 
@@ -802,6 +827,20 @@ class creancesRepo extends ServiceEntityRepository
     }
     public function getUtilisateurs($id){
         $entity  = $this->em->getRepository(Utilisateurs::class)->findAll();
+        return $entity;
+    }
+
+    public function getListTask($id){
+        $entity  = $this->em->getRepository(Task::class)->findBy(['idCreance'=>$id]);
+        return $entity;
+    }
+    public function getAssignedTask($id){
+        $entity  = $this->em->getRepository(TaskAssigned::class)->findOneBy(['id_task'=>$id] ,["id"=>"DESC"]);
+        return $entity ? $entity->getIdUser() : null;
+    }
+    
+    public function getTask($id){
+        $entity  = $this->em->getRepository(Task::class)->find(['id'=>$id]);
         return $entity;
     }
     
