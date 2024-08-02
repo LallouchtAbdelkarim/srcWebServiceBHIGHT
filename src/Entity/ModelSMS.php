@@ -20,8 +20,11 @@ class ModelSMS
     #[ORM\Column(length: 255)]
     private ?string $message = null;
 
-    #[ORM\Column(type: Types::DATE_MUTABLE)]
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $date_creation = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $objet = null;
 
     public function getId(): ?int
     {
@@ -60,6 +63,18 @@ class ModelSMS
     public function setDateCreation(\DateTimeInterface $date_creation): self
     {
         $this->date_creation = $date_creation;
+
+        return $this;
+    }
+
+    public function getObjet(): ?string
+    {
+        return $this->objet;
+    }
+
+    public function setObjet(?string $objet): static
+    {
+        $this->objet = $objet;
 
         return $this;
     }

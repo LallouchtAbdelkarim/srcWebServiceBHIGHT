@@ -20,7 +20,7 @@ class ModelEmail
     #[ORM\Column(length: 255)]
     private ?string $message = null;
 
-    #[ORM\Column(type: Types::DATE_MUTABLE)]
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $date_creation = null;
 
     #[ORM\Column(length: 255)]

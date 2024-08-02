@@ -15,6 +15,7 @@ use App\Entity\TypeDebiteur;
 use App\Entity\TypePaiement;
 use App\Entity\Utilisateurs;
 use App\Repository\Encaissement\paiementRepo;
+use App\Service\typeService;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -22,11 +23,13 @@ class creancesRepo extends ServiceEntityRepository
 {
     private $conn;
     public $em;
+    public $TypeService;
 
-    public function __construct(Connection $conn , EntityManagerInterface $em )
+    public function __construct(Connection $conn , EntityManagerInterface $em , typeService $TypeService )
     {
         $this->conn = $conn;
         $this->em = $em;
+        $this->TypeService = $TypeService;
     }
     public function getListesCreancesByFiltrages($data){
         $numero_creance = $data["numero_creance"];
@@ -844,4 +847,80 @@ class creancesRepo extends ServiceEntityRepository
         return $entity;
     }
     
+    // public function getEmailsByCr($id){
+    //     $query = $this->em->createQuery('SELECT a  from App\Entity\Email a where identity(a.id_debiteur) in (SELECT identity(ca.id_debiteur) from App\Entity\Debiteur ca  where (ca.id) in (select identity(c.id_debiteur) from App\Entity\TypeDebiteur c where identity(c.id_creance) = :id) )')
+    //     ->setParameters([
+    //         'id' => $id
+    //     ]);
+    //     $result = $query->getResult();
+    //     return $result;
+    // }
+    public function getEmailsByCr($id) {
+        $array = [];
+        $sql="SELECT e.*
+             FROM Email e 
+             WHERE (e.id_debiteur_id) IN (
+                 SELECT ca.id
+                 FROM Debiteur ca 
+                 WHERE ca.id IN (
+                     SELECT (c.id_debiteur_id) 
+                     FROM Type_Debiteur c 
+                     WHERE (c.id_creance_id) = ".$id."
+                 )
+             );";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAll();
+        for ($i=0; $i <count($resulat) ; $i++) { 
+            $array[$i] = $resulat[$i];
+            $array[$i]['id_type_email'] = $this->TypeService->getTypeById($resulat[$i]['id_type_email_id'] , 'email');
+        }
+        return $array;
+    }
+    
+    public function getAddressesCr($id) {
+        $array = [];
+        $sql="SELECT e.*
+             FROM Adresse e 
+             WHERE (e.id_debiteur_id) IN (
+                 SELECT ca.id
+                 FROM Debiteur ca 
+                 WHERE ca.id IN (
+                     SELECT (c.id_debiteur_id) 
+                     FROM Type_Debiteur c 
+                     WHERE (c.id_creance_id) = ".$id."
+                 )
+             );";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAll();
+        for ($i=0; $i <count($resulat) ; $i++) { 
+            $array[$i] = $resulat[$i];
+            $array[$i]['id_type_adresse_id'] = $this->TypeService->getTypeById($resulat[$i]['id_type_adresse_id'] , 'adresse');
+        }
+        return $array;
+    }
+
+    public function getTelephonesCr($id) {
+        $array = [];
+        $sql="SELECT e.*
+             FROM Telephone e 
+             WHERE (e.id_debiteur_id) IN (
+                 SELECT ca.id
+                 FROM Debiteur ca 
+                 WHERE ca.id IN (
+                     SELECT (c.id_debiteur_id) 
+                     FROM Type_Debiteur c 
+                     WHERE (c.id_creance_id) = ".$id."
+                 )
+             );";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAll();
+        for ($i=0; $i <count($resulat) ; $i++) { 
+            $array[$i] = $resulat[$i];
+            $array[$i]['id_type_tel_id'] = $this->TypeService->getTypeById($resulat[$i]['id_type_tel_id'] , 'tel');
+        }
+        return $array;
+    }
 }

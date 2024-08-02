@@ -27,7 +27,6 @@ class Adresse
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $ville = null;
 
-
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     private ?TypeAdresse $id_type_adresse = null;

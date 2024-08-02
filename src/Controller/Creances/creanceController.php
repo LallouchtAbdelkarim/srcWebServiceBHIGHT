@@ -107,6 +107,7 @@ class creanceController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
     #[Route('/getCreance')]
     public function getCreance(Request $request,creancesRepo $creancesRepo): JsonResponse
     {
@@ -142,6 +143,7 @@ class creanceController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
     #[Route('/getTypeDonneur')]
     public function getTypeDonneur(Request $request,creancesRepo $creancesRepo): JsonResponse
     {
@@ -1003,6 +1005,99 @@ class creanceController extends AbstractController
 
             $codeStatut="OK";
             
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/getTemplate/{type}' )]
+    public function getTemplate( $type, Request $request, creancesRepo $creancesRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            
+            $respObjects["data"] = $this->TypeService->getListeTemplate($type);
+            $codeStatut="OK";
+
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/getEmails/{id}')]
+    public function getEmails( $id , Request $request, creancesRepo $creancesRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $id = $request->get("id");
+            $creance = $creancesRepo->getOneCreance($id);
+            if($creance){
+                $data = $creancesRepo->getEmailsByCr($id);
+                
+                $respObjects["data"] = $data;
+                $codeStatut="OK";
+            }else{
+                $codeStatut = "NOT_EXIST_ELEMENT";
+            }
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/getAddresses/{id}')]
+    public function getAddresses( $id , Request $request, creancesRepo $creancesRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $id = $request->get("id");
+            $creance = $creancesRepo->getOneCreance($id);
+            if($creance){
+                $data = $creancesRepo->getAddressesCr($id);
+                $respObjects["data"] = $data;
+                $codeStatut="OK";
+            }else{
+                $codeStatut = "NOT_EXIST_ELEMENT";
+            }
+        }catch(\Exception $e){
+            $codeStatut="ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    
+    #[Route('/getTelephones/{id}')]
+    public function getTelephones( $id , Request $request, creancesRepo $creancesRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $id = $request->get("id");
+            $creance = $creancesRepo->getOneCreance($id);
+            if($creance){
+                $data = $creancesRepo->getTelephonesCr($id);
+                $respObjects["data"] = $data;
+                $codeStatut="OK";
+            }else{
+                $codeStatut = "NOT_EXIST_ELEMENT";
+            }
         }catch(\Exception $e){
             $codeStatut="ERROR";
             $respObjects["err"] = $e->getMessage();

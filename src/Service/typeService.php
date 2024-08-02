@@ -527,5 +527,42 @@ class typeService
 
         // If none of the cases matched, return false
         return false;
+    }   
+    
+    public function getListeTemplate($type)
+    {
+        switch ($type) {
+            case 1:
+                // Check if $id matches 'revenu' type
+                $query = $this->em->createQuery('SELECT r FROM App\Entity\ModelCourier r ');
+                $resultList = $query->getResult();
+                if ($resultList) {
+                    return $resultList;
+                }
+                break;
+
+            case 2:
+                $query = $this->em->createQuery('SELECT r FROM App\Entity\ModelEmail r ');
+                $resultList = $query->getResult();
+                if ($resultList) {
+                    return $resultList;
+                }
+                break;
+
+            case 3:
+                $query = $this->em->createQuery('SELECT r FROM App\Entity\ModelSMS r ');
+                $resultList = $query->getResult();
+                if ($resultList) {
+                    return $resultList;
+                }
+                break;
+
+            default:
+                // If $type doesn't match any expected types, return false
+                return [];
+        }
+
+        // If none of the cases matched, return false
+        return false;
     }    
 }
