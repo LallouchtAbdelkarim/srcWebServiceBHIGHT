@@ -137,6 +137,9 @@ class DossiersController extends AbstractController
                 $notes = $dossiersRepo->getListeNote($id);
                 $creance = $dossiersRepo->getCreanceByIdDossier($id);
                 $process = $dossiersRepo->getProcessByIdUser($id , $idUser);
+                $nb_accord = $dossiersRepo->getNbrAccord($id);
+                
+
                 
                 $respObjects["total"]  = $dossiersRepo->getDetailsCreanceByIdDossier($id);
                 $respObjects["dossier"] = $array_doss;
@@ -176,6 +179,10 @@ class DossiersController extends AbstractController
                 $respObjects["courriers"] = $courriers;
                 $respObjects["sms"] = $sms;
                 $respObjects["email"] = $email;
+                $respObjects["nbr_accord"] = $nb_accord;
+                $respObjects["nbr_note"] = $dossiersRepo->getNbrNote($id);
+                $respObjects["nbr_pj"] = $dossiersRepo->getNbrPj($id);
+                
                 $codeStatut="OK";
             }
         }catch(\Exception $e){

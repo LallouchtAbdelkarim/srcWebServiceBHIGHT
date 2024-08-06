@@ -14,6 +14,7 @@ use App\Entity\Profil;
 use App\Entity\Roles;
 use App\Entity\Utilisateurs;
 use App\Entity\Workflow;
+use App\Repository\Users\userRepo;
 use App\Service\AuthService;
 use App\Service\MessageService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -39,15 +40,18 @@ class UsersController extends AbstractController
     private $AuthService;
 
     private $JWTManager;
+    private $userRepo;
     public function __construct(Connection $connection,  
     MessageService $MessageService,
     AuthService $AuthService,
-    JWTEncoderInterface $JWTManager)
+    JWTEncoderInterface $JWTManager,
+    userRepo $userRepo)
     {
          $this->connection = $connection;
          $this->JWTManager = $JWTManager;
          $this->MessageService = $MessageService;
          $this->AuthService = $AuthService;
+         $this->userRepo = $userRepo;
     }
 
     #[Route('/add_profile', name: 'add_profile')]
@@ -760,6 +764,108 @@ class UsersController extends AbstractController
         $stmt = $stmt->executeQuery();
         $resulatUser = $stmt->fetchAllAssociative();
         return new JsonResponse($resulatUser);
+    }
+
+    #[Route('/department' ,methods:['POST'])]
+    public function AddDepartment(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            
+            $data = json_decode($request->getContent(), true);
+            $department = $data['department'];
+            
+            if(!empty($department)){
+                $exist = $this->userRepo->getDepartmentByName($department);
+                if(!$exist){
+                    $this->userRepo->saveDepartment($department);
+                    $codeStatut = 'OK';
+                }else{
+                    $codeStatut="ELEMENT_DEJE_EXIST";
+                }
+            }else{
+                $codeStatut="ERROR-EMPTY-PARAMS";
+            }
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+        $respObjects["et"] = $e->getMessage();
+
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/department/{id}' ,methods:['PUT'])]
+    public function updateDepartment(Request $request, $id ,EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            
+            $data = json_decode($request->getContent(), true);
+            $departmentName = $data['department'];
+            
+            if(!empty($departmentName)){
+                $exist = $this->userRepo->getDepartmentByName($departmentName);
+                $department = $this->userRepo->getDepartment($id);
+                if(!$exist && ($exist->getId() != $id)){
+                    $this->userRepo->saveDepartment($departmentName , $department);
+                    $codeStatut = 'OK';
+                }else{
+                    $codeStatut="ELEMENT_DEJE_EXIST";
+                }
+            }else{
+                $codeStatut="ERROR-EMPTY-PARAMS";
+            }
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+        $respObjects["et"] = $e->getMessage();
+
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/department' ,methods:['GET'])]
+    public function listDepartment(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            
+            $respObjects['data'] = $this->userRepo->getListDepartment();
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/department/{id}' ,methods:['GET'])]
+    public function getDepartment(Request $request, $id ,EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            
+            $respObjects['data'] = $this->userRepo->getDepartment($id);
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
     }
 
     #[Route('/getuserCompetence/{id}', name: 'get_user_comp', methods: ['GET'])]

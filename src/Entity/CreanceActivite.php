@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\CreanceActiviteRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: CreanceActiviteRepository::class)]
@@ -20,6 +21,20 @@ class CreanceActivite
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     private ?ParamActivite $id_param_activite = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $assigned_type = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $date_creation = null;
+
+    
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Utilisateurs $createdBy = null;
+    
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $commentaire = null;
 
     public function getId(): ?int
     {
@@ -46,6 +61,52 @@ class CreanceActivite
     public function setIdParamActivite(?ParamActivite $id_param_activite): static
     {
         $this->id_param_activite = $id_param_activite;
+
+        return $this;
+    }
+
+    public function getAssignedType(): ?int
+    {
+        return $this->assigned_type;
+    }
+
+    public function setAssignedType(?int $assigned_type): static
+    {
+        $this->assigned_type = $assigned_type;
+
+        return $this;
+    }
+
+    public function getDateCreation(): ?\DateTimeInterface
+    {
+        return $this->date_creation;
+    }
+
+    public function setDateCreation(?\DateTimeInterface $date_creation): static
+    {
+        $this->date_creation = $date_creation;
+
+        return $this;
+    }
+    public function getCreatedBy(): ?Utilisateurs
+    {
+        return $this->createdBy;
+    }
+
+    public function setCreatedBy(?Utilisateurs $createdBy): static
+    {
+        $this->createdBy = $createdBy;
+
+        return $this;
+    }
+    public function getCommentaire(): ?string
+    {
+        return $this->commentaire;
+    }
+
+    public function setCommentaire(?string $commentaire): static
+    {
+        $this->commentaire = $commentaire;
 
         return $this;
     }

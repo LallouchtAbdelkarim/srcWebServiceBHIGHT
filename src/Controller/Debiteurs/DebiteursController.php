@@ -84,7 +84,7 @@ class DebiteursController extends AbstractController
         return $this->json($respObjects);
     }
     #[Route('/checkDebiteur')]
-    public function checkDebiteur(Request $request,debiteursRepo $debiteursRepo): JsonResponse
+    public function checkDebiteur(Request $request,debiteursRepo $debiteursRepo ): JsonResponse
     {
         $respObjects =array();
         $codeStatut="ERROR";
@@ -98,7 +98,11 @@ class DebiteursController extends AbstractController
                 $geRelations = $this->debiteursRepo->getRelationByDebt($id);
                 $respObjects["personnes"] = $geRelations;
                 $contacts = $this->debiteursRepo->getContacts($id);
+                $creance = $this->debiteursRepo->getCreanceByDeb($id);
+
+                
                 $respObjects["contacts"] = $contacts;
+                $respObjects["creance"] = $creance;
             }else{
                 $codeStatut="NOT_EXIST_ELEMENT";
             }

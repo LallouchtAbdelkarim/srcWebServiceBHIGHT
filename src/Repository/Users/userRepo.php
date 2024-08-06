@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Repository\Users;
+use App\Entity\Departement;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -40,5 +41,24 @@ class userRepo extends ServiceEntityRepository
             return null;
         }
     }
+    public function saveDepartment($titre, ?Departement $department = null) {
+        if (!$department) {
+            $department = new Departement();
+            $department->setDateCreation(new \DateTime());
+        }
+        $department->setNom($titre);
+        $this->em->persist($department);
+        $this->em->flush();
+    }
     
+    public function getDepartmentByName($titre){
+        return $this->em->getRepository(Departement::class)->findOneBy(['nom'=>$titre]);
+    }
+    public function getDepartment($id){
+        return $this->em->getRepository(Departement::class)->findOneBy(['id'=>$id]);
+    }
+    public function getListDepartment(){
+        return $this->em->getRepository(Departement::class)->findAll();
+    }
+          
 }

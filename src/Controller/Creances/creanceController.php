@@ -2,15 +2,18 @@
 
 namespace App\Controller\Creances;
 
+use App\Entity\BackgroundCourrier;
 use App\Entity\Creance;
 use App\Repository\DonneurOrdreAndPTF\donneurRepo;
 use App\Repository\Creances\creancesRepo;
 use App\Repository\Encaissement\paiementRepo;
 use App\Repository\Parametrages\Activities\activityRepo;
 use App\Repository\Users\userRepo;
+use Spipu\Html2Pdf\Html2Pdf;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -131,6 +134,9 @@ class creanceController extends AbstractController
                 $respObjects["activite_creance"] =$creancesRepo->getActiviteCreance($id);
                 $respObjects["paiement"] =$creancesRepo->getPaiement($id);
                 $respObjects["list_creance"] =$creancesRepo->getListeOtherCreance($creance['id_dossier_id']);
+                $respObjects["allDebiteur"] =$creancesRepo->getListesDebiteurByDossier($id);
+
+                
                 $codeStatut="OK";
             }else{
                 $codeStatut = "NOT_EXIST_ELEMENT";
@@ -389,33 +395,76 @@ class creanceController extends AbstractController
     #[Route('/addActivity',methods:"POST")]
     public function addActivity(Request $request,creancesRepo $creancesRepo): JsonResponse
     {
-        $respObjects =array();
-        $codeStatut="ERROR";
-        try{
-            $this->AuthService->checkAuth(0,$request);
-            $data = json_decode($request->getContent(), true);
-            $id_creance =  $data["id_creance"];
-            $creance = $creancesRepo->getOneCreance($id_creance);
-            if($creance){
-                $id_param = $data["id_param"];
-                $checkParam = $this->activityRepo->getOneParam($id_param);
-                if($checkParam){
-                    $creancesRepo->createActivity($id_creance , $id_param , $creance['id_dossier_id']);
+        // $respObjects =array();
+        // $codeStatut="ERROR";
+        // try{
+        //     $this->AuthService->checkAuth(0,$request);
+        //     $data = json_decode($request->getContent(), true);
+        //     $id_creance =  $data["id_creance"];
+        //     $creance = $creancesRepo->getOneCreance($id_creance);
+        //     if($creance){
+        //         $id_param = $data["id_param"];
+        //         $checkParam = $this->activityRepo->getOneParam($id_param);
+        //         if($checkParam){
+        //             $creancesRepo->createActivity($id_creance , $id_param , $creance['id_dossier_id']);
                     
-                    $codeStatut="OK";
-                }else{
-                    $codeStatut = "NOT_EXIST_ELEMENT";
+        //             $codeStatut="OK";
+        //         }else{
+        //             $codeStatut = "NOT_EXIST_ELEMENT";
+        //         }
+        //     }else{
+        //         $codeStatut = "NOT_EXIST_ELEMENT";
+        //     }
+        // }catch(\Exception $e){
+        //     $codeStatut="ERROR";
+        //     $respObjects["err"] = $e->getMessage();
+        // }
+        // $respObjects["codeStatut"] = $codeStatut;
+        // $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        // return $this->json($respObjects);
+        $respObjects = [];
+        $codeStatut = "ERROR";
+
+        try {
+            $this->AuthService->checkAuth(0, $request);
+
+            $data = json_decode($request->getContent(), true);
+            $idQualification = $data['qualification'];
+            $assigned = $data['assigned'];
+           
+            $idCreance = $data['idCreance'];
+            $comment = $data['comment'];
+
+
+            $qualification = $creancesRepo->getParamActivity($idQualification);
+            $creance = $creancesRepo->getCreance($idCreance);
+
+            if($idQualification){
+                
+                $idUser = $this->AuthService->returnUserId($request);
+                $task = $creancesRepo->addActivity($creance, $qualification, $assigned , $idUser , $comment);
+    
+                if($assigned == 1){
+                    $assignedTask = $creancesRepo->addAssignedActivity($task , $idUser);
+                }else if ($assigned == 2){
+                    $assignedTo = $data['assignedTo'];
+                    $assignedTask = $creancesRepo->addAssignedActivity($task , $assignedTo);
                 }
+                $codeStatut = "OK";
+                
             }else{
-                $codeStatut = "NOT_EXIST_ELEMENT";
+                $codeStatut="EMPTY-DATA";
             }
-        }catch(\Exception $e){
-            $codeStatut="ERROR";
+
+        } catch (\Exception $e) {
+            $codeStatut = "ERROR";
             $respObjects["err"] = $e->getMessage();
         }
+
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
-        return $this->json($respObjects);
+
+        return new JsonResponse($respObjects);
     }
 
     #[Route('/addPaiement',methods:"POST")]
@@ -1105,5 +1154,141 @@ class creanceController extends AbstractController
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
+    }
+    #[Route("/previewPdf/{id}/{idAdresse}")]
+    public function previewPdf(Request $request , $id , $idAdresse, creancesRepo $creancesRepo): JsonResponse
+    {
+        $response = new Response();
+        $response->headers->set('Content-Type', 'application/json');
+
+        try {
+            $modele = $this->creancesRepo->getModelCourrier($id);
+            $adresse = $this->creancesRepo->getAdresse($idAdresse);
+            $data = json_decode($request->getContent(), true);
+            $objet = $modele->getObjet();
+            $message = $modele->getMessage();
+            $background = '';
+            if($modele->getIdBackground()){
+                $background = $modele->getIdBackground()->getId();
+            }
+            
+            // Header
+            $header = '<style>
+            .background{
+                        width:100px;height:100px;
+                    }
+            </style><div style="text-align:center"><img src="profile_img/logoCourrier/header2.png"  /></div>';
+            $html = "<div style='font-family:dejavusans'>";
+            $html .= $header;
+            $html .= "<h1 class='title'>Object :" . htmlspecialchars($objet, ENT_QUOTES, 'UTF-8') . "</h1>";
+            $html .= '<div style="text-align:right"><img src="profile_img/barcode.gif"  /></div>';
+            $html .= '
+                <div style="margin-top: 20px; margin-bottom: 50px;">
+                    <table style="width: 100%;">
+                        <tr>
+                        <td style="width: 70%;">
+                             <div>
+                            <b>Réference : 123456789</b>
+                            </div>
+                        </td>
+                        <td style="width: 30%;">
+                            <div>
+                                <b><span style="text-transform: uppercase;">'.$adresse->getIdDebiteur()->getNom().'</span> <span style="text-transform: capitalize;">'.$adresse->getIdDebiteur()->getPrenom().'</span></b><br><br>
+                                <b>'.$adresse->getAdresseComplet().'</b><br><br>
+                                <b>'.$adresse->getCodePostal().'</b><br><br>
+                                <b>'.$adresse->getPays().'</b><br><br>
+                            </div>
+                        </td>
+                        </tr>
+                    </table>
+                </div>
+            ';
+           
+            
+            if($background != ""){
+                $background = $this->em->getRepository(BackgroundCourrier::class)->find($background);
+                $background = $background->getUrl();
+                $html .= "<div style='position:relative;width:100%;min-height:1000px'>
+                    <div style='position:absolute; top:0; bottom:0; left:0; right:0; z-index:-1;'>
+                    <img src='".$background."' style='width:100%; height:100%; object-fit:cover;'>
+                    </div>
+                    <p>" . html_entity_decode($message) . "</p>
+                </div>";
+                $html .="</div>";
+            }else{
+                $html .= "<div style='position:relative;width:100%;min-height:1000px'>
+                    <p>" . html_entity_decode($message) . "</p>
+                </div>";
+                $html .="</div>";
+            }
+
+
+            $html2pdf = new Html2Pdf('P', 'A4', 'fr', true, 'UTF-8', array(10, 10, 10, 10),false); 
+            $html2pdf->pdf->SetFont('dejavusans', '', 12); 
+
+            // Write HTML to PDF
+            $html2pdf->writeHTML($html);
+        
+            // Output PDF as string
+            $pdfContent = $html2pdf->output('', 'S');
+        
+            // Encode PDF content to base64
+            $base64Content = base64_encode($pdfContent);
+        
+            // Prepare response data
+            $file = [
+                'content' => $base64Content,
+                'filename' => 'previewPdf.pdf',
+                'type' => 'application/pdf'
+            ];
+        
+            // Serialize response to JSON
+            $json = $this->serializer->serialize($file, 'json');
+        
+            // Return JsonResponse with PDF data
+            return new JsonResponse($json, Response::HTTP_OK, [], true);
+        
+        } catch (\Exception $e) {
+            // Handle exceptions
+            $response = "Exception- " . $e->getMessage();
+        
+            // Return error response
+            return new JsonResponse($response, Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+    #[Route("/previewSMS/{id}/{idTel}")]
+    public function previewSMS(Request $request, $id, $idTel, creancesRepo $creancesRepo): Response
+    {
+        try {
+            $modele = $creancesRepo->getModelSMS($id);
+            $message = $modele->getMessage();
+            $message=str_replace("<p>","",$message);
+            $message=str_replace("</p>","",$message);
+            $message=str_replace("&nbsp;","",$message);
+            
+            // No need to format the message further if it contains HTML tags
+            $formattedMessage = $this->formatMessageForTxt($message);
+            
+            // Create a Response object for the .txt file
+            $name = uniqid("sms");
+            $response = new Response($formattedMessage);
+            $response->headers->set('Content-Type', 'text/plain');
+            $response->headers->set('Content-Disposition', 'attachment; filename="'.$name.'.txt"');
+            
+            return $response;
+            
+        } catch (\Exception $e) {
+            // Handle exceptions
+            $responseContent = "Exception - " . $e->getMessage();
+            
+            // Return error response
+            return new JsonResponse($responseContent, Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private function formatMessageForTxt(string $message): string
+    {
+        // Since the message contains HTML, we don't need additional formatting
+        return $message;
     }
 }

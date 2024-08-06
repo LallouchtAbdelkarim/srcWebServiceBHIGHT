@@ -175,6 +175,15 @@ class dossiersRepo extends ServiceEntityRepository
             $type = $stmt->fetchAssociative();
             $resulat[$i]["type"] = $type;
         }
+
+        for ($i=0; $i <count($resulat) ; $i++) { 
+            $sql = "SELECT * FROM `personne` dt where dt.id in (select d.id_personne_id from relation_debiteur d where d.id_debiteur_id =:id);";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam('id', $resulat[$i]['id']);
+            $stmt = $stmt->executeQuery();
+            $type = $stmt->fetchAll();
+            $resulat[$i]["relation"] = $type;
+        }
         return $resulat;
     }
     public function getListesAdresse($id){
@@ -303,7 +312,7 @@ class dossiersRepo extends ServiceEntityRepository
         return $resulat;
     }
     public function getListeNote($id){
-        $sql="select h.* from note_dossier h where h.id_dossier_id = :id ";
+        $sql="select h.* from note_dossier h where h.id_dossier_id = :id ORDER BY `id` DESC";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam('id', $id);
         $stmt = $stmt->executeQuery();
@@ -402,4 +411,31 @@ class dossiersRepo extends ServiceEntityRepository
     public function getProcessWorkflow(){
         
     }
+
+    
+    public function getNbrAccord($id){
+        $sql="SELECT count(*) FROM accord a where a.id in (select ac.id_accord_id from creance_accord ac where ac.id_creance_id in (select c.id from creance c where c.id_dossier_id = :id ));;";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $id);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchOne();
+        return $resulat;
+    }
+    public function getNbrNote($id){
+        $sql="SELECT count(*) FROM note_dossier WHERE id_dossier_id = :id;";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $id);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchOne();
+        return $resulat;
+    }
+    public function getNbrPj($id){
+        $sql="SELECT count(*) FROM `pj_dossier` where id_dossier_id_id = :id;";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $id);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchOne();
+        return $resulat;
+    }
 }
+    

@@ -1296,6 +1296,21 @@ class debiteursRepo extends ServiceEntityRepository
 
         return $result;
     }
-    
+    public function getCreanceByDeb($id){
+        $sql="SELECT * FROM `creance` c WHERE c.id in (select t.id_creance_id from type_debiteur t where t.id_debiteur_id = :id )";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $id);
+        $stmt = $stmt->executeQuery();
+        $result = $stmt->fetchAll();
+        for ($i=0; $i < count($result); $i++) { 
+            $sql="SELECT * FROM `details_type_creance` WHERE id = :idType";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam('idType', $result[$i]['id_type_creance_id']);
+            $stmt = $stmt->executeQuery();
+            $type = $stmt->fetchAssociative();
+            $result[$i]['type_creance'] = $type;
+        }
+        return $result;
+    }
     
 }
