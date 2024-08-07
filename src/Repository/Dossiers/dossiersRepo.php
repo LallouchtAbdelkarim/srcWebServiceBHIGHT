@@ -68,6 +68,8 @@ class dossiersRepo extends ServiceEntityRepository
         if ($num_dossier != "") {
             $query .= ' WHERE d.numero_dossier = "'.$num_dossier.'" ';
         }
+
+        //TODO:Dossier
         if ($agent != "") {
             $query .= ' AND d.id_users_id = "'.$agent.'"';
         }
@@ -79,16 +81,25 @@ class dossiersRepo extends ServiceEntityRepository
             $dateFin = $date_fin_prevesionnel . " 23:59:59";
             $query .= ' AND d.date_fin_prevesionnel BETWEEN "'.$dateDebut.'" AND "'.$dateFin.'"';
         }
+        //TODO:Creance
         if ($date_echeance != "") {
             $dateDebut = $date_echeance . " 00:00:00";
             $dateFin = $date_echeance . " 23:59:59";
             $query .= ' AND c.date_echeance BETWEEN "'.$dateDebut.'" AND "'.$dateFin.'"';
         }
+        //TODO:deb
         if ($cin != "") {
             $query .= ' AND deb.cin like "'.$cin.'" ';
         }
         if($raison_social != ""){
             $query .= ' AND deb.raison_social like "'.$raison_social.'" '; 
+        }
+
+        
+        if($date_naissance != ""){
+            $dateDebut = $date_naissance. " 00:00:00";
+            $dateFin = $date_naissance. " 23:59:59";
+            $query .= ' AND deb.date_naissance BETWEEN "'.$dateDebut.'" AND "'.$dateFin.'"';
         }
 
         if($tel != ""){
@@ -97,23 +108,34 @@ class dossiersRepo extends ServiceEntityRepository
         if($addr != ""){
             $query .= ' AND ad.adresse_complet = "'.$addr.'" AND ad.verifier = 1'; 
         }
-        if($date_naissance != ""){
-            $dateDebut = $date_naissance. " 00:00:00";
-            $dateFin = $date_naissance. " 23:59:59";
-            $query .= ' AND deb.date_naissance BETWEEN "'.$dateDebut.'" AND "'.$dateFin.'"';
-        }
-        if($date_echeance != ""){
-            $dateDebut = $date_echeance. " 00:00:00";
-            $dateFin = $date_echeance. " 23:59:59";
-            $query .= ' AND c.date_echeance BETWEEN "'.$dateDebut.'" AND "'.$dateFin.'"';
-        }
-        if($num_creance != ""){
-            $query .= ' AND c.numero_creance like "'.$num_creance.'" ';
-        }
-        
+       
         $stmt = $this->conn->prepare($query);
         $stmt = $stmt->executeQuery();
         $resulat = $stmt->fetchAll();
+
+        $array = array();
+        for ($i=0; $i < count($resulat); $i++) { 
+            $array[$i] = $resulat[$i];
+            $array[$i]['ptf'] = $this->getPtf($resulat[$i]['id_ptf_id']);
+            $array[$i]['dn'] = $this->getDonneur($array[$i]['ptf']['id_donneur_ordre_id']);
+        }
+        
+        return $array;
+    }
+    public function getPtf($id){
+        $sql="SELECT  deb.* FROM portefeuille deb where deb.id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $id);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAssociative();
+        return $resulat;
+    }
+    public function getDonneur($id){
+        $sql="SELECT  deb.* FROM donneur_ordre deb where deb.id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $id);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAssociative();
         return $resulat;
     }
     public function getDebiteurByDossier($id){

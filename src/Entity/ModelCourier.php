@@ -29,6 +29,12 @@ class ModelCourier
     #[ORM\ManyToOne]
     private ?BackgroundCourrier $idBackground = null;
 
+    #[ORM\ManyToOne]
+    private ?Header $id_header = null;
+
+    #[ORM\ManyToOne]
+    private ?Footer $id_footer = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -90,6 +96,30 @@ class ModelCourier
     public function setIdBackground(?BackgroundCourrier $idBackground): static
     {
         $this->idBackground = $idBackground;
+
+        return $this;
+    }
+
+    public function getIdHeader(): ?Header
+    {
+        return $this->id_header;
+    }
+
+    public function setIdHeader(?Header $id_header): static
+    {
+        $this->id_header = $id_header;
+
+        return $this;
+    }
+
+    public function getIdFooter(): ?Footer
+    {
+        return $this->id_footer;
+    }
+
+    public function setIdFooter(?Footer $id_footer): static
+    {
+        $this->id_footer = $id_footer;
 
         return $this;
     }

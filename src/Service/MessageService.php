@@ -81,7 +81,8 @@ class MessageService
          "INVALID_EMAIL"=>"Veuillez vérifier que le format du email !",
          "IN_DONNEUR"=>"Votre modèle exist dans un donneur ordre !",
          "ACCESS_DELETE"=>"Impossible de supprimer cet élément !",
-         "ERROR_DATA_PROMISE"=>"Veuillez respecter les conditions !"
+         "ERROR_DATA_PROMISE"=>"Veuillez respecter les conditions !",
+         "ERROR-HEADER"=>"Il est existe dans le model de courrier"
         );
         return $listMessage[$CODEERROR];
     }

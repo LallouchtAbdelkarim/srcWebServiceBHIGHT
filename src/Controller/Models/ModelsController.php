@@ -4,6 +4,8 @@ namespace App\Controller\Models;
 
 use App\Entity\BackgroundCourrier;
 use App\Entity\DetailModelAffichage;
+use App\Entity\Footer;
+use App\Entity\Header;
 use App\Entity\ModelCourier;
 use App\Entity\ModelEmail;
 use App\Entity\ModelSMS;
@@ -27,7 +29,9 @@ class ModelsController extends AbstractController
     private $MessageService;
     public $serializer;
     public $modelCourierRepo;
+    private $AuthService;
 
+    public $em;
     public function __construct(
         AuthService $AuthService,
         EntityManagerInterface $em,
@@ -378,103 +382,63 @@ class ModelsController extends AbstractController
         return new JsonResponse($jsonContent);
     }
 
-    #[Route("/previewPdf")]
-    public function getContrat(Request $request): JsonResponse
+    #[Route("/previewPdf", methods: ["POST"])]
+    public function previewPdf(Request $request): JsonResponse
     {
-        $response = new Response();
-        $response->headers->set('Content-Type', 'application/json');
+        // Fetch data from request
+        $data = json_decode($request->getContent(), true);
 
-        try {
-            $data = json_decode($request->getContent(), true);
-            $objet = $data['objet'];
-            $message = $data['message'];
-            $background = $data['background'];
-        
-            
-            // Header
-            $header = '<style>
-            .background{
-                        width:100px;height:100px;
-                    }
-            </style><div style="text-align:center"><img src="profile_img/logoCourrier/header2.png"  /></div>';
-            $html = "<div style='font-family:dejavusans'>";
-            $html .= $header;
-            $html .= "<h1 class='title'>Object :" . htmlspecialchars($objet, ENT_QUOTES, 'UTF-8') . "</h1>";
-            $html .= '<div style="text-align:right"><img src="profile_img/barcode.gif"  /></div>';
-            $html .= '
-                <div style="margin-top: 20px; margin-bottom: 50px;">
-                    <table style="width: 100%;">
-                        <tr>
-                        <td style="width: 70%;">
-                             <div>
-                            <b>Réference : 123456789</b>
-                            </div>
-                        </td>
-                        <td style="width: 30%;">
-                            <div>
-                                <b>Prenom NOM</b><br><br>
-                                <b>Adresse complet</b><br><br>
-                                <b>Code postale Ville</b><br><br>
-                                <b>Pays</b><br><br>
-                            </div>
-                        </td>
-                        </tr>
-                    </table>
-                </div>
-            ';
-           
-            
-            if($background != ""){
-                $background = $this->em->getRepository(BackgroundCourrier::class)->find($background);
-                $background = $background->getUrl();
-                $html .= "<div style='position:relative;width:100%;min-height:1000px'>
-                    <div style='position:absolute; top:0; bottom:0; left:0; right:0; z-index:-1;'>
-                    <img src='".$background."' style='width:100%; height:100%; object-fit:cover;'>
-                    </div>
-                    <p>" . html_entity_decode($message) . "</p>
-                </div>";
-                $html .="</div>";
-            }else{
-                $html .= "<div style='position:relative;width:100%;min-height:1000px'>
-                    <p>" . html_entity_decode($message) . "</p>
-                </div>";
-                $html .="</div>";
-            }
-
-
-            $html2pdf = new Html2Pdf('P', 'A4', 'fr', true, 'UTF-8', array(10, 10, 10, 10),false); 
-            $html2pdf->pdf->SetFont('dejavusans', '', 12); 
-
-            // Write HTML to PDF
-            $html2pdf->writeHTML($html);
-        
-            // Output PDF as string
-            $pdfContent = $html2pdf->output('', 'S');
-        
-            // Encode PDF content to base64
-            $base64Content = base64_encode($pdfContent);
-        
-            // Prepare response data
-            $file = [
-                'content' => $base64Content,
-                'filename' => 'previewPdf.pdf',
-                'type' => 'application/pdf'
-            ];
-        
-            // Serialize response to JSON
-            $json = $this->serializer->serialize($file, 'json');
-        
-            // Return JsonResponse with PDF data
-            return new JsonResponse($json, Response::HTTP_OK, [], true);
-        
-        } catch (\Exception $e) {
-            // Handle exceptions
-            $response = "Exception- " . $e->getMessage();
-        
-            // Return error response
-            return new JsonResponse($response, Response::HTTP_INTERNAL_SERVER_ERROR);
+        // Check if data was successfully decoded
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return new JsonResponse(['error' => 'Invalid JSON'], Response::HTTP_BAD_REQUEST);
         }
+
+        $objet = $data['objet'] ?? '';
+        $message = $data['message'] ?? '';
+        $background = $data['background'] ?? '';
+        $headerSelected = $data['header'] ?? '';
+        $footerSelected = $data['footer'] ?? '';
+
+        // Fetch header and footer data from database
+        $header = $this->em->getRepository(Header::class)->find($headerSelected);
+        $footer = $this->em->getRepository(Footer::class)->find($footerSelected);
+        $footerText = $footer ? $footer->getMesssage() : '';
+        $positionHeader = $header ? $header->getPosition() : 1;
+        $styleHeader = $positionHeader == 1 ? 'left' : ($positionHeader == 2 ? 'center' : 'right');
+        $logo = $header ? $header->getUrl() : '';
+
+        // Prepare variables for Twig
+        $variables = [
+            'objet' => $objet,
+            'message' => $message,
+            'background' => $background,
+            'headerLogo' => $logo,
+            'headerStyle' => $styleHeader,
+            'footerText' => $footerText,
+        ];
+
+        // Render the Twig template
+        $htmlContent = $this->renderView('models/previewPdf.html.twig', $variables);
+
+        // Generate PDF from HTML content
+        $html2pdf = new Html2Pdf('P', 'A4', 'fr', true, 'UTF-8', [10, 10, 10, 10], false);
+        $html2pdf->writeHTML($htmlContent);
+        $pdfOutput = $html2pdf->output('', 'S');
+
+        // Encode PDF content to base64
+        $base64Content = base64_encode($pdfOutput);
+
+        // Prepare response data
+        $file = [
+            'content' => $base64Content,
+            'filename' => 'previewPdf.pdf',
+            'type' => 'application/pdf'
+        ];
+
+        // Return JSON response with PDF data
+        return new JsonResponse($file, Response::HTTP_OK);
     }
+
 
     #[Route('/addBackground')]
     public function addBackground(Request $request, EntityManagerInterface $entityManager): Response
@@ -542,5 +506,246 @@ class ModelsController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
+    #[Route('/header' ,methods:['POST'])]
+    public function AddHeader(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            
+            $data = json_decode($request->getContent(), true);
+            $position = $request->get('position');
+            $titre = $request->get('titre');
+            
+            $img = $request->files->get('logo');
+            if ($img) {
+                $destination = $this->getParameter('kernel.project_dir') . '/public/header_img';
+                $newFilename = uniqid() . '.' . $img->guessExtension();
+                $img->move($destination, $newFilename);
+                $header = new Header();
+                $header->setUrl('header_img/'.$newFilename);
+                $header->setTitre($titre);
+                $header->setPosition($position);
+                $entityManager->persist($header);
+                $entityManager->flush();
+                $codeStatut="OK";
+            }else{
+                $codeStatut="ERROR-EMPTY-PARAMS";
+            }
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+        $respObjects["et"] = $e->getMessage();
+
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/update-header/{id}' ,methods:['POST'])]
+    public function updateDepartment(Request $request, $id ,EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            
+            $position = $request->get('position');
+            $titre = $request->get('titre');
+            
+            $img = $request->files->get('logo');
+            if($img) {
+                $destination = $this->getParameter('kernel.project_dir') . '/public/header_img';
+                $newFilename = uniqid() . '.' . $img->guessExtension();
+                $img->move($destination, $newFilename);
+                $header = $entityManager->getRepository(Header::class)->find($id);
+                $header->setUrl('header_img/'.$newFilename);
+                $header->setTitre($titre);
+                $header->setPosition($position);
+                $entityManager->flush();
+                $codeStatut="OK";
+            }else{
+                $codeStatut="ERROR-EMPTY-PARAMS";
+            }
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+        $respObjects["et"] = $e->getMessage();
+
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/header/{id}' ,methods:['DELETE'])]
+    public function deleteHeader(Request $request, $id ,EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            
+            $cor = $entityManager->getRepository(ModelCourier::class)->findOneBy(['id_header'=>$id]);
+            if ($cor) {
+                $header = $entityManager->getRepository(Header::class)->find($id);
+                $entityManager->remove($header);
+                $entityManager->flush();
+                $codeStatut="OK";
+            }else{
+                $codeStatut="ERROR-HEADER";
+            }
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+            $respObjects["et"] = $e->getMessage();
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/header' ,methods:['GET'])]
+    public function listHedaer(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            $codeStatut='OK';
+            $respObjects['data']  = $entityManager->getRepository(Header::class)->findAll();
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/header/{id}' ,methods:['GET'])]
+    public function getHedaer(Request $request, $id ,EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            
+            $codeStatut='OK';
+            $respObjects['data']  = $entityManager->getRepository(Header::class)->find($id);
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
     
+    #[Route('/footer' ,methods:['POST'])]
+    public function AddFooter(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            
+            $data = json_decode($request->getContent(), true);
+            $message = $request->get('message');
+            $titre = $request->get('titre');
+            
+            if ($message != '') {
+
+                $footer = new Footer();
+                $footer->setMesssage($message);
+                $footer->setTitre($titre);
+                $entityManager->persist($footer);
+                $entityManager->flush();
+                $codeStatut="OK";
+            }else{
+                $codeStatut="ERROR-EMPTY-PARAMS";
+            }
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+        $respObjects["et"] = $e->getMessage();
+
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/update-footer/{id}' ,methods:['POST'])]
+    public function updateFooter(Request $request, $id ,EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            
+            $message = $request->get('message');
+            $titre = $request->get('titre');
+            
+            if ($message != '') {
+
+                $footer = $entityManager->getRepository(Footer::class)->find($id);
+                $footer->setMesssage($message);
+                $footer->setTitre($titre);
+                $entityManager->persist($footer);
+                $entityManager->flush();
+                $codeStatut="OK";
+
+            }else{
+                $codeStatut="ERROR-EMPTY-PARAMS";
+            }
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+        $respObjects["et"] = $e->getMessage();
+
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/footer' ,methods:['GET'])]
+    public function listFooter(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            $codeStatut='OK';
+            $respObjects['data']  = $entityManager->getRepository(Footer::class)->findAll();
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/footer/{id}' ,methods:['GET'])]
+    public function getFooter(Request $request, $id ,EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            
+            $codeStatut='OK';
+            $respObjects['data']  = $entityManager->getRepository(Footer::class)->find($id);
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
 }
