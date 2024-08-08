@@ -4,6 +4,7 @@ namespace App\Repository\IntegrationExtraction\Extraction;
 
 
 use App\Entity\HistoriqueDemandeCadrage;
+use App\Entity\ModelExport;
 use App\Entity\Portefeuille;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -84,4 +85,33 @@ class extractionRepo extends ServiceEntityRepository
         $portefeuille = $this->em->getRepository(HistoriqueDemandeCadrage::class)->find($id);
         return $portefeuille;
     }
+    
+    public function getAllModelExport($type){
+        $entity = $this->em->getRepository(ModelExport::class)->findAll();
+        return $entity;
+    }
+    public function saveModelExport($titre, $data, ?ModelExport $model = null): ModelExport {
+        if (!$model) {
+            $model = new ModelExport();
+            $model->setDateCreation(new \DateTime("now"));
+        }
+        $model->setTitre($titre);
+        $model->setEntities($data);
+        $model->setType(1);
+        $this->em->persist($model);
+        $this->em->flush();
+    
+        return $model;
+    }
+    
+    public function getModelExport($id){
+        $entity = $this->em->getRepository(ModelExport::class)->find($id);
+        return $entity;
+    }
+    
+    public function deleteModelExport($model){
+        $this->em->remove($model);
+        $this->em->flush();
+    }
+    
 }

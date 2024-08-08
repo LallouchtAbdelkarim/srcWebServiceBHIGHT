@@ -11,12 +11,16 @@ use App\Service\MessageService;
 use App\Service\typeService;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Flex\Response;
+use ZipArchive;
 
 #[Route('/API/extraction')]
 
@@ -107,7 +111,6 @@ class ExtractionController extends AbstractController
         try{
 
             $this->AuthService->checkAuth(0,$request);
-            $data_list = json_decode($request->getContent(), true);
             $data = $this->extractionRepo->getHistoriqueCadrage();
             $codeStatut="OK";
             $respObjects["data"] = $data;
@@ -172,5 +175,207 @@ class ExtractionController extends AbstractController
         $respObjects["codeStatut"]=$codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects );
+    }
+    #[Route('/getAllModelExport')]
+    public function getAllModelExport(Request $request , extractionRepo $extractionRepo ): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            
+            $this->AuthService->checkAuth(0,$request);
+            $type = $request->get('type');
+            $model_export = $extractionRepo->getAllModelExport($type);
+            $objet['model_export'] = $model_export;
+            $respObjects["data"] = $objet;
+            $codeStatut="OK";
+
+        }catch(\Exception $e){
+            $codeStatut = "ERREUR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    #[Route('/addModelExport' , methods:['POST'])]
+    public function addModelExport(Request $request , extractionRepo $extractionRepo ): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            
+            $this->AuthService->checkAuth(0,$request);
+            $data = json_decode($request->getContent(), true);
+            $titre = $data['titre'] ;
+            $entities = $data['data'] ;
+            if(!empty($titre) && count($entities) > 0){
+                $extractionRepo->saveModelExport($titre , $entities);
+                $codeStatut="OK";
+            }else{
+                $codeStatut="EMPTY-DATA";
+            }
+
+        }catch(\Exception $e){
+            $codeStatut = "ERREUR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/getModelExport/{id}')]
+    public function getModelExport($id , Request $request , extractionRepo $extractionRepo ): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            
+            $this->AuthService->checkAuth(0,$request);
+            $respObjects['data'] = $extractionRepo->getModelExport($id);
+        }catch(\Exception $e){
+            $codeStatut = "ERREUR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/updateModelExport/{id}')]
+    public function updateModelExport($id , Request $request , extractionRepo $extractionRepo ): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            
+            $this->AuthService->checkAuth(0,$request);
+            $data = json_decode($request->getContent(), true);
+            $titre = $data['titre'] ;
+            $entities = $data['data'] ;
+            if(!empty($titre) && count($entities) > 0){
+                $model = $extractionRepo->getModelExport($id);
+                if($model){
+                    $extractionRepo->saveModelExport($titre , $entities , $model);
+                    $codeStatut="OK";
+                }else{
+                    $codeStatut="NOT_EXIST_ELEMENT";
+                }
+            }else{
+                $codeStatut="EMPTY-DATA";
+            }
+
+        }catch(\Exception $e){
+            $codeStatut = "ERREUR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/deleteModelExport/{id}')]
+    public function deleteModelExport($id , Request $request , extractionRepo $extractionRepo ): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            
+            $this->AuthService->checkAuth(0,$request);
+            $data = json_decode($request->getContent(), true);
+            $model = $extractionRepo->getModelExport($id);
+            if($model){
+                $extractionRepo->deleteModelExport($model);
+                $codeStatut="OK";
+            }else{
+                $codeStatut="NOT_EXIST_ELEMENT";
+            }
+        }catch(\Exception $e){
+            $codeStatut = "ERROR";
+            $respObjects["err"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    
+    #[Route('/exportCadrageModel/{idSegmentation}/{id}')]
+    public function exportLogImport(extractionRepo $extractionRepo,$idSegmentation ,$id, ManagerRegistry $doctrine, SerializerInterface $serializer, Request $request)
+    {
+        // Create a temporary directory to store CSV files
+        $tempDir = sys_get_temp_dir() . '/' . uniqid('export_', true);
+        if (!mkdir($tempDir) && !is_dir($tempDir)) {
+            throw new \RuntimeException(sprintf('Directory "%s" was not created', $tempDir));
+        }
+    
+        // Initialize a zip archive
+        $zipFile = tempnam(sys_get_temp_dir(), 'exports');
+        $zip = new ZipArchive();
+        $zip->open($zipFile, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+    
+        $model = $extractionRepo->getModelExport($id);
+        $entities = $model->getEntities();
+
+        foreach ($entities as $entity) {
+            $type = $entity;
+            $tableName = strtolower($entity);
+            $sql = "SELECT * FROM ".$tableName;
+            
+            // Prepare and execute SQL query
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $data = $stmt->fetchAllAssociative();
+            
+            // Filter out the 'vide_champ' column
+            $dataWithoutVideChamp = array_map(function ($row) {
+                return array_filter($row, function ($value, $key) {
+                    return $key !== 'vide_champ';
+                }, ARRAY_FILTER_USE_BOTH); // Use both key and value for array_filter
+            }, $data);
+        
+            // Create a CSV file for this import
+            $csvFileName = $type."_".$id.'.csv';
+            $csvFilePath = $tempDir . '/' . $csvFileName;
+            // $csvFile = fopen($csvFilePath, 'w');
+            $csvFile = fopen($csvFilePath, 'w', false, stream_context_create(['ftp' => ['encoding' => 'UTF-8']]));
+            
+            fwrite($csvFile, "\xEF\xBB\xBF");
+
+            // Write CSV headers
+            fputcsv($csvFile, array_keys($dataWithoutVideChamp[0]), ';');
+        
+            // Write CSV data
+            foreach ($dataWithoutVideChamp as $row) {
+                fputcsv($csvFile, $row, ';');
+            }
+        
+            fclose($csvFile);
+        
+            // Add the CSV file to the zip archive
+            $zip->addFile($csvFilePath, $csvFileName);
+        }
+        
+        // Close the zip archive
+        $zip->close();
+    
+        // Remove temporary directory
+        foreach (glob($tempDir . '/*') as $file) {
+            unlink($file);
+        }
+        rmdir($tempDir);
+    
+        // Create a response containing the zip file
+        $response = new StreamedResponse(function () use ($zipFile) {
+            readfile($zipFile);
+        });
+        $response->headers->set('Content-Type', 'application/zip');
+        $response->headers->set('Content-Disposition', $response->headers->makeDisposition(
+            ResponseHeaderBag::DISPOSITION_ATTACHMENT,
+            'integration_log_'.$id.'.zip'
+        ));
+    
+        return $response;
     }
 }

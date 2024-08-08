@@ -1297,4 +1297,8 @@ class integrationRepo extends ServiceEntityRepository
             return null;
         }
     }
+    public function getAllModelExport($type){
+        $entity = $this->em->getRepository(ModelExport::class)->findAll();
+        return $entity;
+    }
 }

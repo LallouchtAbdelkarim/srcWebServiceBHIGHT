@@ -64,12 +64,15 @@ class missionsRepo extends ServiceEntityRepository
         $result = $this->em->getRepository(Utilisateurs::class)->find($id);
         return $result;
     }
-    public function createMission($idAgent , $idFile){
+    public function createMission($idAgent , $idFile , $date_debut, $date_fin){
         $status = $this->em->getRepository(StatusMissions::class)->find(2);
         $h=new Missions();
         $h->setIdUsers($idAgent);
         $h->setIdFile($idFile);
         $h->setIdStatus($status);
+        $h->setDateCreation(new \DateTime());
+        $h->setDateDebut(new \DateTime($date_debut));
+        $h->setDateFin(new \DateTime($date_fin));
         $this->em->persist($h);
         $this->em->flush();
         return $h;
@@ -138,5 +141,20 @@ class missionsRepo extends ServiceEntityRepository
         return $result;
     }
 
+    public function getDossierPreAffectation(){
+        $sql="SELECT * FROM `dossier` where id_status_assign_id = 1 ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $result = $stmt->fetchAll();
+        for ($i=0; $i <count($result) ; $i++) { 
+            # code...
+            $sql="SELECT * FROM `portefeuille` where id = ".$result[$i]["id_ptf_id"]." ";
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $type = $stmt->fetchAssociative();
+            $result[$i]["ptf"] = $type;
+        }
+        return $result;
+    }
 }
 

@@ -47,6 +47,12 @@ class Dossier
     #[ORM\Column(nullable: true)]
     private ?int $id_integration = null;
 
+    #[ORM\ManyToOne]
+    private ?StatusDossierAssign $id_status_assign = null;
+
+    #[ORM\ManyToOne]
+    private ?Utilisateurs $id_user_assign = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -180,6 +186,30 @@ class Dossier
     public function setIdIntegration(?int $id_integration): static
     {
         $this->id_integration = $id_integration;
+
+        return $this;
+    }
+
+    public function getIdStatusAssign(): ?StatusDossierAssign
+    {
+        return $this->id_status_assign;
+    }
+
+    public function setIdStatusAssign(?StatusDossierAssign $id_status_assign): static
+    {
+        $this->id_status_assign = $id_status_assign;
+
+        return $this;
+    }
+
+    public function getIdUserAssign(): ?Utilisateurs
+    {
+        return $this->id_user_assign;
+    }
+
+    public function setIdUserAssign(?Utilisateurs $id_user_assign): static
+    {
+        $this->id_user_assign = $id_user_assign;
 
         return $this;
     }

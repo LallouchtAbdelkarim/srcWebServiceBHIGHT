@@ -1,13 +1,13 @@
 <page backtop="100px" backbottom="150px">
     <page_header>
         <div style="text-align:{{ headerStyle }}; padding-bottom: 20px;">
-            <img src="{{ headerLogo }}" alt="Logo" style="width: 33%;">
+            <img src="{{ headerLogo }}" alt="Logo" style="width: 33%; ">
         </div>
     </page_header>
 
     <page_footer>
         <div style="text-align: center; font-size: 11px; border-top: 1px solid black;">
-            {{ footerText }}
+        {{ footerText | raw }}
         </div>
         <div style="text-align: center; font-size: 15px; margin-top: 5px;">
             page : [[page_cu]] / [[page_nb]]
@@ -15,53 +15,45 @@
     </page_footer>
 
     <div>
-        <h1 class="title">Object: {{ objet }}</h1>
-        <div style="text-align: right;"><img src="profile_img/barcode.gif" /></div>
+                <!-- Only show this section on the first page -->
+            <div style="text-align: right;">
+                <img src="profile_img/barcode.gif" />
+            </div>
+            <div style="margin-top: 20px; margin-bottom: 50px;">
+                <table style="width: 100%;">
+                    <tr>
+                        <td style="width: 70%;">
+                            <div>
+                                <b>Réference : 123456789</b>
+                            </div>
+                        </td>
+                        <td style="width: 30%;">
+                            <div>
+                                <b>Prenom NOM</b><br><br>
+                                <b>Adresse complet</b><br><br>
+                                <b>Code postale Ville</b><br><br>
+                                <b>Pays</b><br><br>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <p class="title">Objet: {{ objet }}</p>
 
-        <div style="margin-top: 20px; margin-bottom: 50px;">
-            <table style="width: 100%;">
-                <tr>
-                    <td style="width: 70%;">
-                        <div>
-                            <b>Réference : 123456789</b>
-                        </div>
-                    </td>
-                    <td style="width: 30%;">
-                        <div>
-                            <b>Prenom NOM</b><br><br>
-                            <b>Adresse complet</b><br><br>
-                            <b>Code postale Ville</b><br><br>
-                            <b>Pays</b><br><br>
-                        </div>
-                    </td>
-                </tr>
-            </table>
-        </div>
+            
 
         {% if background %}
             <div style="position: relative; width: 100%; min-height: 1000px;">
                 <div style="position: absolute; top: 0; bottom: 0; left: 0; right: 0; z-index: -1;">
                     <img src="{{ background }}" style="width: 100%; height: 100%; object-fit: cover;">
                 </div>
-                <p>{{ message }}</p>
+                <p>{{ message | raw }}</p>
             </div>
         {% else %}
             <div style="position: relative; width: 100%; min-height: 1000px;">
-                <p>{{ message }}</p>
+                <p>{{ message | raw }}</p>
             </div>
         {% endif %}
 
-        <table style="width: 100%;">
-            <tr>
-                <td style="width: 60%;"></td>
-                <td style="width: 40%;">
-                    <table style="width: 100%; padding-right: 20px; border: 0.5px solid #2E2E2E; background: #ce3232; border-radius: 5px; padding: 10px; color: white; text-align: right;">
-                        <tr>
-                            <td style="width: 50%">Total :</td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        </table>
     </div>
 </page>

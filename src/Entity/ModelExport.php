@@ -23,6 +23,9 @@ class ModelExport
     #[ORM\Column(nullable: true)]
     private ?int $type = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?array $entities = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -60,6 +63,18 @@ class ModelExport
     public function setType(?int $type): static
     {
         $this->type = $type;
+
+        return $this;
+    }
+
+    public function getEntities(): ?array
+    {
+        return $this->entities;
+    }
+
+    public function setEntities(?array $entities): static
+    {
+        $this->entities = $entities;
 
         return $this;
     }

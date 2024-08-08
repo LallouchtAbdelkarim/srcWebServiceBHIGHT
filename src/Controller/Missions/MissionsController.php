@@ -228,20 +228,20 @@ class MissionsController extends AbstractController
         $codeStatut = "ERROR";
         try{
             $dataJson = json_decode($request->getContent(), true);
-            $idFile = $dataJson['idFile'];
+            // $idFile = $dataJson['idFile'];
             $idAgent = $dataJson['idAgent'];
             $data = $dataJson['data'];
-            if($idFile != "" && $idAgent != "" && count($data)>0){
+            $date_debut = $dataJson['date_debut'];
+            $date_fin = $dataJson['date_fin'];
+            if( $idAgent != "" ){
 
                 $agent = $missionsRepo->getAgent($idAgent);
-                $file = $missionsRepo->getFile($idFile);
-                $missions = $missionsRepo->createMission($agent , $file);
+                // $file = $missionsRepo->getFile($idFile);
+                $missions = $missionsRepo->createMission($agent , null, $date_debut , $date_fin);
             
                 for ($i=0; $i < count($data); $i++) { 
-                    if($data[$i]['is_in_missions'] == 0 ){
-                        $sql = "INSERT INTO `detail_mission`( `id_detail_file_id`, `id_mission_id`, `etat`) VALUES (".$data[$i]['id'].",".$missions->getId().",0)";
-                        $stmt = $this->conn->prepare($sql)->executeQuery();
-                    }
+                    $sql = "UPDATE `dossier` SET `id_status_assign_id`=2, `id_user_assign_id`=".$idAgent." WHERE id = ".$data[$i]['id'];
+                    $stmt = $this->conn->prepare($sql)->executeQuery();
                 }
 
                 //Delete the old data 
@@ -266,8 +266,8 @@ class MissionsController extends AbstractController
 
                 
 
-                $sql = "UPDATE `details_file` d SET d.`is_in_missions`=2 WHERE d.id in (select dm.id_detail_file_id from detail_mission dm where dm.id_mission_id = ".$missions->getId().");";
-                $stmt = $this->conn->prepare($sql)->executeQuery();
+                // $sql = "UPDATE `details_file` d SET d.`is_in_missions`=2 WHERE d.id in (select dm.id_detail_file_id from detail_mission dm where dm.id_mission_id = ".$missions->getId().");";
+                // $stmt = $this->conn->prepare($sql)->executeQuery();
                 $codeStatut="OK";
 
             }else{
@@ -443,4 +443,24 @@ class MissionsController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+    #[Route('/getDossierPreAffectation')]
+    public function getDossierPreAffectation(missionsRepo $missionsRepo ,Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $id = $request->get("id");
+            $data = $missionsRepo->getDossierPreAffectation();
+            $codeStatut = "OK";
+            $respObjects["data"] = $data;
+            $respObjects["details"] = $data;
+        }catch(\Exception $e){
+            $respObjects["err"] = $e->getMessage();
+            $codeStatut = "ERREUR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    
 }
