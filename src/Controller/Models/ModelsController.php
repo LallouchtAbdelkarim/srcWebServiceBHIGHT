@@ -13,6 +13,7 @@ use App\Repository\ModelCourierRepository;
 use App\Service\AuthService;
 use App\Service\MessageService;
 use Doctrine\ORM\EntityManagerInterface;
+use Endroid\QrCode\Builder\BuilderInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -37,7 +38,7 @@ class ModelsController extends AbstractController
         EntityManagerInterface $em,
         MessageService $MessageService,
         SerializerInterface $serializer,
-        ModelCourierRepository $modelCourierRepository
+        ModelCourierRepository $modelCourierRepository,
     )
     {
         $this->em = $em;
@@ -164,6 +165,8 @@ class ModelsController extends AbstractController
         $titre = $request->get("titre");
         $objet = $request->get("objet");
         $background = $request->get("background");
+        $id_header = $request->get("header");
+        $id_footer = $request->get("footer");
 
         $contraintes = array(
             "message" => array("val" => $message, "length" => 80, "type" => "string"),
@@ -181,15 +184,25 @@ class ModelsController extends AbstractController
                 if($background != ""){
                     $backgroundImg =  $entityManager->getRepository(BackgroundCourrier::class)->find($background);
                 }
-                $courier = new ModelCourier();
-                $courier->setMessage($message);
-                $courier->setTitre($titre);
-                $courier->setObjet($objet);
-                $courier->setDateCreation(new \DateTime());
-                $courier->setIdBackground($backgroundImg);
-                $entityManager->persist($courier);
-                $entityManager->flush();
-                $codeStatut = "OK";
+                $header =  $entityManager->getRepository(Header::class)->find($id_header);
+                $footer =  $entityManager->getRepository(Footer::class)->find($id_footer);
+
+                if($header && $footer){
+                    $courier = new ModelCourier();
+                    $courier->setMessage($message);
+                    $courier->setTitre($titre);
+                    $courier->setObjet($objet);
+                    $courier->setDateCreation(new \DateTime());
+                    $courier->setIdBackground($backgroundImg);
+                    $courier->setIdHeader($header);
+                    $courier->setIdFooter($footer);
+                    $entityManager->persist($courier);
+                    $entityManager->flush();
+                    $codeStatut = "OK";
+                }else{
+                    $codeStatut = "REQUIRED-HEADER";
+                }
+
             }
         }
         $respObjects["codeStatut"] = $codeStatut;
@@ -239,11 +252,11 @@ class ModelsController extends AbstractController
         return $this->json($respObjects);
     }
 
-    #[Route('/delete_model_courier/{id}', name: 'delete_model_courier')]
+    #[Route('/delete_model_courier/{id}', methods:['POST'])]
     public function deleteModelCourier(EntityManagerInterface $entityManager, Request $request, ValidationService $validator, $id): JsonResponse
     {
 
-        $courier = $entityManager->getRepository(ModelCourier::class)->findOneBy(array('id' => $id));
+        $courier = $entityManager->getRepository(ModelCourier::class)->find($id);
         $response = "";
         $codeStatut = "";
         if (!$courier) {
@@ -383,7 +396,7 @@ class ModelsController extends AbstractController
     }
 
     #[Route("/previewPdf", methods: ["POST"])]
-    public function previewPdf(Request $request): JsonResponse
+    public function previewPdf(Request $request ): JsonResponse
     {
         // Fetch data from request
         $data = json_decode($request->getContent(), true);
@@ -402,11 +415,12 @@ class ModelsController extends AbstractController
         // Fetch header and footer data from database
         $header = $this->em->getRepository(Header::class)->find($headerSelected);
         $footer = $this->em->getRepository(Footer::class)->find($footerSelected);
-        $footerText = $footer ? $footer->getMesssage() : '';
+        $footerText = $footer ? $footer->getMessage() : '';
         $positionHeader = $header ? $header->getPosition() : 1;
         $styleHeader = $positionHeader == 1 ? 'left' : ($positionHeader == 2 ? 'center' : 'right');
         $logo = $header ? $header->getUrl() : '';
 
+        
         // Prepare variables for Twig
         $variables = [
             'objet' => $objet,
@@ -420,19 +434,23 @@ class ModelsController extends AbstractController
         // Render the Twig template
         $htmlContent = $this->renderView('models/previewPdf.html.twig', $variables);
 
+
         // Generate PDF from HTML content
         $html2pdf = new Html2Pdf('P', 'A4', 'fr', true, 'UTF-8', [10, 10, 10, 10], false);
         $html2pdf->writeHTML($htmlContent);
         $pdfOutput = $html2pdf->output('', 'S');
 
+        // Get the total number of pages
+        $pageCount = $html2pdf->getNbPages();
+
         // Encode PDF content to base64
         $base64Content = base64_encode($pdfOutput);
 
-        // Prepare response data
         $file = [
             'content' => $base64Content,
             'filename' => 'previewPdf.pdf',
-            'type' => 'application/pdf'
+            'type' => 'application/pdf',
+            'pageCount'=>$pageCount
         ];
 
         // Return JSON response with PDF data
@@ -659,7 +677,7 @@ class ModelsController extends AbstractController
             if ($message != '') {
 
                 $footer = new Footer();
-                $footer->setMesssage($message);
+                $footer->setMessage($message);
                 $footer->setTitre($titre);
                 $entityManager->persist($footer);
                 $entityManager->flush();
@@ -692,7 +710,7 @@ class ModelsController extends AbstractController
             if ($message != '') {
 
                 $footer = $entityManager->getRepository(Footer::class)->find($id);
-                $footer->setMesssage($message);
+                $footer->setMessage($message);
                 $footer->setTitre($titre);
                 $entityManager->persist($footer);
                 $entityManager->flush();
@@ -743,6 +761,34 @@ class ModelsController extends AbstractController
 
         } catch (\Exception $e) {
             $codeStatut="ERROR";
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/footer/{id}' ,methods:['DELETE'])]
+    public function deleteFooter(Request $request, $id ,EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            
+            $cor = $entityManager->getRepository(ModelCourier::class)->findOneBy(['id_footer'=>$id]);
+            if ($cor == null) {
+                $footer = $entityManager->getRepository(Footer::class)->find($id);
+                $entityManager->remove($footer);
+                $entityManager->flush();
+                $codeStatut="OK";
+            }else{
+                $codeStatut="ERROR-FOOTER";
+            }
+
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+            $respObjects["et"] = $e->getMessage();
         }   
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);

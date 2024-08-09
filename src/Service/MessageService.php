@@ -82,7 +82,9 @@ class MessageService
          "IN_DONNEUR"=>"Votre modèle exist dans un donneur ordre !",
          "ACCESS_DELETE"=>"Impossible de supprimer cet élément !",
          "ERROR_DATA_PROMISE"=>"Veuillez respecter les conditions !",
-         "ERROR-HEADER"=>"Il est existe dans le model de courrier"
+         "ERROR-HEADER"=>"Il est existe dans le model de courrier",
+         "ERROR-FOOTER"=>"Il est existe dans le model de courrier",
+         "REQUIRED-HEADER"=>"Le header et le footer sont obligatoires !"
         );
         return $listMessage[$CODEERROR];
     }

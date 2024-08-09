@@ -1825,4 +1825,12 @@ class segementationRepo extends ServiceEntityRepository
         $stmt = $stmt->executeQuery();
         // return $data;
     }
+    public function getListSegment(){
+        $sql="SELECT * FROM `segmentation` s ";
+        $stmt = $this->conn->prepare($sql);
+        // $stmt->bindValue(":id",$id);
+        $stmt = $stmt->executeQuery();
+        $statut = $stmt->fetchAll();
+        return $statut;
+    }
 }

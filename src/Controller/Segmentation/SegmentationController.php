@@ -2536,4 +2536,23 @@ class SegmentationController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+    #[Route('/getListeSegment')]
+    public function getListeSegment(Request $request,segementationRepo $segementationRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data = $segementationRepo->getListSegment();
+            $codeStatut = "OK";
+            $respObjects["data"] = $data;
+        }catch(\Exception $e){
+            $codeStatut = "ERROR";
+        $respObjects["ERRR"] = $e->getMessage();
+
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
 }

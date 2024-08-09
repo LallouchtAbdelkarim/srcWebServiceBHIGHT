@@ -13,27 +13,16 @@ class Footer
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $messsage = null;
 
     #[ORM\Column(length: 255)]
     private ?string $titre = null;
 
+    #[ORM\Column(length: 2000, nullable: true)]
+    private ?string $message = null;
+
     public function getId(): ?int
     {
         return $this->id;
-    }
-
-    public function getMesssage(): ?string
-    {
-        return $this->messsage;
-    }
-
-    public function setMesssage(string $messsage): static
-    {
-        $this->messsage = $messsage;
-
-        return $this;
     }
 
     public function getTitre(): ?string
@@ -44,6 +33,18 @@ class Footer
     public function setTitre(string $titre): static
     {
         $this->titre = $titre;
+
+        return $this;
+    }
+
+    public function getMessage(): ?string
+    {
+        return $this->message;
+    }
+
+    public function setMessage(?string $message): static
+    {
+        $this->message = $message;
 
         return $this;
     }
