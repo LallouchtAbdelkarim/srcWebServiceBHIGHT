@@ -209,8 +209,10 @@ class ExtractionController extends AbstractController
             $data = json_decode($request->getContent(), true);
             $titre = $data['titre'] ;
             $entities = $data['data'] ;
+            $selectedColumns = $data['selectedColumns'];
             if(!empty($titre) && count($entities) > 0){
-                $extractionRepo->saveModelExport($titre , $entities);
+                $model = $extractionRepo->saveModelExport($titre , $entities);
+                $extractionRepo->saveColumnEntity($entities  , $selectedColumns , $model);
                 $codeStatut="OK";
             }else{
                 $codeStatut="EMPTY-DATA";
@@ -231,9 +233,9 @@ class ExtractionController extends AbstractController
         $respObjects =array();
         $codeStatut = "ERROR";
         try{
-            
             $this->AuthService->checkAuth(0,$request);
             $respObjects['data'] = $extractionRepo->getModelExport($id);
+            $respObjects['columns'] = $extractionRepo->getColumnModelExport($id);
         }catch(\Exception $e){
             $codeStatut = "ERREUR";
             $respObjects["err"] = $e->getMessage();
@@ -254,10 +256,18 @@ class ExtractionController extends AbstractController
             $data = json_decode($request->getContent(), true);
             $titre = $data['titre'] ;
             $entities = $data['data'] ;
+            $selectedColumns = $data['selectedColumns'];
             if(!empty($titre) && count($entities) > 0){
                 $model = $extractionRepo->getModelExport($id);
                 if($model){
                     $extractionRepo->saveModelExport($titre , $entities , $model);
+
+                    $columns = $extractionRepo->getColumnModelExport($id);
+                    foreach ($columns as $value) {
+                        $extractionRepo->deleteColumnModelExport($value);   
+                    }
+                    $extractionRepo->saveColumnEntity($entities  , $selectedColumns , $model);
+
                     $codeStatut="OK";
                 }else{
                     $codeStatut="NOT_EXIST_ELEMENT";
@@ -286,6 +296,10 @@ class ExtractionController extends AbstractController
             $data = json_decode($request->getContent(), true);
             $model = $extractionRepo->getModelExport($id);
             if($model){
+                $columns = $extractionRepo->getColumnModelExport($id);
+                foreach ($columns as $value) {
+                    $extractionRepo->deleteColumnModelExport($value);   
+                }
                 $extractionRepo->deleteModelExport($model);
                 $codeStatut="OK";
             }else{
@@ -302,70 +316,71 @@ class ExtractionController extends AbstractController
 
     
     #[Route('/exportCadrageModel/{idSegmentation}/{id}')]
-    public function exportLogImport(extractionRepo $extractionRepo,$idSegmentation ,$id, ManagerRegistry $doctrine, SerializerInterface $serializer, Request $request)
+    public function exportLogImport(extractionRepo $extractionRepo, $idSegmentation, $id, ManagerRegistry $doctrine, SerializerInterface $serializer, Request $request)
     {
         // Create a temporary directory to store CSV files
         $tempDir = sys_get_temp_dir() . '/' . uniqid('export_', true);
         if (!mkdir($tempDir) && !is_dir($tempDir)) {
             throw new \RuntimeException(sprintf('Directory "%s" was not created', $tempDir));
         }
-    
+
         // Initialize a zip archive
         $zipFile = tempnam(sys_get_temp_dir(), 'exports');
         $zip = new ZipArchive();
         $zip->open($zipFile, ZipArchive::CREATE | ZipArchive::OVERWRITE);
-    
+
         $model = $extractionRepo->getModelExport($id);
         $entities = $model->getEntities();
 
         foreach ($entities as $entity) {
             $type = $entity;
             $tableName = strtolower($entity);
-            $sql = "SELECT * FROM ".$tableName;
-            
-            // Prepare and execute SQL query
-            $stmt = $this->conn->prepare($sql);
-            $stmt = $stmt->executeQuery();
-            $data = $stmt->fetchAllAssociative();
-            
-            // Filter out the 'vide_champ' column
-            $dataWithoutVideChamp = array_map(function ($row) {
-                return array_filter($row, function ($value, $key) {
-                    return $key !== 'vide_champ';
-                }, ARRAY_FILTER_USE_BOTH); // Use both key and value for array_filter
-            }, $data);
-        
-            // Create a CSV file for this import
-            $csvFileName = $type."_".$id.'.csv';
-            $csvFilePath = $tempDir . '/' . $csvFileName;
-            // $csvFile = fopen($csvFilePath, 'w');
-            $csvFile = fopen($csvFilePath, 'w', false, stream_context_create(['ftp' => ['encoding' => 'UTF-8']]));
-            
-            fwrite($csvFile, "\xEF\xBB\xBF");
 
-            // Write CSV headers
-            fputcsv($csvFile, array_keys($dataWithoutVideChamp[0]), ';');
-        
-            // Write CSV data
-            foreach ($dataWithoutVideChamp as $row) {
-                fputcsv($csvFile, $row, ';');
+            $data = $extractionRepo->getDataBySegment($tableName, $id, $idSegmentation);
+
+            // Filter out the 'vide_champ' column
+            $dataWithoutVideChamp = $data;
+
+            // Create a CSV file for this import
+            $csvFileName = $type . "_" . $id . '.csv';
+            $csvFilePath = $tempDir . '/' . $csvFileName;
+            $csvFile = fopen($csvFilePath, 'w', false, stream_context_create(['ftp' => ['encoding' => 'UTF-8']]));
+
+            fwrite($csvFile, "\xEF\xBB\xBF"); // UTF-8 BOM for proper encoding
+
+            if (!empty($dataWithoutVideChamp)) {
+                // Write CSV headers if data is available
+                fputcsv($csvFile, array_keys($dataWithoutVideChamp[0]), ';');
+
+                // Write CSV data
+                foreach ($dataWithoutVideChamp as $row) {
+                    fputcsv($csvFile, $row, ';');
+                }
+            } else {
+                // If no data, write only headers
+                $columns = $extractionRepo->getColumnModel($id, ucfirst($tableName));
+                $arrayHeader = array_map(function ($column) {
+                    return $column->getColumnName();
+                }, $columns);
+
+                fputcsv($csvFile, $arrayHeader, ';');
             }
-        
+
             fclose($csvFile);
-        
+
             // Add the CSV file to the zip archive
             $zip->addFile($csvFilePath, $csvFileName);
         }
-        
+
         // Close the zip archive
         $zip->close();
-    
+
         // Remove temporary directory
         foreach (glob($tempDir . '/*') as $file) {
             unlink($file);
         }
         rmdir($tempDir);
-    
+
         // Create a response containing the zip file
         $response = new StreamedResponse(function () use ($zipFile) {
             readfile($zipFile);
@@ -373,9 +388,10 @@ class ExtractionController extends AbstractController
         $response->headers->set('Content-Type', 'application/zip');
         $response->headers->set('Content-Disposition', $response->headers->makeDisposition(
             ResponseHeaderBag::DISPOSITION_ATTACHMENT,
-            'integration_log_'.$id.'.zip'
+            'extraction_log_' . $id . '_' . $idSegmentation . '.zip'
         ));
-    
+
         return $response;
     }
+
 }

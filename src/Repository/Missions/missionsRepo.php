@@ -156,5 +156,90 @@ class missionsRepo extends ServiceEntityRepository
         }
         return $result;
     }
+
+    public function getDossierBySeg($id){
+        $sql="select * from dossier d where d.id in (select s.id_dossier from debt_force_seg.seg_dossier s where s.id_seg = ".$id.");";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $result = $stmt->fetchAll();
+        for ($i=0; $i <count($result) ; $i++) { 
+            # code...
+            $sql="SELECT * FROM `portefeuille` where id = ".$result[$i]["id_ptf_id"]." ";
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $type = $stmt->fetchAssociative();
+            $result[$i]["ptf"] = $type;
+        }
+        return $result;
+    }
+
+    public function getDossiersByCriteres($data){
+     
+        
+        $numero_dossier = isset($data['numero_dossier']) ? $data['numero_dossier'] : '';
+        $numero_creance = isset($data['numero_creance']) ? $data['numero_creance'] : '' ;
+        $cin_debiteur = isset($data['cin_debiteur']) ? $data['cin_debiteur'] : '' ;
+
+        
+
+        $query = 'SELECT DISTINCT d.* FROM dossier d ';
+        $compl = " ";
+
+        if($numero_creance != ''){
+            $query .= ' INNER JOIN creance c ON d.id = c.id_dossier_id';
+        }
+
+        if($cin_debiteur != ''){
+
+            if($numero_creance == ""){
+                $query .= 'INNER JOIN creance c ON d.id = c.id_dossier_id';
+            }
+            $query .= '
+             INNER JOIN type_debiteur t ON c.id = t.id_creance_id
+            INNER JOIN debiteur deb ON t.id_debiteur_id = deb.id';
+        }
+
+
+        //TODO:Dossier
+
+        if ($numero_dossier != "") {
+            $compl .= ' WHERE d.numero_dossier = "'.$numero_dossier.'" ';
+        }
+        
+        
+        //TODO:deb
+        if ($cin_debiteur != "") {
+            $compl .= ' AND deb.cin like "'.$cin_debiteur.'" ';
+        }
+        
+        //TODO:deb
+        if ($numero_creance != "") {
+            $compl .= ' AND c.numero_creance like "'.$numero_creance.'" ';
+        }
+
+        $query = $query. ' '.$compl;
+       
+        $stmt = $this->conn->prepare($query);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAll();
+
+        // $array = array();
+        
+        for ($i=0; $i <count($resulat) ; $i++) { 
+            # code...
+            $sql="SELECT * FROM `portefeuille` where id = ".$resulat[$i]["id_ptf_id"]." ";
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $type = $stmt->fetchAssociative();
+            $resulat[$i]["ptf"] = $type;
+        }
+        
+        return $resulat;
+
+    }
+
+    
+    
+    
 }
 

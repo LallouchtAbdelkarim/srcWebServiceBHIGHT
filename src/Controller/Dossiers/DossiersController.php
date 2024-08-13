@@ -266,6 +266,4 @@ class DossiersController extends AbstractController
         return $this->json($respObjects);
     }
 
-    
-    
 }

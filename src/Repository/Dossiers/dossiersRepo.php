@@ -87,6 +87,10 @@ class dossiersRepo extends ServiceEntityRepository
             $dateFin = $date_echeance . " 23:59:59";
             $query .= ' AND c.date_echeance BETWEEN "'.$dateDebut.'" AND "'.$dateFin.'"';
         }
+        if ($num_creance != "") {
+            $query .= ' WHERE c.numero_creance = "'.$num_creance.'" ';
+
+        }
         //TODO:deb
         if ($cin != "") {
             $query .= ' AND deb.cin like "'.$cin.'" ';

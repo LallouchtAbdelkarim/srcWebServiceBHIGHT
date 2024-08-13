@@ -698,6 +698,7 @@ class ActivityController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+    
     #[Route('/activities/getListeEtapByFamille')]
     public function getListeEtapByFamille(activityRepo $activityRepo , SerializerInterface $serializer , Request $request): JsonResponse
     {
@@ -860,6 +861,10 @@ class ActivityController extends AbstractController
             $parametrageSelected = $data['parametrageSelected'];
             if($famille && $typeText != ""){
                 if($type_select == 1){
+                   
+                    $activityRepo->createParam(null , $codeType , $typeText , $famille , $type_select);
+                    $codeStatut='OK';
+                }else{
                     $activite_p = $this->em->getRepository(ParamActivite::class)->find($parametrageSelected);
                     if($activite_p){
                         $activityRepo->createParam($activite_p->getId() , $codeType , $typeText , $famille , $type_select);
@@ -867,9 +872,6 @@ class ActivityController extends AbstractController
                     }else{
                         $codeStatut='EMPTY-DATA';
                     }
-                }else{
-                    $activityRepo->createParam(null , $codeType , $typeText , $famille , $type_select);
-                    $codeStatut='OK';
                 }
             }else{
                 $codeStatut='EMPTY-DATA';

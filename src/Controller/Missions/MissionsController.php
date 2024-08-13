@@ -233,7 +233,7 @@ class MissionsController extends AbstractController
             $data = $dataJson['data'];
             $date_debut = $dataJson['date_debut'];
             $date_fin = $dataJson['date_fin'];
-            if( $idAgent != "" ){
+            if( $idAgent != "" && count($data)>0){
 
                 $agent = $missionsRepo->getAgent($idAgent);
                 // $file = $missionsRepo->getFile($idFile);
@@ -244,7 +244,7 @@ class MissionsController extends AbstractController
                     $stmt = $this->conn->prepare($sql)->executeQuery();
                 }
 
-                //Delete the old data 
+                // Delete the old data 
                 // $oldData = $missionsRepo->getDetailsByFileAndUser($idAgent , $idFile);
                 // $checkIfExist = false;
 
@@ -454,6 +454,52 @@ class MissionsController extends AbstractController
             $codeStatut = "OK";
             $respObjects["data"] = $data;
             $respObjects["details"] = $data;
+        }catch(\Exception $e){
+            $respObjects["err"] = $e->getMessage();
+            $codeStatut = "ERREUR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/getDossierBySeg/{id}')]
+    public function getDossierBySeg( $id, missionsRepo $missionsRepo ,Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $id = $request->get("id");
+            $data = $missionsRepo->getDossierBySeg($id);
+            $codeStatut = "OK";
+            $respObjects["data"] = $data;
+            $respObjects["details"] = $data;
+        }catch(\Exception $e){
+            $respObjects["err"] = $e->getMessage();
+            $codeStatut = "ERREUR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/getDossiersByCriteres' ,methods:['POST'])]
+    public function getDossiersByCriteres( missionsRepo $missionsRepo ,Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $dataJson = json_decode($request->getContent(), true);
+
+            if(!isset($dataJson['numero_dossier']) && !isset($dataJson['numero_creance']) && !isset($dataJson['cin_debiteur']) ){
+                $codeStatut = "EMPTY-PARAMS";
+            }else if(($dataJson['numero_dossier']) == "" && ($dataJson['numero_creance']) == "" && ($dataJson['cin_debiteur']) == "" ){
+                $codeStatut = "EMPTY-PARAMS";
+            }else{
+                $data = $missionsRepo->getDossiersByCriteres($dataJson);
+            }
+            $codeStatut = "OK";
+            $respObjects["data"] = $data;
         }catch(\Exception $e){
             $respObjects["err"] = $e->getMessage();
             $codeStatut = "ERREUR";

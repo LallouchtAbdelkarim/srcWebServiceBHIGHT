@@ -3,6 +3,7 @@
 namespace App\Repository\IntegrationExtraction\Extraction;
 
 
+use App\Entity\ColumnModelExport;
 use App\Entity\HistoriqueDemandeCadrage;
 use App\Entity\ModelExport;
 use App\Entity\Portefeuille;
@@ -108,10 +109,124 @@ class extractionRepo extends ServiceEntityRepository
         $entity = $this->em->getRepository(ModelExport::class)->find($id);
         return $entity;
     }
+    public function getColumnModelExport($id){
+        $entity = $this->em->getRepository(ColumnModelExport::class)->findBy(['id_model'=>$id]);
+        return $entity;
+    }
+    
     
     public function deleteModelExport($model){
         $this->em->remove($model);
         $this->em->flush();
     }
+    public function deleteColumnModelExport($model){
+        $this->em->remove($model);
+        $this->em->flush();
+    }
     
+
+    public function saveColumnEntity($entities  , $selectedColumns , $model){
+        foreach ($selectedColumns as $selected => $selectedValue ) {
+            if(in_array($selected , $entities)){
+                foreach ($selectedValue as $key => $value) {
+                    if($value){
+                        $column = new ColumnModelExport();
+                        $column->setIdModel($model);
+                        $column->setColumnName($key);
+                        $column->setEntity($selected);
+                        $this->em->persist($column);
+                        $this->em->flush();
+                    }
+                }
+            }
+        }
+    }
+
+    public function getColumnModel($id , $entity){
+        $entity = $this->em->getRepository(ColumnModelExport::class)->findBy(['id_model'=>$id , 'entity'=>$entity]);
+        return $entity;
+    }
+
+    public function getDataBySegment($tableName , $id, $idSegmentation){
+        if($tableName == 'dossier'){
+            $columns = $this->getColumnModel($id,ucfirst($tableName));
+            $columnsTable = '';
+            for ($i=0; $i < count($columns); $i++) { 
+                $laison = ',';
+                if ($i === count($columns) - 1) {  // Check if it's the last iteration
+                    $laison = ' ';  // or you can leave it empty
+                }
+                $columnsTable .= 'd.'.$columns[$i]->getColumnName().' '.$laison;
+            }
+            $sql = 'SELECT '.$columnsTable. ' from dossier d where d.id in (select s.id_dossier from debt_force_seg.seg_dossier s where s.id_seg = '.$idSegmentation.');';
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $data = $stmt->fetchAllAssociative();
+            return $data;
+        }
+        else if($tableName == 'creance'){
+            $columns = $this->getColumnModel($id,ucfirst($tableName));
+            $columnsTable = '';
+            for ($i=0; $i < count($columns); $i++) { 
+                $laison = ',';
+                if ($i === count($columns) - 1) {  // Check if it's the last iteration
+                    $laison = ' ';  // or you can leave it empty
+                }
+                $columnsTable .= 'd.'.$columns[$i]->getColumnName().' '.$laison;
+            }
+            $sql = 'SELECT '.$columnsTable. ' from creance d where d.id in (select s.id_creance from debt_force_seg.seg_creance s where s.id_seg = '.$idSegmentation.');';
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $data = $stmt->fetchAllAssociative();
+            return $data;
+        }
+        else if($tableName == 'debiteur'){
+            $columns = $this->getColumnModel($id,ucfirst($tableName));
+            $columnsTable = '';
+            for ($i=0; $i < count($columns); $i++) { 
+                $laison = ',';
+                if ($i === count($columns) - 1) {  // Check if it's the last iteration
+                    $laison = ' ';  // or you can leave it empty
+                }
+                $columnsTable .= 'd.'.$columns[$i]->getColumnName().' '.$laison;
+            }
+            $sql = 'SELECT '.$columnsTable. ' from debiteur d where d.id in (select s.id_debiteur from debt_force_seg.seg_debiteur s where s.id_seg = '.$idSegmentation.');';
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $data = $stmt->fetchAllAssociative();
+            return $data;
+        }
+        else if($tableName == 'telephone'){
+            $columns = $this->getColumnModel($id,ucfirst($tableName));
+            $columnsTable = '';
+            for ($i=0; $i < count($columns); $i++) { 
+                $laison = ',';
+                if ($i === count($columns) - 1) {  // Check if it's the last iteration
+                    $laison = ' ';  // or you can leave it empty
+                }
+                $columnsTable .= 'd.'.$columns[$i]->getColumnName().' '.$laison;
+            }
+            $sql = 'SELECT '.$columnsTable. ' from telephone d where d.id in (select s.id_telephone from debt_force_seg.seg_telephone s where s.id_seg = '.$idSegmentation.');';
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $data = $stmt->fetchAllAssociative();
+            return $data;
+        }
+        else if($tableName == 'adresse'){
+            $columns = $this->getColumnModel($id,ucfirst($tableName));
+            $columnsTable = '';
+            for ($i=0; $i < count($columns); $i++) { 
+                $laison = ',';
+                if ($i === count($columns) - 1) {  // Check if it's the last iteration
+                    $laison = ' ';  // or you can leave it empty
+                }
+                $columnsTable .= 'd.'.$columns[$i]->getColumnName().' '.$laison;
+            }
+            $sql = 'SELECT '.$columnsTable. ' from adresse d where d.id in (select s.id_adresse from debt_force_seg.seg_adresse s where s.id_seg = '.$idSegmentation.');';
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $data = $stmt->fetchAllAssociative();
+            return $data;
+        }
+    }
 }

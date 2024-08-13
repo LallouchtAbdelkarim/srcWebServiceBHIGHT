@@ -28,6 +28,9 @@ class debiDossDbi
     #[ORM\Column(nullable: true)]
     private ?int $id_integration = null;
 
+    #[ORM\Column]
+    private ?int $id_debiteur = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -89,6 +92,18 @@ class debiDossDbi
     public function setIdIntegration(?int $id_integration): static
     {
         $this->id_integration = $id_integration;
+
+        return $this;
+    }
+
+    public function getIdDebiteur(): ?int
+    {
+        return $this->id_debiteur;
+    }
+
+    public function setIdDebiteur(int $id_debiteur): static
+    {
+        $this->id_debiteur = $id_debiteur;
 
         return $this;
     }
