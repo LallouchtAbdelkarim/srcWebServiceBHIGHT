@@ -181,4 +181,168 @@ class histoRepo extends ServiceEntityRepository
         return $resulat;
     }
 
+    public function getListTelAdd($date_debut , $date_fin , $idPtf , $idImport){
+        $sql="SELECT * FROM `integration` h where (h.date_fin_execution_3 between '".$date_debut."' and '".$date_fin."')";
+        
+        if($idPtf != 0){
+            $sql .= "and h.id_ptf_id  ".$idPtf.")";
+        }
+
+        if($idImport != 0){
+            $sql .= "and h.id  ".$idImport.")";
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAll();
+
+        for ($i=0; $i <count($resulat); $i++) { 
+            $query = "SELECT count(id) from telephone where id_integration = ".$resulat[$i]['id']."";
+            $stmt = $this->conn->prepare($query);
+            $stmt = $stmt->executeQuery();
+            $getOne = $stmt->fetchOne();
+            $resulat[$i]['nbr'] = $getOne; 
+        }
+        for ($i=0; $i <count($resulat); $i++) { 
+            $query = "SELECT * from portefeuille where id = ".$resulat[$i]['id_ptf_id']."";
+            $stmt = $this->conn->prepare($query);
+            $stmt = $stmt->executeQuery();
+            $ptf = $stmt->fetchAssociative();
+            $resulat[$i]['ptf'] = $ptf; 
+        }
+
+        return $resulat;
+    }
+    public function getListAdresseAdd($date_debut , $date_fin , $idPtf , $idImport){
+        $sql="SELECT * FROM `integration` h where (h.date_fin_execution_3 between '".$date_debut."' and '".$date_fin."')";
+        
+        if($idPtf != 0){
+            $sql .= "and h.id_ptf_id  ".$idPtf.")";
+        }
+
+        if($idImport != 0){
+            $sql .= "and h.id  ".$idImport.")";
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAll();
+
+        for ($i=0; $i <count($resulat); $i++) { 
+            $query = "SELECT count(id) from adresse where id_integration = ".$resulat[$i]['id']."";
+            $stmt = $this->conn->prepare($query);
+            $stmt = $stmt->executeQuery();
+            $getOne = $stmt->fetchOne();
+            $resulat[$i]['nbr'] = $getOne; 
+        }
+        for ($i=0; $i <count($resulat); $i++) { 
+            $query = "SELECT * from portefeuille where id = ".$resulat[$i]['id_ptf_id']."";
+            $stmt = $this->conn->prepare($query);
+            $stmt = $stmt->executeQuery();
+            $ptf = $stmt->fetchAssociative();
+            $resulat[$i]['ptf'] = $ptf; 
+        }
+
+        return $resulat;
+    }
+    
+    
+
+    public function getListEmploiAdd($date_debut , $date_fin , $idPtf , $idImport){
+        $sql="SELECT * FROM `integration` h where (h.date_fin_execution_3 between '".$date_debut."' and '".$date_fin."')";
+        
+        if($idPtf != 0){
+            $sql .= "and h.id_ptf_id  ".$idPtf.")";
+        }
+
+        if($idImport != 0){
+            $sql .= "and h.id  ".$idImport.")";
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAll();
+
+        for ($i=0; $i <count($resulat); $i++) { 
+            $query = "SELECT count(id) from emploi where id_integration = ".$resulat[$i]['id']."";
+            $stmt = $this->conn->prepare($query);
+            $stmt = $stmt->executeQuery();
+            $getOne = $stmt->fetchOne();
+            $resulat[$i]['nbr'] = $getOne; 
+        }
+        for ($i=0; $i <count($resulat); $i++) { 
+            $query = "SELECT * from portefeuille where id = ".$resulat[$i]['id_ptf_id']."";
+            $stmt = $this->conn->prepare($query);
+            $stmt = $stmt->executeQuery();
+            $ptf = $stmt->fetchAssociative();
+            $resulat[$i]['ptf'] = $ptf; 
+        }
+
+        return $resulat;
+    }
+
+    public function getListEmailAdd($date_debut , $date_fin , $idPtf , $idImport){
+        $sql="SELECT * FROM `integration` h where (h.date_fin_execution_3 between '".$date_debut."' and '".$date_fin."')";
+        
+        if($idPtf != 0){
+            $sql .= "and h.id_ptf_id  ".$idPtf.")";
+        }
+
+        if($idImport != 0){
+            $sql .= "and h.id  ".$idImport.")";
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAll();
+
+        for ($i=0; $i <count($resulat); $i++) { 
+            $query = "SELECT count(id) from email where id_integration = ".$resulat[$i]['id']."";
+            $stmt = $this->conn->prepare($query);
+            $stmt = $stmt->executeQuery();
+            $getOne = $stmt->fetchOne();
+            $resulat[$i]['nbr'] = $getOne; 
+        }
+        for ($i=0; $i <count($resulat); $i++) { 
+            $query = "SELECT * from portefeuille where id = ".$resulat[$i]['id_ptf_id']."";
+            $stmt = $this->conn->prepare($query);
+            $stmt = $stmt->executeQuery();
+            $ptf = $stmt->fetchAssociative();
+            $resulat[$i]['ptf'] = $ptf; 
+        }
+
+        return $resulat;
+    }
+    
+    public function getListEmployeurAdd($date_debut , $date_fin , $idPtf , $idImport){
+        $sql="SELECT * FROM `integration` h where (h.date_fin_execution_3 between '".$date_debut."' and '".$date_fin."')";
+        
+        if($idPtf != 0){
+            $sql .= "and h.id_ptf_id  ".$idPtf.")";
+        }
+
+        if($idImport != 0){
+            $sql .= "and h.id  ".$idImport.")";
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAll();
+
+        for ($i=0; $i <count($resulat); $i++) { 
+            $query = "SELECT count(id) from employeur where id_integration = ".$resulat[$i]['id']."";
+            $stmt = $this->conn->prepare($query);
+            $stmt = $stmt->executeQuery();
+            $getOne = $stmt->fetchOne();
+            $resulat[$i]['nbr'] = $getOne; 
+        }
+        for ($i=0; $i <count($resulat); $i++) { 
+            $query = "SELECT * from portefeuille where id = ".$resulat[$i]['id_ptf_id']."";
+            $stmt = $this->conn->prepare($query);
+            $stmt = $stmt->executeQuery();
+            $ptf = $stmt->fetchAssociative();
+            $resulat[$i]['ptf'] = $ptf; 
+        }
+        return $resulat;
+    }
 }

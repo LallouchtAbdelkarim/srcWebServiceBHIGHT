@@ -980,7 +980,6 @@ class integrationRepo extends ServiceEntityRepository
     }
     function insertDebFromDbiToProd($idIntegration,$id_import,$idAction){
         $sql1 = "CALL debt_force_integration.PROC_INSERT_DEB_PROD(".$idIntegration." , ".$id_import." , ".$idAction.")";
-        // dump($sql1);
         $sql = "CALL debt_force_integration.PROC_INSERT_DEB_PROD(:idIntegration , :idImport , :idAction)";
         $stmt = $this->conn->prepare($sql); 
         $stmt->bindValue(":idImport",$id_import);
@@ -990,7 +989,6 @@ class integrationRepo extends ServiceEntityRepository
     }
     function insertDossierFromDbiToProd($idIntegration ,$id_import , $id_action){
         $sql1 = "CALL debt_force_integration.PROC_INSERT_DOSSIERS_PROD(".$idIntegration." , ".$id_import." , ".$id_action.")";
-        // dump($sql1);
         $sql = "CALL debt_force_integration.PROC_INSERT_DOSSIERS_PROD(:idIntegration , :idImport , :idAction)";
         $stmt = $this->conn->prepare($sql); 
         $stmt->bindValue(":idImport",$id_import);   
@@ -1049,7 +1047,7 @@ class integrationRepo extends ServiceEntityRepository
         $stmt->bindValue(":id",$id);
         $stmt = $stmt->executeQuery();*/
         $sql = "CALL debt_force_integration.PROC_INSERT_CREANCE_PROD(".$idIntegration." , ".$id_import." , ".$id_action.")";
-        // dump($sql);
+        
         $stmt = $this->conn->prepare($sql); 
         // $stmt->bindValue(":idImport",$id_import);   
         // $stmt->bindValue(":idIntegration",$idIntegration);  

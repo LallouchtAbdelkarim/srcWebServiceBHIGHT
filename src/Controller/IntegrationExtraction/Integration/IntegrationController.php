@@ -1610,11 +1610,11 @@ class IntegrationController extends AbstractController
         $codeStatut = "ERROR";
         $emDbi = $doctrine->getManager('customer');
 
-        try{
+        // try{
             $IntegrationNonCommencer = $integrationRepo->getAllInegrationByStatus2();
             if($IntegrationNonCommencer){
                 for ($t=0; $t <count($IntegrationNonCommencer);$t++) {
-                    try {
+                    // try {
                         $porte_feuille = $IntegrationNonCommencer[$t]->getIdPtf()->getId(); 
                         $integrationId =  $IntegrationNonCommencer[$t]->getId();
 
@@ -1648,7 +1648,6 @@ class IntegrationController extends AbstractController
                         $emDbi->flush();
 
                         $sql = 'CALL debt_force_integration.PROC_INSERT_DEB_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().');';
-                        
                         $stmt = $integrationRepo->executeSQL($sql);
                         $importByType = $integrationRepo->getOneImportType($integrationId , "dossier");
                         $a=new actionsImportDbi();
@@ -1749,7 +1748,6 @@ class IntegrationController extends AbstractController
                             $emDbi->flush();
 
                             $sql = 'CALL debt_force_integration.PROC_INSERT_TEL_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
-                            dump($sql);
                             $stmt = $integrationRepo->executeSQL($sql);
                         }
 
@@ -1779,7 +1777,6 @@ class IntegrationController extends AbstractController
                             $emDbi->persist($a);
                             $emDbi->flush();
                             $sql = 'CALL debt_force_integration.PROC_INSERT_EMAIL_DBI('.$integrationId.','.$importByType->getId().','.$importByType->getIdModel()->getId().','.$porte_feuille.',1,'.$a->getId().' , '.$idModelDeb.'); ';
-                            dump($sql);
                             $stmt = $integrationRepo->executeSQL($sql);
                         }
 
@@ -1789,19 +1786,19 @@ class IntegrationController extends AbstractController
                         $stmt = $integrationRepo->executeSQL($sql);
                         $codeStatut="OK";
 
-                    } catch (\Exception $e) {
-                        $sql="UPDATE `integration` SET `status_id` = '3' WHERE `integration`.`id` = ".$integrationId.";";
-                        $stmt = $integrationRepo->executeSQL($sql);
-                        $sql="INSERT INTO `logs_actions_integration`( `id_integration`, `logs`, `date_creation`,`etat`) VALUES (".$integrationId.",'".$e->getMessage()."',now(),0)";
-                        $stmt = $integrationRepo->executeSQL($sql);
-                    }
+                    // } catch (\Exception $e) {
+                    //     $sql="UPDATE `integration` SET `status_id` = '3' WHERE `integration`.`id` = ".$integrationId.";";
+                    //     $stmt = $integrationRepo->executeSQL($sql);
+                    //     $sql="INSERT INTO `logs_actions_integration`( `id_integration`, `logs`, `date_creation`,`etat`) VALUES (".$integrationId.",'".$e->getMessage()."',now(),0)";
+                    //     $stmt = $integrationRepo->executeSQL($sql);
+                    // }
                 }
             }
-        }
-        catch(\Exception $e){
-            $codeStatut = "ERROR";
-            $respObjects["err"] = $e->getMessage();
-        }
+        // }
+        // catch(\Exception $e){
+        //     $codeStatut = "ERROR";
+        //     $respObjects["err"] = $e->getMessage();
+        // }
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
@@ -2013,9 +2010,7 @@ class IntegrationController extends AbstractController
                 $a->setTitre("Ajout");
                 $this->em->persist($a);
                 $this->em->flush();
-
                 $integrationRepo->insertDebFromDbiToProd($integrationId,$importByType->getId(),$a->getId());
-
                 $importByType = $integrationRepo->getOneImportType($integrationId , "dossier");
                 $a=new ActionsImport();
                 $a->setEtat(0);

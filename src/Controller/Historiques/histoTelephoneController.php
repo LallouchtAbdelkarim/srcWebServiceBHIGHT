@@ -56,6 +56,7 @@ class histoTelephoneController extends AbstractController
             $this->AuthService->checkAuth(0,$request);
             $data_list = json_decode($request->getContent(), true);
             $idPtf = $data_list['idPtf'];
+            $idImport = $data_list['idImport'];
             //Vérifier date 
             if($request->get("day") == "1"){
                 $date_debut = date("Y-m-d")." 00:00:00";
@@ -64,17 +65,20 @@ class histoTelephoneController extends AbstractController
                 $date_debut = $data_list["date_debut"]." 00:00:00";
                 $date_fin = $data_list["date_fin"]." 23:59:59";
             }
-            $data = $histoRepo->getListeTel($date_debut  , $date_fin ,  $idPtf);
 
-            $array=[];
-            for($i=0; $i < count($data); $i++)
-            {
-                $array[$i] = $data[$i];
-                $array[$i]["id_type_tel_id"] = $this->TypeService->getTypeById($data[$i]["id_type_tel_id"], "tel");
-                // $array[$i]["id_users_id"] = $userRepo->getUser($data[$i]["id_users_id"]);
-                $array[$i]["is_status_id"] = $this->TypeService->getOneStatus("telephone",$data[$i]["id_status_id"]);
-            }
+            //Old
+            // $data = $histoRepo->getListeTel($date_debut  , $date_fin ,  $idPtf);
 
+            // $array=[];
+            // for($i=0; $i < count($data); $i++)
+            // {
+            //     $array[$i] = $data[$i];
+            //     $array[$i]["id_type_tel_id"] = $this->TypeService->getTypeById($data[$i]["id_type_tel_id"], "tel");
+            //     // $array[$i]["id_users_id"] = $userRepo->getUser($data[$i]["id_users_id"]);
+            //     $array[$i]["is_status_id"] = $this->TypeService->getOneStatus("telephone",$data[$i]["id_status_id"]);
+            // }
+
+            $array = $histoRepo->getListTelAdd($date_debut  , $date_fin ,  $idPtf , $idImport);
 
             $data2 = $histoRepo->getHistoTelephone($date_debut , $date_fin , $idPtf);
             $array2=[];
@@ -107,6 +111,7 @@ class histoTelephoneController extends AbstractController
             $this->AuthService->checkAuth(0,$request);
             $data_list = json_decode($request->getContent(), true);
             $idPtf = $data_list['idPtf'];
+            $idImport = $data_list['idImport'];
             //Vérifier date 
             if($request->get("day") == "1"){
                 $date_debut = date("Y-m-d")." 00:00:00";
@@ -116,16 +121,18 @@ class histoTelephoneController extends AbstractController
                 $date_fin = $data_list["date_fin"]." 23:59:59";
             }
             $data = $histoRepo->getHistoAdresse($date_debut , $date_fin , $idPtf);
-            $array= array();
-            if($data)
-            {
-                for($i=0; $i < count($data); $i++)
-                {
-                    $array[$i] = $data[$i];
-                    $array[$i]["type_tel"] = $this->TypeService->getTypeById($data[$i]["id_type_adresse_id"], "adresse");
-                    $array[$i]["utilisateurs"] = $userRepo->getUser($data[$i]["id_users_id"]);
-                }
-            }
+            // $array= array();
+            // if($data)
+            // {
+            //     for($i=0; $i < count($data); $i++)
+            //     {
+            //         $array[$i] = $data[$i];
+            //         $array[$i]["type_tel"] = $this->TypeService->getTypeById($data[$i]["id_type_adresse_id"], "adresse");
+            //         $array[$i]["utilisateurs"] = $userRepo->getUser($data[$i]["id_users_id"]);
+            //     }
+            // }
+            $array = $histoRepo->getListAdresseAdd($date_debut  , $date_fin ,  $idPtf , $idImport);
+
 
             $date_debut . $date_fin;
 
@@ -162,6 +169,7 @@ class histoTelephoneController extends AbstractController
             $this->AuthService->checkAuth(0,$request);
             $data_list = json_decode($request->getContent(), true);
             $idPtf = $data_list['idPtf'];
+            $idImport = $data_list['idImport'];
             //Vérifier date 
             if($request->get("day") == "1"){
                 $date_debut = date("Y-m-d")." 00:00:00";
@@ -171,16 +179,18 @@ class histoTelephoneController extends AbstractController
                 $date_fin = $data_list["date_fin"]." 23:59:59";
             }
             $data = $histoRepo->getHistoEmploi($date_debut , $date_fin , $idPtf);
-            $array= array();
-            if($data)
-            {
-                for($i=0; $i < count($data); $i++)
-                {
-                    $array[$i] = $data[$i];
-                    // $array[$i]["type_tel"] = $this->TypeService->getTypeById($data[$i]["id_type_emploi_id"], "emploi");
-                    // $array[$i]["utilisateurs"] = $userRepo->getUser($data[$i]["id_users_id"]);
-                }
-            }
+            // $array= array();
+            // if($data)
+            // {
+            //     for($i=0; $i < count($data); $i++)
+            //     {
+            //         $array[$i] = $data[$i];
+            //         // $array[$i]["type_tel"] = $this->TypeService->getTypeById($data[$i]["id_type_emploi_id"], "emploi");
+            //         // $array[$i]["utilisateurs"] = $userRepo->getUser($data[$i]["id_users_id"]);
+            //     }
+            // }
+            $array = $histoRepo->getListEmploiAdd($date_debut  , $date_fin ,  $idPtf , $idImport);
+
             $respObjects["data_supprime"] = $array;
 
             $data2 = $histoRepo->getListeEmploi($date_debut , $date_fin , $idPtf);
@@ -214,6 +224,7 @@ class histoTelephoneController extends AbstractController
             $this->AuthService->checkAuth(0,$request);
             $data_list = json_decode($request->getContent(), true);
             $idPtf = $data_list['idPtf'];
+            $idImport = $data_list['idImport'];
             //Vérifier date 
             if($request->get("day") == "1"){
                 $date_debut = date("Y-m-d")." 00:00:00";
@@ -223,16 +234,18 @@ class histoTelephoneController extends AbstractController
                 $date_fin = $data_list["date_fin"]." 23:59:59";
             }
 
-            $data = $histoRepo->getListeEmployeur($date_debut , $date_fin , $idPtf);
-            $array = [];
-            if($data)
-            {
-                for($i=0; $i < count($data); $i++)
-                {
-                    $array[$i] = $data[$i];
-                    // $array[$i]["type_employeur"] = $this->TypeService->getTypeById($data[$i]["id_type_employeur_id"], "employeur");
-                }
-            }
+            // $data = $histoRepo->getListeEmployeur($date_debut , $date_fin , $idPtf);
+            // $array = [];
+            // if($data)
+            // {
+            //     for($i=0; $i < count($data); $i++)
+            //     {
+            //         $array[$i] = $data[$i];
+            //         // $array[$i]["type_employeur"] = $this->TypeService->getTypeById($data[$i]["id_type_employeur_id"], "employeur");
+            //     }
+            // }
+            $array = $histoRepo->getListEmployeurAdd($date_debut  , $date_fin ,  $idPtf , $idImport);
+
             $respObjects["data"] = $array;
 
             $data2 = $histoRepo->getHistoEmployeur($date_debut , $date_fin , $idPtf);
@@ -266,6 +279,7 @@ class histoTelephoneController extends AbstractController
             $this->AuthService->checkAuth(0,$request);
             $data_list = json_decode($request->getContent(), true);
             $idPtf = $data_list['idPtf'];
+            $idImport = $data_list['idImport'];
             //Vérifier date 
             if($request->get("day") == "1"){
                 $date_debut = date("Y-m-d")." 00:00:00";
@@ -275,17 +289,19 @@ class histoTelephoneController extends AbstractController
                 $date_fin = $data_list["date_fin"]." 23:59:59";
             }
 
-            $data = $histoRepo->getListeEmail($date_debut , $date_fin , $idPtf);
-            $array = [];
-            if($data)
-            {
-                for($i=0; $i < count($data); $i++)
-                {
-                    $array[$i] = $data[$i];
-                    $array[$i]["type_email"] = $this->TypeService->getTypeById($data[$i]["id_type_email_id"], "email");
-                    $array[$i]["status_email"] = $this->TypeService->getOneStatus( "status" , $data[$i]["id_status_email_id"]);
-                }
-            }
+            // $data = $histoRepo->getListeEmail($date_debut , $date_fin , $idPtf);
+            // $array = [];
+            // if($data)
+            // {
+            //     for($i=0; $i < count($data); $i++)
+            //     {
+            //         $array[$i] = $data[$i];
+            //         $array[$i]["type_email"] = $this->TypeService->getTypeById($data[$i]["id_type_email_id"], "email");
+            //         $array[$i]["status_email"] = $this->TypeService->getOneStatus( "status" , $data[$i]["id_status_email_id"]);
+            //     }
+            // }
+            $array = $histoRepo->getListEmailAdd($date_debut  , $date_fin ,  $idPtf , $idImport);
+
             $respObjects["data"] = $array;
 
             $data2 = $histoRepo->getHistoEmail($date_debut , $date_fin , $idPtf);

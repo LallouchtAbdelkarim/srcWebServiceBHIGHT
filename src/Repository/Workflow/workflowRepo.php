@@ -847,7 +847,6 @@ class workflowRepo extends ServiceEntityRepository
     }
     public function getListeSplitQueueById($id){
         $sql="SELECT * FROM `queue_split` s WHERE s.id = :id";
-        
         $stmt = $this->conn->prepare($sql);
         $stmt->bindValue(":id",$id);
         $stmt = $stmt->executeQuery();

@@ -30,7 +30,7 @@ class Queue
     private ?bool $assigned_strategy = null;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: true)]
     private ?QueueGroupe $queue_groupe = null;
 
     #[ORM\ManyToOne]

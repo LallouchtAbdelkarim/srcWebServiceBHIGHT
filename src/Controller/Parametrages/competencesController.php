@@ -2,10 +2,7 @@
 
 namespace App\Controller\Parametrages;
 
-use App\Entity\ActiviteParent;
-use App\Entity\Competence;
 use App\Entity\DetailCompetence;
-use App\Entity\DetailCompetenceFamilles;
 use App\Entity\DetailGroupeCompetence;
 use App\Entity\GroupeCompetence;
 use App\Entity\SousDetailGroupeCompetence;
@@ -21,7 +18,6 @@ use Symfony\Component\Serializer\SerializerInterface;
 use App\Repository\Parametrages\Activities\activityRepo;
 use Doctrine\DBAL\Connection;
 
-
 #[Route('/API')]
 
 class competencesController extends AbstractController
@@ -31,7 +27,6 @@ class competencesController extends AbstractController
 
     private $AuthService;
     public $em;
-
 
     public function __construct(
         competenceRepo $competenceRepo,
