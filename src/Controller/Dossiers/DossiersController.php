@@ -80,7 +80,6 @@ class DossiersController extends AbstractController
             //Vérifier date 
             $data = $dossiersRepo->getListesDossiersByFiltrages($data_list);
 
-            
             $respObjects["data"] = $data;
             $codeStatut="OK";
         }catch(\Exception $e){

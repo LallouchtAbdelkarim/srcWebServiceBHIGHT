@@ -161,7 +161,7 @@ class QueueController extends AbstractController
             $id_type = $request->get("id_type");
             $id_groupe = $request->get("id_groupe");
             $this->AuthService->checkAuth(0,$request);
-            $data = $queueRepo->getListeQueue($id_type,$id_groupe);
+            $data = $queueRepo->getListeQueueByType($id_type);
             $codeStatut = "OK";
             $respObjects["data"] = $data;
         }catch(\Exception $e){
@@ -502,7 +502,7 @@ class QueueController extends AbstractController
                     $rqTelephone = "SELECT tel1.id FROM debt_force_seg.dt_Telephone tel1 WHERE (tel1.id_debiteur_id) IN (
                         SELECT debi.id FROM debt_force_seg.dt_Debiteur debi WHERE debi.id IN (
                         SELECT (t1.id_debiteur_id) 
-                        FROM debt_force_seg.dt_Type_Debiteur t1 
+                        FROM debt_force_seg.dt_type_debiteur t1 
                         WHERE t1.id_creance_id IN (".$rqCreance."))
                     )";
 
@@ -576,7 +576,7 @@ class QueueController extends AbstractController
                     {
                         $rqDeb = "SELECT debi.id FROM debt_force_seg.dt_Debiteur debi WHERE debi.id IN (
                             SELECT (t1.id_debiteur_id) 
-                            FROM debt_force_seg.dt_Type_Debiteur t1 
+                            FROM debt_force_seg.dt_type_debiteur t1 
                             WHERE t1.id_creance_id IN (".$rqCreance.")
                         )";
                         $stmt = $this->conn->prepare($rqDeb);
@@ -768,7 +768,7 @@ class QueueController extends AbstractController
                     $rqTelephone = "SELECT tel1.id FROM debt_force_seg.dt_Telephone tel1 WHERE (tel1.id_debiteur_id) IN (
                         SELECT debi.id FROM debt_force_seg.dt_Debiteur debi WHERE debi.id IN (
                         SELECT (t1.id_debiteur_id) 
-                        FROM debt_force_seg.dt_Type_Debiteur t1 
+                        FROM debt_force_seg.dt_type_debiteur t1 
                         WHERE t1.id_creance_id IN (".$rqCreance."))
                     )";
 
@@ -850,7 +850,7 @@ class QueueController extends AbstractController
                     {
                         $rqDeb = "SELECT debi.id FROM debt_force_seg.dt_Debiteur debi WHERE debi.id IN (
                             SELECT (t1.id_debiteur_id) 
-                            FROM debt_force_seg.dt_Type_Debiteur t1 
+                            FROM debt_force_seg.dt_type_debiteur t1 
                             WHERE t1.id_creance_id IN (".$rqCreance.")
                         )";
                         $stmt = $this->conn->prepare($rqDeb);
@@ -1396,9 +1396,9 @@ class QueueController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
                             if(strpos($queryEntities,",debt_force_seg.dt_Telephone tel") == false)
                             {
@@ -1419,9 +1419,9 @@ class QueueController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
                             if(strpos($queryEntities,",debt_force_seg.dt_Telephone tel") == false)
                             {
@@ -1455,9 +1455,9 @@ class QueueController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
                             if(strpos($queryEntities,",debt_force_seg.dt_Adresse ad") == false)
                             {
@@ -1478,9 +1478,9 @@ class QueueController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
                             if(strpos($queryEntities,",debt_force_seg.dt_Adresse ad") == false)
                             {
@@ -1514,9 +1514,9 @@ class QueueController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
                             $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)  and  deb.type_personne like :VALUE1".$k."_".$i." ) ";
                             $param['VALUE1'.$k.'_'.$i] = $details[$i]["value1"];
@@ -1533,9 +1533,9 @@ class QueueController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
 
                             $start = $this->GeneralService->dateStart($details[$i]["value1"]);
@@ -1607,9 +1607,9 @@ class QueueController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
                             if(strpos($queryEntities,",debt_force_seg.dt_Emploi em") == false)
                             {
@@ -1630,9 +1630,9 @@ class QueueController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
                             if(strpos($queryEntities,",debt_force_seg.dt_Emploi em") == false)
                             {
@@ -1664,9 +1664,9 @@ class QueueController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
                             if(strpos($queryEntities,",debt_force_seg.dt_Emploi em") == false)
                             {
@@ -1710,9 +1710,9 @@ class QueueController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
                             if(strpos($queryEntities,",debt_force_seg.dt_Employeur emp") == false)
                             {
@@ -2363,6 +2363,8 @@ class QueueController extends AbstractController
         }
         return ["queryConditions"=>$queryConditions ,"queryEntities"=>$queryEntities , 'param'=>$param ];
     }
+
+
     #[Route('/detailsQueue')]
     public function detailsQueue(queueRepo $queueRepo , segementationRepo $segementationRepo  ,SerializerInterface $serializer , Request $request): JsonResponse
     {
@@ -2408,4 +2410,29 @@ class QueueController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects );
     }
+
+
+    #[Route('/deleteQueue/{id}' , methods:['POST'])]
+    public function deleteQueue( $id, queueRepo $queueRepo , segementationRepo $segementationRepo  ,SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try {
+            $queue = $queueRepo->getOneQueue($id);
+            $data = $segementationRepo->getDetailsSegment($queue['id_segmentation_id']);
+            if($data){
+                $queueRepo->deleteQueue($id);
+                $codeStatut = "OK";
+            }else{
+                $codeStatut="NOT_EXIST_ELEMENT";
+            }
+        }catch (\Exception $e) {
+            $respObjects["msg"] = $e->getMessage();
+            $codeStatut="ERROR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects );
+    }
+    
 }   

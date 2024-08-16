@@ -7,13 +7,16 @@ use App\Entity\DetailCritereSegment;
 use App\Entity\DetailsSeg;
 use App\Entity\GroupeCritere;
 use App\Entity\IntermGroupeCritere;
+use App\Entity\Queue;
 use App\Entity\QueueSplit;
 use App\Entity\SegCritere;
 use App\Entity\Segmentation;
 use App\Entity\SegGroupeCritere;
 use App\Entity\SplitCritere;
 use App\Entity\SplitGroupeCritere;
+use App\Entity\StatusQueue;
 use App\Entity\StatusSeg;
+use App\Entity\TypeQueue;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -851,9 +854,9 @@ class segementationRepo extends ServiceEntityRepository
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
                             if(strpos($queryEntities,",debt_force_seg.dt_Telephone tel") == false)
                             {
@@ -887,9 +890,9 @@ class segementationRepo extends ServiceEntityRepository
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
                             if(strpos($queryEntities,",debt_force_seg.dt_Adresse ad") == false)
                             {
@@ -910,9 +913,9 @@ class segementationRepo extends ServiceEntityRepository
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
                             if(strpos($queryEntities,",debt_force_seg.dt_Adresse ad") == false)
                             {
@@ -946,9 +949,9 @@ class segementationRepo extends ServiceEntityRepository
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
                             $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)  and  deb.type_personne like :VALUE1".$k."_".$i." ) ";
                             $param['VALUE1'.$k.'_'.$i] = $details[$i]["value1"];
@@ -965,9 +968,9 @@ class segementationRepo extends ServiceEntityRepository
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
 
                             $start = $this->GeneralService->dateStart($details[$i]["value1"]);
@@ -1039,9 +1042,9 @@ class segementationRepo extends ServiceEntityRepository
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
                             if(strpos($queryEntities,",debt_force_seg.dt_Emploi em") == false)
                             {
@@ -1062,9 +1065,9 @@ class segementationRepo extends ServiceEntityRepository
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
                             if(strpos($queryEntities,",debt_force_seg.dt_Emploi em") == false)
                             {
@@ -1096,9 +1099,9 @@ class segementationRepo extends ServiceEntityRepository
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
                             if(strpos($queryEntities,",debt_force_seg.dt_Emploi em") == false)
                             {
@@ -1142,9 +1145,9 @@ class segementationRepo extends ServiceEntityRepository
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Type_Debiteur t") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_type_debiteur t") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Type_Debiteur t";
+                                $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
                             if(strpos($queryEntities,",debt_force_seg.dt_Employeur emp") == false)
                             {
@@ -1796,8 +1799,42 @@ class segementationRepo extends ServiceEntityRepository
         return ["queryConditions"=>$queryConditions ,"queryEntities"=>$queryEntities , 'param'=>$param ];
     }
     
+    public function deleteQueue($idQueue){
+        $sql="
+            -- Replace :queue_id with the actual queue ID you want to delete
+
+            -- Step 1: Delete from queue_values
+            DELETE qv FROM `queue_values` qv
+            JOIN `queue_critere` qc ON qv.id_critere_id = qc.id
+            JOIN `queue_groupe_critere` qgc ON qc.id_groupe_id = qgc.id
+            JOIN `queue` q ON qgc.id_queue_id = q.id
+            WHERE q.id = :queue_id;
+
+            -- Step 2: Delete from queue_critere
+            DELETE qc FROM `queue_critere` qc
+            JOIN `queue_groupe_critere` qgc ON qc.id_groupe_id = qgc.id
+            JOIN `queue` q ON qgc.id_queue_id = q.id
+            WHERE q.id = :queue_id;
+
+            -- Step 3: Delete from queue_groupe_critere
+            DELETE qgc FROM `queue_groupe_critere` qgc
+            JOIN `queue` q ON qgc.id_queue_id = q.id
+            WHERE q.id = :queue_id;
+
+            -- Step 4: Delete from queue
+            DELETE FROM `queue` WHERE id = :queue_id;";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(":queue_id",$idQueue);
+        $stmt = $stmt->executeQuery();
+    }
     public function deleteSegmentation($id){
-        $data =  array();
+        
+        $listQueue = $this->em->getRepository(Queue::class)->findBy(['id_segmentation'=>$id]);
+        foreach ($listQueue as $q) {
+            $this->deleteQueue($q->getId());
+        }
+
         $sql="
         -- Delete from seg_values
             DELETE seg_values
@@ -1832,5 +1869,77 @@ class segementationRepo extends ServiceEntityRepository
         $stmt = $stmt->executeQuery();
         $statut = $stmt->fetchAll();
         return $statut;
+    }
+    public function getTypesQueue($type){
+        $resultList = $this->em->getRepository(TypeQueue::class)->find($type);
+        return $resultList;
+    }
+    public function getStatusQueue($status){
+        $resultList = $this->em->getRepository(StatusQueue::class)->find($status);
+        return $resultList;
+    }
+    public function copyQueue(Segmentation $seg){
+
+        $type = $this->getTypesQueue(1);
+        $getStatusQueue = $this->getStatusQueue(1);
+        
+        $model = new Queue();
+        $model->setTitre('Seg-'.$seg->getCleIdentifiant());
+        $model->setDescription('');
+        $model->setIdSegmentation($seg);
+        $model->setIdType($type);
+        $model->setIdStatus($getStatusQueue);
+        $model->setDateCreation(new \DateTime("now"));
+        $model->setActive(true);
+        $model->setPriority(0);
+        $model->setAssignedStrategy(false);
+        $this->em->persist($model);
+        $this->em->flush();
+        return $model;
+    }
+    public function copyDataQueue($idSeg , $idQueue){
+        //Adresse
+        $sql = '
+        INSERT INTO debt_force_seg.queue_adresse (id_seg, id_adresse, id_queue)
+        SELECT id_seg, id_adresse, "'.$idQueue.'"
+        FROM debt_force_seg.seg_adresse
+        WHERE id_seg = "'.$idSeg.'"';
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        //Tel
+        $sql = '
+        INSERT INTO debt_force_seg.queue_telephone (id_seg, id_telephone, id_queue)
+        SELECT id_seg, id_telephone, "'.$idQueue.'"
+        FROM debt_force_seg.seg_telephone
+        WHERE id_seg = "'.$idSeg.'"';
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+
+        //Tel
+        $sql = '
+        INSERT INTO debt_force_seg.queue_dossier (id_seg, id_dossier, id_queue)
+        SELECT id_seg, id_dossier, "'.$idQueue.'"
+        FROM debt_force_seg.seg_dossier
+        WHERE id_seg = "'.$idSeg.'"';
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+
+        //Tel
+        $sql = '
+        INSERT INTO debt_force_seg.queue_debiteur (id_seg, id_debiteur, id_queue)
+        SELECT id_seg, id_debiteur, "'.$idQueue.'"
+        FROM debt_force_seg.seg_debiteur
+        WHERE id_seg = "'.$idSeg.'"';
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+
+        //Tel
+        $sql = '
+        INSERT INTO debt_force_seg.queue_creance (id_seg, id_creance, id_queue)
+        SELECT id_seg, id_creance, "'.$idQueue.'"
+        FROM debt_force_seg.seg_creance
+        WHERE id_seg = "'.$idSeg.'"';
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
     }
 }

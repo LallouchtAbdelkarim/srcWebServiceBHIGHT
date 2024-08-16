@@ -79,6 +79,7 @@ class WorkflowController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
     #[Route('/getListeSegmentByType')]
     public function getListeSegmentByType(Request $request,workflowRepo $workflowRepo): JsonResponse
     {
@@ -102,6 +103,7 @@ class WorkflowController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
     #[Route('/getListeObjet')]
 
     public function getListeObjet(Request $request,workflowRepo $workflowRepo): JsonResponse
@@ -662,24 +664,24 @@ class WorkflowController extends AbstractController
             if(!$workflow){
                 $codeStatut="NOT_EXIST";
             }else{
-                $data = $dataRequest["data"];
-                $dataAcivity = $dataRequest["dataActivitySplit"];
-                $dateWorkflow = new DataWorkflow();
-                $dateWorkflow->setData($data);
-                $dateWorkflow->setDataActivity($dataAcivity);
-                $dateWorkflow->setIdWorkflow($workflow);
-                $this->em->persist($dateWorkflow);
-                $this->em->flush();
-                //Save events
-                $this->processWorkflowData($data , $id);
+                // $data = $dataRequest["data"];
+                // $dataAcivity = $dataRequest["dataActivitySplit"];
+                // $dateWorkflow = new DataWorkflow();
+                // $dateWorkflow->setData($data);
+                // $dateWorkflow->setDataActivity($dataAcivity);
+                // $dateWorkflow->setIdWorkflow($workflow);
+                // $this->em->persist($dateWorkflow);
+                // $this->em->flush();
+                // //Save events
+                // $this->processWorkflowData($data , $id);
                 
-                $idEvent = $this->workflowRepo->getFirstEvent($id);
-                //Save detail queue
-                $this->workflowRepo->saveQueueWorkflow($id , $idEvent['id']);
+                // $idEvent = $this->workflowRepo->getFirstEvent($id);
+                // //Save detail queue
+                // $this->workflowRepo->saveQueueWorkflow($id , $idEvent['id']);
                 // $this->saveSplitQueue($data,$id);
                 
-                $this->saveSplitQueue($dataRequest["data"], $id , $dataRequest["dataSplit"]);
-
+                // $this->saveSplitQueue($dataRequest["data"], $id , $dataRequest["dataSplit"]);
+                $this->workflowRepo->saveDataSplitQueue($id);
                 // $workflow = $this->workflowRepo->updateStatutWorkflow($id, 2);
                 $codeStatut="OK";
             }
@@ -911,7 +913,6 @@ class WorkflowController extends AbstractController
                     }
                     $this->segementationRepo->createSegValues($value1 , $value2 , $createQueueCritere->getId(),$action,null);
                 }
-
             }
             // $priority ++;
             $codeStatut="OK";
@@ -1018,26 +1019,23 @@ class WorkflowController extends AbstractController
                     //Récuperer les actions que il a aucune action 
                     $listQueue = $workflowRepo->getQueueEvent($id); 
                     $checkIfUserLibre = $workflowRepo->checkIfUserLibre(); 
-
                     
-                    for ($i=0; $i < count($listQueue); $i++) {
-                        $eventAction = $workflowRepo->getEventAction($listQueue[$i]['id_event_action_id']);
-                        $eventDetails = $workflowRepo->getEvenmentWorkflow($eventAction['id_event_id']);
-                        if($eventDetails['is_system'] == 1){
-                            //Sauvguarde d'une place pour  
-                            $workflowRepo->saveSystemQueueProcess($listQueue[$i]['id'] , $listQueue[$i]['id_event_action_id'] );
-                        }else{
-
-                            if(!$checkIfUserLibre){
-                                $workflowRepo->addHistoriqueWorkflow($id , "Aucun utilisateur disponible !");
-                            }else{
-                                $userLibre = $workflowRepo->getUserLibre();
-                                $workflowRepo->assignTask($userLibre , $listQueue[$i]['id'] , 2);
-                                $workflowRepo->updateStatutQueueEvent( $listQueue[$i]['id'], 3);
-                            }
-
-                        }
-                    }
+                    // for ($i=0; $i < count($listQueue); $i++) {
+                    //     $eventAction = $workflowRepo->getEventAction($listQueue[$i]['id_event_action_id']);
+                    //     $eventDetails = $workflowRepo->getEvenmentWorkflow($eventAction['id_event_id']);
+                    //     if($eventDetails['is_system'] == 1){
+                    //         //Sauvguarde d'une place pour  
+                    //         $workflowRepo->saveSystemQueueProcess($listQueue[$i]['id'] , $listQueue[$i]['id_event_action_id'] );
+                    //     }else{
+                    //         if(!$checkIfUserLibre){
+                    //             $workflowRepo->addHistoriqueWorkflow($id , "Aucun utilisateur disponible !");
+                    //         }else{
+                    //             $userLibre = $workflowRepo->getUserLibre();
+                    //             $workflowRepo->assignTask($userLibre , $listQueue[$i]['id'] , 2);
+                    //             $workflowRepo->updateStatutQueueEvent( $listQueue[$i]['id'], 3);
+                    //         }
+                    //     }
+                    // }
                 }
             }
             $codeStatut="OK";
@@ -1066,7 +1064,7 @@ class WorkflowController extends AbstractController
                 $cleEvent = $eventQueue->getIdEventAction()->getCle();
         
                 $nextStep = $this->GeneralService->getNextStep($workflowData, $cleEvent);
-    
+                
                 $evenmentWorkflow = $workflowRepo->getEvenmentWorkflow($eventQueue->getIdEventAction()->getIdEvent()->getId());
                 $cle=$eventQueue->getIdEventAction()->getCle();
                 $workflowRepo->addHistoriqueQueueEvent($eventQueue->getId() , "L'événement de ".$evenmentWorkflow['titre']." été appliqué." , 1 ,$cle);
@@ -1316,8 +1314,6 @@ class WorkflowController extends AbstractController
                                 if(isset($nextStep['id'])){
                                     $actionEvent = $workflowRepo->getEvenmentWorkflow2($nextStep['id'] , $workflow->getId());
                                     $eventQueue->setIdEventAction($actionEvent);
-                                    
-                                    
                                     //Get statuts
                                     $statutEvent = $workflowRepo->getStatutQueueEvent(2);
                                     //Get status

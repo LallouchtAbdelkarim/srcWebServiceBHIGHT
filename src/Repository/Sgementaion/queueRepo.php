@@ -88,6 +88,16 @@ class queueRepo extends ServiceEntityRepository
         // $data = $stmt->fetchAll();
         return $resultList;
     }
+    public function getListeQueueByType($id_type){
+        $resultList = $this->em->getRepository(Queue::class)->findBy(["id_type"=>$id_type],["id"=>"DESC"]);
+
+        // $sql="SELECT* from queue q WHERE q.id_type_id = '".$id_type."' and q.queue_groupe_id = '".$id_groupe."'";
+        // $stmt = $this->conn->prepare($sql);
+        // // $stmt->bindValue(":id",$id);
+        // $stmt = $stmt->executeQuery();
+        // $data = $stmt->fetchAll();
+        return $resultList;
+    }
     public function getLastQueue(){
         $sql="Select max(id) from queue";
         $stmt = $this->conn->prepare($sql);
@@ -338,5 +348,35 @@ class queueRepo extends ServiceEntityRepository
         $stmt = $stmt->executeQuery();
         $statut = $stmt->fetchAll();
         return $statut;
+    }
+
+    public function deleteQueue($idQueue){
+        $sql="
+            -- Replace :queue_id with the actual queue ID you want to delete
+
+            -- Step 1: Delete from queue_values
+            DELETE qv FROM `queue_values` qv
+            JOIN `queue_critere` qc ON qv.id_critere_id = qc.id
+            JOIN `queue_groupe_critere` qgc ON qc.id_groupe_id = qgc.id
+            JOIN `queue` q ON qgc.id_queue_id = q.id
+            WHERE q.id = :queue_id;
+
+            -- Step 2: Delete from queue_critere
+            DELETE qc FROM `queue_critere` qc
+            JOIN `queue_groupe_critere` qgc ON qc.id_groupe_id = qgc.id
+            JOIN `queue` q ON qgc.id_queue_id = q.id
+            WHERE q.id = :queue_id;
+
+            -- Step 3: Delete from queue_groupe_critere
+            DELETE qgc FROM `queue_groupe_critere` qgc
+            JOIN `queue` q ON qgc.id_queue_id = q.id
+            WHERE q.id = :queue_id;
+
+            -- Step 4: Delete from queue
+            DELETE FROM `queue` WHERE id = :queue_id;";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(":queue_id",$idQueue);
+        $stmt = $stmt->executeQuery();
     }
 }

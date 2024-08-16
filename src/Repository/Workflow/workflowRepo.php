@@ -25,6 +25,7 @@ use App\Entity\TypeParametrage;
 use App\Entity\Utilisateurs;
 use App\Entity\Scenario;
 use App\Entity\Workflow;
+use App\Repository\Sgementaion\segementationRepo;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -35,11 +36,14 @@ class workflowRepo extends ServiceEntityRepository
 {
     private $conn;
     public $em;
+    private $segementationRepo;
 
-    public function __construct(Connection $conn , EntityManagerInterface $em)
+    public function __construct(Connection $conn , EntityManagerInterface $em  ,segementationRepo $segementationRepo,
+    )
     {
         $this->conn = $conn;
         $this->em = $em;
+        $this->segementationRepo = $segementationRepo;
     }
     public function getListeWorkflow(){
         $sql2 = "select * from workflow ORDER BY `id` DESC";
@@ -131,8 +135,7 @@ class workflowRepo extends ServiceEntityRepository
     }
 
     public function getListeSegmentByType($type){
-        $query = $this->em->createQuery('SELECT d FROM App\Entity\Segmentation d WHERE d.id  IN (SELECT IDENTITY(cr.id_segmentaion) FROM App\Entity\IntermWorkflowSegmentation cr WHERE IDENTITY(cr.id_workflow) IS NULL )
-        AND d.id in (SELECT IDENTITY(q.id_segmentation) from App\Entity\Queue q where IDENTITY(q.id_status) = 3 )');
+        $query = $this->em->createQuery('SELECT d FROM App\Entity\Segmentation d WHERE d.id  IN (SELECT IDENTITY(cr.id_segmentaion) FROM App\Entity\IntermWorkflowSegmentation cr WHERE IDENTITY(cr.id_workflow) IS NULL )');
         $resultList = $query->getResult();
 
         if($resultList){
@@ -820,11 +823,11 @@ class workflowRepo extends ServiceEntityRepository
     }
 
     public function getCritereSplit($id){
-        $sql2 = "select * from split_groupe_critere where id_queue_split_id = :id ORDER BY priority ASC";
+        $sql2 = "select * from split_groupe_critere where id_queue_split_id = :id ";
         $stmt = $this->conn->prepare($sql2);
         $stmt->bindValue(":id",$id);
         $stmt = $stmt->executeQuery();
-        $liste_groupe = $stmt->fetchAll();  
+        $liste_groupe = $stmt->fetchAll(); dump($liste_groupe);
         $array_data = [];
         for ($i=0; $i < count($liste_groupe); $i++) { 
             $array_data[$i] = $liste_groupe[$i];
@@ -845,6 +848,7 @@ class workflowRepo extends ServiceEntityRepository
         }
         return $array_data;
     }
+
     public function getListeSplitQueueById($id){
         $sql="SELECT * FROM `queue_split` s WHERE s.id = :id";
         $stmt = $this->conn->prepare($sql);
@@ -965,5 +969,73 @@ class workflowRepo extends ServiceEntityRepository
         return $statut;
     }
 
+    public function saveDataSplitQueue($id){
+        $sql="SELECT * FROM queue_split q where q.is_child = 0 and q.id_event_action_id in (select e.id from event_action e where e.id_workflow_id = ".$id.")";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $split = $stmt->fetchAll();
+
+        for ($i=0; $i < count($split); $i++) { dump($split);
+            $this->sauvguardeSplit($split[$i]['id']);
+        }
+    }
+
+    
+    public function sauvguardeSplit($id)
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        $idSplit = 1;//TODO:Force
+        $segment = $this->getListeSplitQueueById($idSplit);
+        // try {
+            for ($s=0; $s < count($segment) ; $s++) {
+                // $entities = json_decode($segment[$s]['entities']);
+                // if(in_array('dossier',$entities))
+                // {
+                    $queryEntities = "debt_force_seg.dt_debiteur deb,debt_force_seg.dt_creance c";
+                    $queryConditions = " ";
+                    $param = array();
+                    $id = $segment[$s]["id"];
+                    $groupe = $this->getCritereSplit($id);
+                    $queryConditions = " ";
+                    $requetOutput = $this->segementationRepo->getRequeteCreance($id , $groupe , $queryEntities,$queryConditions,$param);
+                    $queryConditions = $requetOutput["queryConditions"];
+                    $queryEntities = $requetOutput["queryEntities"];
+                    $param = $requetOutput["param"];
+                    $queryEntities = strtolower($queryEntities);
+                    
+                    $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ; 
+
+                    $rqDossier = "SELECT doss.id FROM debt_force_seg.dt_Dossier doss WHERE doss.id IN (
+                        SELECT (c1.id_dossier_id) from debt_force_seg.dt_Creance c1 where c1.id in (".$rqCreance.")
+                    )";
+                    $stmt = $this->conn->prepare($rqDossier);
+                    foreach ($param as $key => $value) {
+                        $stmt->bindValue($key, $value);
+                    }
+                    $stmt = $stmt->executeQuery();
+                    $resultDossier = $stmt->fetchAll();
+
+                    // if(count($resultDossier) >= 1)
+                    // {
+                    //     $sql="UPDATE `segmentation` SET `id_status_id`='3' WHERE  id = ".$id."";
+                    //     $stmt = $this->conn->prepare($sql)->executeQuery(); 
+                    //     for ($r=0; $r < count($resultDossier); $r++) { 
+                    //         $sql="insert into `debt_force_seg`.`seg_dossier`(id_seg,id_dossier) values(".$id.",".$resultDossier[$r]["id"].")";
+                    //         $stmt = $this->conn->prepare($sql)->executeQuery();
+                    //     }
+                    // }else{
+                    //     $sql="UPDATE `segmentation` SET `id_status_id`='4' WHERE  id = ".$id."";
+                    //     $stmt = $this->conn->prepare($sql)->executeQuery(); 
+                    // }
+                // }
+            }
+        // } catch (\Exception $e) {
+        //     $respObjects["err"] = $e->getMessage();
+        // }
+        // $respObjects["codeStatut"] = $codeStatut;
+        // $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        // return $this->json($respObjects);
+    }
     
 }
