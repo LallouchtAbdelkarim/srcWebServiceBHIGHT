@@ -379,4 +379,69 @@ class queueRepo extends ServiceEntityRepository
         $stmt->bindValue(":queue_id",$idQueue);
         $stmt = $stmt->executeQuery();
     }
+
+    public function getQueue($id){
+        $resultList = $this->em->getRepository(Queue::class)->find($id);
+        if($resultList){
+            return $resultList;
+        }else{
+            return null;
+        }
+    }
+
+    public function updateQueue($id, $titre, $description, $queue_groupe_id, $id_type_id, $segment, $active) {
+        $sql = "
+        UPDATE `queue`
+        SET 
+            `queue_groupe_id` = :queue_groupe_id,
+            `titre` = :titre,
+            `description` = :description,
+            `id_segmentation_id` = :segment,
+            `id_type_id` = :id_type_id,
+            `active` = :active
+        WHERE 
+            `id` = :id;
+        ";
+    
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(":titre", $titre);
+        $stmt->bindValue(":description", $description);
+        $stmt->bindValue(":queue_groupe_id", $queue_groupe_id);
+        $stmt->bindValue(":id_type_id", $id_type_id);
+        $stmt->bindValue(":segment", $segment);
+        $stmt->bindValue(":active", $active);
+        $stmt->bindValue(":id", $id, \PDO::PARAM_INT);
+    
+        $stmt->executeQuery();
+    
+        return true;
+    }
+
+    public function deleteCritereQueue($idQueue){
+        $sql="
+            -- Replace :queue_id with the actual queue ID you want to delete
+
+            -- Step 1: Delete from queue_values
+            DELETE qv FROM `queue_values` qv
+            JOIN `queue_critere` qc ON qv.id_critere_id = qc.id
+            JOIN `queue_groupe_critere` qgc ON qc.id_groupe_id = qgc.id
+            JOIN `queue` q ON qgc.id_queue_id = q.id
+            WHERE q.id = :queue_id; 
+
+            -- Step 2: Delete from queue_critere
+            DELETE qc FROM `queue_critere` qc
+            JOIN `queue_groupe_critere` qgc ON qc.id_groupe_id = qgc.id
+            JOIN `queue` q ON qgc.id_queue_id = q.id
+            WHERE q.id = :queue_id;
+
+            -- Step 3: Delete from queue_groupe_critere
+            DELETE qgc FROM `queue_groupe_critere` qgc
+            JOIN `queue` q ON qgc.id_queue_id = q.id
+            WHERE q.id = :queue_id;";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(":queue_id",$idQueue);
+        $stmt = $stmt->executeQuery();
+    }
+    
 }

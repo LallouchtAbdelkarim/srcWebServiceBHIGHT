@@ -930,7 +930,7 @@ class ActivityController extends AbstractController
     {
         $respObjects =array();
         $codeStatut = "ERROR";
-        try{
+        // try{
             $this->AuthService->checkAuth(0,$request);
             $data = json_decode($request->getContent(), true);
             $id = $data["id"];
@@ -961,10 +961,10 @@ class ActivityController extends AbstractController
             }else{
                 $codeStatut="NOT_EXIST_ELEMENT";
             }
-        }catch(\Exception $e){
-            $codeStatut="ERROR";
-        $respObjects["err"] = $e->getMessage();
-        }
+        // }catch(\Exception $e){
+        //     $codeStatut="ERROR";
+        // $respObjects["err"] = $e->getMessage();
+        // }
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);

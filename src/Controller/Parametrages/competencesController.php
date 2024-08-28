@@ -49,7 +49,7 @@ class competencesController extends AbstractController
     #[Route('/competences/listModels/')]
     public function index(competenceRepo $competenceRepo , Request $request): JsonResponse
     {
-        $this->AuthService->checkAuth(0,$request);
+        // $this->AuthService->checkAuth(0,$request);
         $respObjects =array();
         $codeStatut = "ERREUR";
         try{
@@ -61,7 +61,9 @@ class competencesController extends AbstractController
         }
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
-        return $this->json($respObjects);    }
+        return $this->json($respObjects);
+    }
+
     #[Route('/competences/createCompetence', methods: ['POST'])]
     public function createModel(competenceRepo $competenceRepo ,activityRepo $activityRepo, Request $request): JsonResponse
     {
@@ -97,6 +99,7 @@ class competencesController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
     #[Route('/competences/updateCompetence', methods: ['POST'])]
     public function updateModel(competenceRepo $competenceRepo , Request $request): JsonResponse
     {
@@ -236,11 +239,12 @@ class competencesController extends AbstractController
         $id = $request->get("id");
         if(trim($id) != ""){
             $competence = $competenceRepo->findModel($id);
+            dump($competence);
             if($competence){
                 $codeStatut = "OK";
                 $respObjects["data"]["competence"] = $competence;
                 //Get list param
-                $param_activite = $activityRepo->getParamsActivity();
+                $param_activite = $activityRepo->getParamsActivity();dump($id);
                 // $param_list = array();
                 // for($j = 0 ; $j < count($param_activite) ;$j++){
                 //     $param_list[$j]["param"] = $param_activite[$j];
@@ -354,21 +358,25 @@ class competencesController extends AbstractController
             $data = json_decode($request->getContent(), true);
             $id = $request->get('id');
             $groupe =  $this->em->getRepository(GroupeCompetence::class)->find($id);
-
-            if($groupe)
-            {
-                $sousGroupe =  $this->em->getRepository(DetailGroupeCompetence::class)->findBy(['id_groupe'=>$groupe->getId()]);
-                foreach ($sousGroupe as $sous) {
-                    $sousSousGroupe =  $this->em->getRepository(SousDetailGroupeCompetence::class)->findBy(['id_detail_groupe_competence'=>$sous->getId()]);
-                    foreach ($sousSousGroupe as $sous1) {
-                        $this->em->remove($sous1);
+            $checkIf = $this->em->getRepository(DetailCompetence::class)->findOneBy(['id_groupe'=>$id]);
+            if(!$checkIf){
+                if($groupe)
+                {
+                    $sousGroupe =  $this->em->getRepository(DetailGroupeCompetence::class)->findBy(['id_groupe'=>$groupe->getId()]);
+                    foreach ($sousGroupe as $sous) {
+                        $sousSousGroupe =  $this->em->getRepository(SousDetailGroupeCompetence::class)->findBy(['id_detail_groupe_competence'=>$sous->getId()]);
+                        foreach ($sousSousGroupe as $sous1) {
+                            $this->em->remove($sous1);
+                        }
+                        $this->em->remove($sous);
                     }
-                    $this->em->remove($sous);
+                    $this->em->remove($groupe);
+                    $this->em->flush();
+    
+                    $codeStatut='OK';
                 }
-                $this->em->remove($groupe);
-                $this->em->flush();
-
-                $codeStatut='OK';
+            }else{
+                $codeStatut='EXIST_COMPETENCE';
             }
             
         }catch(\Exception $e){

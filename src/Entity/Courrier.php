@@ -32,7 +32,7 @@ class Courrier
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
-    private ?dossier $id_dossier = null;
+    private ?Dossier $id_dossier = null;
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]

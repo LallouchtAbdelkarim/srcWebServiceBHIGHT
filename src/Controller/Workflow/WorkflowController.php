@@ -664,23 +664,22 @@ class WorkflowController extends AbstractController
             if(!$workflow){
                 $codeStatut="NOT_EXIST";
             }else{
-                // $data = $dataRequest["data"];
-                // $dataAcivity = $dataRequest["dataActivitySplit"];
-                // $dateWorkflow = new DataWorkflow();
-                // $dateWorkflow->setData($data);
-                // $dateWorkflow->setDataActivity($dataAcivity);
-                // $dateWorkflow->setIdWorkflow($workflow);
-                // $this->em->persist($dateWorkflow);
-                // $this->em->flush();
-                // //Save events
-                // $this->processWorkflowData($data , $id);
+                $data = $dataRequest["data"];
+                $dataAcivity = $dataRequest["dataActivitySplit"];
+                $dateWorkflow = new DataWorkflow();
+                $dateWorkflow->setData($data);
+                $dateWorkflow->setDataActivity($dataAcivity);
+                $dateWorkflow->setIdWorkflow($workflow);
+                $this->em->persist($dateWorkflow);
+                $this->em->flush();
+                //Save events
+                $this->processWorkflowData($data , $id);
                 
-                // $idEvent = $this->workflowRepo->getFirstEvent($id);
-                // //Save detail queue
-                // $this->workflowRepo->saveQueueWorkflow($id , $idEvent['id']);
-                // $this->saveSplitQueue($data,$id);
+                $idEvent = $this->workflowRepo->getFirstEvent($id);
+                //Save detail queue
+                $this->workflowRepo->saveQueueWorkflow($id , $idEvent['id']);
                 
-                // $this->saveSplitQueue($dataRequest["data"], $id , $dataRequest["dataSplit"]);
+                $this->saveSplitQueue($dataRequest["data"], $id , $dataRequest["dataSplit"]);
                 $this->workflowRepo->saveDataSplitQueue($id);
                 // $workflow = $this->workflowRepo->updateStatutWorkflow($id, 2);
                 $codeStatut="OK";
@@ -752,7 +751,6 @@ class WorkflowController extends AbstractController
                 foreach ($component['branches'] as $key => $branch) {
                     foreach ($branch as $branchComponent) {
                         if ($branchComponent['id_element'] == "Split flow step" ) {
-                            //TODO:dump($component['branches'][$key][0]['id']);
                             $splitParent = $this->workflowRepo->getSplitQueueByCle($component['id'],$key);
                             /* Save queue from data */
                             //Code **
@@ -867,7 +865,7 @@ class WorkflowController extends AbstractController
                                 $values[$v]["id_critere_id"] == 12 || 
                                 $values[$v]["id_critere_id"] == 14 || 
                                 $values[$v]["id_critere_id"] == 15 ||
-                                $values[$v]["id_critere_id"] == 3 ||
+                                $values[$v]["id_critere_id"] == 3  ||
                                 $values[$v]["id_critere_id"] == 17 ||
                                 $values[$v]["id_critere_id"] == 20 ||
                                 $values[$v]["id_critere_id"] == 22 ||
@@ -875,7 +873,7 @@ class WorkflowController extends AbstractController
                                 $values[$v]["id_critere_id"] == 26 ||
                                 $values[$v]["id_critere_id"] == 27 ||
                                 $values[$v]["id_critere_id"] == 32 ||
-                                $values[$v]["id_critere_id"] == 35  ||
+                                $values[$v]["id_critere_id"] == 35 ||
                                 $values[$v]["id_critere_id"] == 38 || 
                                 $values[$v]["id_critere_id"] == 41 ||
                                 $values[$v]["id_critere_id"] == 42 ||
@@ -901,7 +899,7 @@ class WorkflowController extends AbstractController
                         $value1 =  $values["value1"];
                         $value2 =  $values["value2"] ?? "";
                     }
-                    $this->segementationRepo->createSegValues($value1 , $value2 , $createQueueCritere->getId(),$action,null);
+                    $this->segementationRepo->createValuesSplit($value1 , $value2 , $createQueueCritere->getId(),$action,null);
                 }
 
                 if(isset($critere[$j]) && isset($critere[$j]["type"]) && $critere[$j]["type"] == 'date') {
@@ -911,7 +909,7 @@ class WorkflowController extends AbstractController
                         $value1 =  $values["value1"];
                         $value2 =  $values["value2"] ?? "";
                     }
-                    $this->segementationRepo->createSegValues($value1 , $value2 , $createQueueCritere->getId(),$action,null);
+                    $this->segementationRepo->createValuesSplit($value1 , $value2 , $createQueueCritere->getId(),$action,null);
                 }
             }
             // $priority ++;

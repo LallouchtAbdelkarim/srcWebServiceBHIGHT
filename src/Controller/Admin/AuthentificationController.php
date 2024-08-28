@@ -65,7 +65,7 @@ class AuthentificationController extends AbstractController
             $respObjects=array();
             if (!empty($login) && !empty($password)) {
                 $user = $em->getRepository(Utilisateurs::class)->findOneBy(["email"=>$login , "password"=>md5($password)]);
-                if($user   && ( $user->getIdTypeUser()->getId() == 1 or $user->getIdTypeUser()->getId() == (1)  ) ){
+                if($user  ){
                     $data = array("email"=>$login , "id"=>$user->getId());
                     $tokenJWT = $this->JWTManager->encode($data);
                     //Persist token

@@ -3,6 +3,7 @@
 namespace App\Controller\Models;
 
 use App\Entity\BackgroundCourrier;
+use App\Entity\Courrier;
 use App\Entity\DetailModelAffichage;
 use App\Entity\Footer;
 use App\Entity\Header;
@@ -31,7 +32,7 @@ class ModelsController extends AbstractController
     public $serializer;
     public $modelCourierRepo;
     private $AuthService;
-
+    public $modelCourierRepository;
     public $em;
     public function __construct(
         AuthService $AuthService,
@@ -255,19 +256,28 @@ class ModelsController extends AbstractController
     #[Route('/delete_model_courier/{id}', methods:['POST'])]
     public function deleteModelCourier(EntityManagerInterface $entityManager, Request $request, ValidationService $validator, $id): JsonResponse
     {
-
-        $courier = $entityManager->getRepository(ModelCourier::class)->find($id);
-        $response = "";
-        $codeStatut = "";
-        if (!$courier) {
-            $codeStatut = "NOT_EXIST";
-        } else {
-            $entityManager->remove($courier);
-            $entityManager->flush();
-            $response = "OK";
+        try {
+            $courier = $entityManager->getRepository(ModelCourier::class)->find($id);
+            $response = "";
+            $codeStatut = "";
+            if (!$courier) {
+                $codeStatut = "NOT_EXIST";
+            } else {
+                $cour = $entityManager->getRepository(Courrier::class)->findOneBy(['id_models'=>$id]);
+                if($cour){
+                    $codeStatut = "MODEL_EXIST_IN_COURRIER";
+                }else{
+                    $this->modelCourierRepository->deleteModelCourrier($courier->getId());
+                    $response = "OK";
+                }
+            }
+        } catch (\Exception $e) {
+            $codeStatut = "ERROR";
+            $respObjects["Erreur"] = $e->getMessage();
         }
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+       
         return $this->json($respObjects);
     }
 
@@ -415,12 +425,12 @@ class ModelsController extends AbstractController
         // Fetch header and footer data from database
         $header = $this->em->getRepository(Header::class)->find($headerSelected);
         $footer = $this->em->getRepository(Footer::class)->find($footerSelected);
+        $background = $this->em->getRepository(BackgroundCourrier::class)->find($background);
         $footerText = $footer ? $footer->getMessage() : '';
         $positionHeader = $header ? $header->getPosition() : 1;
         $styleHeader = $positionHeader == 1 ? 'left' : ($positionHeader == 2 ? 'center' : 'right');
         $logo = $header ? $header->getUrl() : '';
 
-        
         // Prepare variables for Twig
         $variables = [
             'objet' => $objet,
@@ -433,7 +443,6 @@ class ModelsController extends AbstractController
 
         // Render the Twig template
         $htmlContent = $this->renderView('models/previewPdf.html.twig', $variables);
-
 
         // Generate PDF from HTML content
         $html2pdf = new Html2Pdf('P', 'A4', 'fr', true, 'UTF-8', [10, 10, 10, 10], false);

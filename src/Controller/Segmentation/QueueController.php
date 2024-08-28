@@ -652,7 +652,7 @@ class QueueController extends AbstractController
     }
 
     #[Route('/updateQueue', methods: ['POST'])]
-    public function updateQueue(Request $request,segementationRepo $segementationRepo , queueRepo $queueRepo): JsonResponse
+    public function updateQueue(Request $request,segementationRepo $segementationRepo , queueRepo $queueRepo,$id): JsonResponse
     {
         $respObjects =array();
         $codeStatut = "ERROR";
@@ -2434,5 +2434,142 @@ class QueueController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects );
     }
+
+    #[Route('/getQueue/{id}' , methods:['GET'])]
+    public function getQueue( $id, queueRepo $queueRepo , segementationRepo $segementationRepo  ,SerializerInterface $serializer , Request $request): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try {
+
+            $queue = $queueRepo->getQueue($id);
+            $respObjects["data"] = $queue;
+            $codeStatut = "OK";
+        }catch (\Exception $e) {
+            $respObjects["msg"] = $e->getMessage();
+            $codeStatut="ERROR";
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects );
+    }
+
+
+    #[Route('/updateQueueCritere/{id}', methods: ['POST'])]
+    public function updateQueueCritere( $id,Request $request,queueRepo $queueRepo , segementationRepo $segementationRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $data = json_decode($request->getContent(), true);
+            $titre = $data["titre"];
+            $description = "";
+            $id_type_id = $data["id_type_id"]; 
+            $queue_groupe_id = $data["queue_groupe_id"];
+            $active = $data["active"];
+            $seg = $data["segmentation"];
+            if($titre == "" ){
+                $codeStatut = "ERROR-EMPTY-PARAMS";
+            }else{
+                $isQueueExist = $queueRepo->findQueueByTitre($titre) ;
+                if($queueRepo->findQueueByTitre($titre) && $isQueueExist != $id ){
+                    $codeStatut = "ELEMENT_DEJE_EXIST";
+                }else{
+                    // $createSegment = $segementationRepo->createSegment1($titre , 1);
+                    if($id_type_id == 1 || $id_type_id == 2 || $queueRepo->findGroupe($queue_groupe_id))
+                    {
+                        if(isset($data['description'])){
+                            $description = $data['description'];
+                        }
+
+                        $createQueue = $queueRepo->updateQueue($id,$titre,$description,$queue_groupe_id ,$id_type_id , $seg ,$active );
+                        
+                        $queueRepo->deleteCritereQueue($id);
+                        
+                        if($createQueue){
+                            $data_critere = $data["data"];
+                            for ($i=0; $i < count($data_critere); $i++) { 
+                                $titre_groupe = $data_critere[$i]["groupe"]["titre_groupe"];
+                                $queueId = $queueRepo->getLastQueue();
+                                $createGroupeQueue = $queueRepo->createGroupeCritereRepo($titre_groupe,$queueId);
+                                $critere = $data_critere[$i]["critere"];
+                                for ($j1=0; $j1 < count($critere); $j1++){
+                                    $createQueueCritere = $queueRepo->createQueueCritere($critere[$j1]["critere"], $createGroupeQueue , $critere[$j1]["type"]);
+                                    if($critere[$j1]["type"] == 'multiple_check'){
+                                       $values = $critere[$j1]['values'];
+                                       for ($j=0; $j < count($values) ; $j++) {
+                                            if(isset($values[$j]["selected"]) && $values[$j]["selected"] == true ){
+                                                if( $values[$j]["id_critere_id"] == 1 || 
+                                                $values[$j]["id_critere_id"] == 17 || 
+                                                $values[$j]["id_critere_id"] == 6 || 
+                                                $values[$j]["id_critere_id"] == 7 || 
+                                                $values[$j]["id_critere_id"] == 11 || 
+                                                $values[$j]["id_critere_id"] == 12 || 
+                                                $values[$j]["id_critere_id"] == 14 || 
+                                                $values[$j]["id_critere_id"] == 15 ||
+                                                $values[$j]["id_critere_id"] == 3 ||
+                                                $values[$j]["id_critere_id"] == 17 ||
+                                                $values[$j]["id_critere_id"] == 20 ||
+                                                $values[$j]["id_critere_id"] == 22 ||
+                                                $values[$j]["id_critere_id"] == 25 ||
+                                                $values[$j]["id_critere_id"] == 26 ||
+                                                $values[$j]["id_critere_id"] == 27 ||
+                                                $values[$j]["id_critere_id"] == 32 ||
+                                                $values[$j]["id_critere_id"] == 35  ||
+                                                $values[$j]["id_critere_id"] == 38 || 
+                                                $values[$j]["id_critere_id"] == 41 ||
+                                                $values[$j]["id_critere_id"] == 42 ||
+                                                $values[$j]["id_critere_id"] == 44 
+                                                )
+                                                {
+                                                    $value1 =  $values[$j]["id_champ"];
+                                                    $queueRepo->createQueueValues($value1 , '' , $createQueueCritere->getId(),null,$values[$j]["value"]);
+                                                }
+                                                else
+                                                {
+                                                    $value1 =  $values[$j]["value"];
+                                                    $queueRepo->createQueueValues($value1 , '' , $createQueueCritere->getId(),null,$values[$j]["value"]);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if($critere[$j1]["type"] == 'montant' || $critere[$j1]["type"] == 'drop_down' ){
+                                        $values = $critere[$j1]['values'];
+                                        $action = $critere[$j1]['action'] ;
+                                        for ($q=0; $q < count($values) ; $q++) {
+                                            $value1 =  $values["value1"];
+                                            $value2 =  $values["value2"] ?? "";
+                                        }
+                                        $queueRepo->createQueueValues($value1 , $value2 , $createQueueCritere->getId(),$action,null);
+                                    }
+                                    if($critere[$j1]["type"] == 'date'){
+                                        $values = $critere[$j1]['values'];
+                                        $action = $critere[$j1]['action'] ;
+                                        for ($q=0; $q < count($values) ; $q++) {
+                                            $value1 =  $values["value1"];
+                                            $value2 =  $values["value2"];
+                                        }
+                                        $queueRepo->createQueueValues($value1 , $value2 , $createQueueCritere->getId(),$action , null);
+                                    }
+                                }
+                            }
+                            $codeStatut="OK";
+                            $this->sauvguardeQueue($request,$segementationRepo , $queueRepo , $queueId);
+                        }
+                    }else{
+                        $codeStatut = "ERROR-EMPTY-PARAMS";
+                    }
+                }
+            }
+        }catch(\Exception $e){
+            $codeStatut = "ERROR";
+            $respObjects["msg"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+    
     
 }   

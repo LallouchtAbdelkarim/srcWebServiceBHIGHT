@@ -302,7 +302,7 @@ class activityRepo extends ServiceEntityRepository
         return $etap;
     }
     public function updateParam($id,$activite_p , $code_type , $type , $famille , $typeActivite){
-        $etap =  $this->em->getRepository(ParamActivite::class)->fin($id);
+        $etap =  $this->em->getRepository(ParamActivite::class)->find($id);
         $etap->setActiviteP($activite_p);
         $etap->setType($type);
         $etap->setCodeType($code_type);

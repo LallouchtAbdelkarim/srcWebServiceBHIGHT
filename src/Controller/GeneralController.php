@@ -57,7 +57,6 @@ class GeneralController extends AbstractController
         $this->AuthService->checkAuth(0,$request);
         $data = [];
         try{
-            // $data = $this->conn->getSchemaManager()->listTableNames(); 
             $data = ['creance' ,"accord","dossier","paiement","telephone"]; 
             $codeStatut = "OK";
         }catch(\Exception $e){

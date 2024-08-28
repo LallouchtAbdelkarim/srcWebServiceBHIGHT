@@ -1854,6 +1854,7 @@ class IntegrationController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects );
     }
+    
     #[Route('/getListeImport/{id}')]
     public function getListeImport(integrationRepo $integrationRepo ,$id,ManagerRegistry $doctrine ,  SerializerInterface $serializer , Request $request): JsonResponse
     {
@@ -1868,7 +1869,7 @@ class IntegrationController extends AbstractController
         }
         $respObjects["codeStatut"]=$codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
-        return $this->json($respObjects );
+        return $this->json($respObjects);
     }
 
     #[Route('/exportLogImport/{id}')]

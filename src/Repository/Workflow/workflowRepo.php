@@ -827,7 +827,7 @@ class workflowRepo extends ServiceEntityRepository
         $stmt = $this->conn->prepare($sql2);
         $stmt->bindValue(":id",$id);
         $stmt = $stmt->executeQuery();
-        $liste_groupe = $stmt->fetchAll(); dump($liste_groupe);
+        $liste_groupe = $stmt->fetchAll(); 
         $array_data = [];
         for ($i=0; $i < count($liste_groupe); $i++) { 
             $array_data[$i] = $liste_groupe[$i];
@@ -839,7 +839,7 @@ class workflowRepo extends ServiceEntityRepository
             $array_data[$i]["criteres"] = $criteria;
             for ($j=0; $j < count($array_data[$i]["criteres"]); $j++) { 
                 $critereId = $array_data[$i]["criteres"][$j]["id"];
-                $sql2 = "select * from split_values_critere where id_critere_id = " . $critereId;
+                $sql2 = "select * from split_values_critere where id_split_critere_id = " . $critereId;
                 $stmt = $this->conn->prepare($sql2);
                 $stmt = $stmt->executeQuery();
                 $details = $stmt->fetchAll();
@@ -974,8 +974,7 @@ class workflowRepo extends ServiceEntityRepository
         $stmt = $this->conn->prepare($sql);
         $stmt = $stmt->executeQuery();
         $split = $stmt->fetchAll();
-
-        for ($i=0; $i < count($split); $i++) { dump($split);
+        for ($i=0; $i < count($split); $i++) { 
             $this->sauvguardeSplit($split[$i]['id']);
         }
     }
@@ -985,8 +984,7 @@ class workflowRepo extends ServiceEntityRepository
     {
         $respObjects =array();
         $codeStatut = "ERROR";
-        $idSplit = 1;//TODO:Force
-        $segment = $this->getListeSplitQueueById($idSplit);
+        $segment = $this->getListeSplitQueueById($id);
         // try {
             for ($s=0; $s < count($segment) ; $s++) {
                 // $entities = json_decode($segment[$s]['entities']);
@@ -1005,7 +1003,7 @@ class workflowRepo extends ServiceEntityRepository
                     $queryEntities = strtolower($queryEntities);
                     
                     $rqCreance = "SELECT DISTINCT c.id  FROM  ". $queryEntities . " where " . $queryConditions. "" ; 
-
+                    
                     $rqDossier = "SELECT doss.id FROM debt_force_seg.dt_Dossier doss WHERE doss.id IN (
                         SELECT (c1.id_dossier_id) from debt_force_seg.dt_Creance c1 where c1.id in (".$rqCreance.")
                     )";
@@ -1016,18 +1014,18 @@ class workflowRepo extends ServiceEntityRepository
                     $stmt = $stmt->executeQuery();
                     $resultDossier = $stmt->fetchAll();
 
-                    // if(count($resultDossier) >= 1)
-                    // {
-                    //     $sql="UPDATE `segmentation` SET `id_status_id`='3' WHERE  id = ".$id."";
-                    //     $stmt = $this->conn->prepare($sql)->executeQuery(); 
-                    //     for ($r=0; $r < count($resultDossier); $r++) { 
-                    //         $sql="insert into `debt_force_seg`.`seg_dossier`(id_seg,id_dossier) values(".$id.",".$resultDossier[$r]["id"].")";
-                    //         $stmt = $this->conn->prepare($sql)->executeQuery();
-                    //     }
-                    // }else{
-                    //     $sql="UPDATE `segmentation` SET `id_status_id`='4' WHERE  id = ".$id."";
-                    //     $stmt = $this->conn->prepare($sql)->executeQuery(); 
-                    // }
+                    if(count($resultDossier) >= 1)
+                    {
+                        // $sql="UPDATE `segmentation` SET `id_status_id`='3' WHERE  id = ".$id."";
+                        // $stmt = $this->conn->prepare($sql)->executeQuery(); 
+                        for ($r=0; $r < count($resultDossier); $r++) { 
+                            $sql="insert into `queue_split_details`(id_queue_split_id,id_queue_detail) values(".$id.",".$resultDossier[$r]["id"].")";
+                            $stmt = $this->conn->prepare($sql)->executeQuery();
+                        }
+                    }else{
+                        // $sql="UPDATE `segmentation` SET `id_status_id`='4' WHERE  id = ".$id."";
+                        // $stmt = $this->conn->prepare($sql)->executeQuery(); 
+                    }
                 // }
             }
         // } catch (\Exception $e) {

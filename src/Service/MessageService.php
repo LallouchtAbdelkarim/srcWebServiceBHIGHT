@@ -84,7 +84,9 @@ class MessageService
          "ERROR_DATA_PROMISE"=>"Veuillez respecter les conditions !",
          "ERROR-HEADER"=>"Il est existe dans le model de courrier",
          "ERROR-FOOTER"=>"Il est existe dans le model de courrier",
-         "REQUIRED-HEADER"=>"Le header et le footer sont obligatoires !"
+         "REQUIRED-HEADER"=>"Le header et le footer sont obligatoires !",
+         "EXIST_COMPETENCE"=>"Ce groupe existe dans une autre  compétence ! ",
+         "MODEL_EXIST_IN_COURRIER" => "Votre modèle existe déjà dans un courrier !"
         );
         return $listMessage[$CODEERROR];
     }

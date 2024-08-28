@@ -12,6 +12,7 @@ use App\Entity\QueueSplit;
 use App\Entity\SegCritere;
 use App\Entity\Segmentation;
 use App\Entity\SegGroupeCritere;
+use App\Entity\SegValues;
 use App\Entity\SplitCritere;
 use App\Entity\SplitGroupeCritere;
 use App\Entity\StatusQueue;
@@ -424,16 +425,16 @@ class segementationRepo extends ServiceEntityRepository
                             $start = $this->GeneralService->dateStart($details[$i]["value1"]);
                             $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
 
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
                                 $start = $this->GeneralService->dateStart($details[$i]["value1"]);
                             
                                 // Check if it's "supérieur" or "inférieur" and assign the appropriate operator
-                                $operator = $details[$i]["action"] === "2" ? ">" : "<";
+                                $operator = $details[$i]["action"] == "2" ? ">" : "<";
                                 
                                 $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.date_echeance $operator :date_echeance" . $k . "_" . $i . ")";
                                 $param['date_echeance' . $k . '_' . $i] = $start;
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $start = $this->GeneralService->dateStart($details[$i]["value1"]);
                                 $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
@@ -457,15 +458,16 @@ class segementationRepo extends ServiceEntityRepository
                             {
                                 $operateur1[$i]=" or ";
                             }
+                            
                             // $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.total_creance between :total_creance1".$k."_".$i." and :total_creance2".$k."_".$i.") ";
                             // $param['total_creance1'.$k.'_'.$i] = $details[$i]["value1"];
                             // $param['total_creance2'.$k.'_'.$i] = $details[$i]["value2"];
 
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." " . $operateur[$k] . " " . $operateur1[$i] . " (c.total_creance " . ($details[$i]["action"] === "2" ? ">" : "<") . " :total_creance" . $k . "_" . $i . ")";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." " . $operateur[$k] . " " . $operateur1[$i] . " (c.total_creance " . ($details[$i]["action"] == "2" ? ">" : "<") . " :total_creance" . $k . "_" . $i . ")";
                                 $param['total_creance' . $k . '_' . $i] = $details[$i]["value1"];
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.total_creance BETWEEN :total_creance1" . $k . "_" . $i . " AND :total_creance2" . $k . "_" . $i . ")";
                                 $param['total_creance1' . $k . '_' . $i] = $details[$i]["value1"];
@@ -487,11 +489,11 @@ class segementationRepo extends ServiceEntityRepository
                                 $operateur1[$i]=" or ";
                             }
 
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.total_restant " . ($details[$i]["action"] === "2" ? ">" : "<") . " :total_restant" . $k . "_" . $i . ")";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.total_restant " . ($details[$i]["action"] == "2" ? ">" : "<") . " :total_restant" . $k . "_" . $i . ")";
                                 $param['total_restant' . $k . '_' . $i] = $details[$i]["value1"];
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.total_restant BETWEEN :total_restant1" . $k . "_" . $i . " AND :total_restant2" . $k . "_" . $i . ")";
                                 $param['total_restant1' . $k . '_' . $i] = $details[$i]["value1"];
@@ -557,11 +559,11 @@ class segementationRepo extends ServiceEntityRepository
                                 $queryEntities .= ",debt_force_seg.dt_garantie g";
                             }
 
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ") ." " . $operateur[$k] . " " . $operateur1[$i] . " ( c.id = (gc.id_creance_id) and (gc.id_garantie_id) = g.id and  g.taux " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ") ." " . $operateur[$k] . " " . $operateur1[$i] . " ( c.id = (gc.id_creance_id) and (gc.id_garantie_id) = g.id and  g.taux " . ($details[$i]["action"] == "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (gc.id_creance_id) and (gc.id_garantie_id) = g.id and  g.taux BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
@@ -640,16 +642,16 @@ class segementationRepo extends ServiceEntityRepository
                                 $queryEntities .= ",debt_force_seg.dt_donneur_Ordre dn";
                             }
                             
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
                                 $start = $this->GeneralService->dateStart($details[$i]["value1"]);
                             
                                 // Check if it's "supérieur" or "inférieur" and assign the appropriate operator
-                                $operator = $details[$i]["action"] === "2" ? ">" : "<";
+                                $operator = $details[$i]["action"] == "2" ? ">" : "<";
                                 $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (   p.id = (c.id_ptf_id) and p.date_debut_gestion $operator :date_debut_gestion" . $k . "_" . $i . ")";
                                 $param['date_debut_gestion' . $k . '_' . $i] = $start;
 
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $start = $this->GeneralService->dateStart($details[$i]["value1"]);
                                 $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
@@ -682,17 +684,17 @@ class segementationRepo extends ServiceEntityRepository
                             // $start = $this->GeneralService->dateStart($details[$i]["value1"]);
                             // $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
 
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
                                 $start = $this->GeneralService->dateStart($details[$i]["value1"]);
                             
                                 // Check if it's "supérieur" or "inférieur" and assign the appropriate operator
-                                $operator = $details[$i]["action"] === "2" ? ">" : "<";
+                                $operator = $details[$i]["action"] == "2" ? ">" : "<";
                                 
                                 $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " ( p.id = (d.id_ptf_id) and p.date_fin_gestion $operator :date_fin_gestion" . $k . "_" . $i . ")";
                                 $param['date_fin_gestion' . $k . '_' . $i] = $start;
 
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $start = $this->GeneralService->dateStart($details[$i]["value1"]);
                                 $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
@@ -734,11 +736,11 @@ class segementationRepo extends ServiceEntityRepository
                             /*$queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = identity(dc.id_creance) and   dc.principale between :VALUE1".$k."_".$i." and :VALUE2".$k."_".$i.") ";
                             $param['VALUE1'.$k.'_'.$i] = $details[$i]["value1"];
                             $param['VALUE2'.$k.'_'.$i] = $details[$i]["value2"];*/
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.principale " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.principale " . ($details[$i]["action"] == "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.principale BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
@@ -765,11 +767,11 @@ class segementationRepo extends ServiceEntityRepository
                             // $param['VALUE1'.$k.'_'.$i] = $details[$i]["value1"];
                             // $param['VALUE2'.$k.'_'.$i] = $details[$i]["value2"];
 
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.frais " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.frais " . ($details[$i]["action"] == "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.frais BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
@@ -795,11 +797,11 @@ class segementationRepo extends ServiceEntityRepository
                             // $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = identity(dc.id_creance) and   dc.interet between :VALUE1".$k."_".$i." and :VALUE2".$k."_".$i.") ";
                             // $param['VALUE1'.$k.'_'.$i] = $details[$i]["value1"];
                             // $param['VALUE2'.$k.'_'.$i] = $details[$i]["value2"];
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.interet " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.interet " . ($details[$i]["action"] == "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.interet BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
@@ -1074,11 +1076,11 @@ class segementationRepo extends ServiceEntityRepository
                                 $queryEntities .= ",debt_force_seg.dt_Emploi em";
                             }
 
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (t.id_creance_id) AND t.id_debiteur = (em.id_debiteur_id) AND (em.id_status_id) AND em.dateDebut " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (t.id_creance_id) AND t.id_debiteur = (em.id_debiteur_id) AND (em.id_status_id) AND em.dateDebut " . ($details[$i]["action"] == "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (t.id_creance_id) AND t.id_debiteur = (em.id_debiteur_id) AND (em.id_status_id) AND em.dateDebut BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
@@ -1108,11 +1110,11 @@ class segementationRepo extends ServiceEntityRepository
                                 $queryEntities .= ",debt_force_seg.dt_Emploi em";
                             }
 
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (t.id_creance_id) AND t.id_debiteur = (em.id_debiteur_id) AND (em.id_status_id) AND em.dateFin " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (t.id_creance_id) AND t.id_debiteur = (em.id_debiteur_id) AND (em.id_status_id) AND em.dateFin " . ($details[$i]["action"] == "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (t.id_creance_id) AND t.id_debiteur = (em.id_debiteur_id) AND (em.id_status_id) AND em.dateFin BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
@@ -1215,11 +1217,11 @@ class segementationRepo extends ServiceEntityRepository
                             }
 
                             $start = $this->GeneralService->dateStart($details[$i]["value1"]);
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.dateCreation " . ($details[$i]["action"] === "2" ? ">" : "<") . " :dateStart_" . $k . "_" . $i . ")";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.dateCreation " . ($details[$i]["action"] == "2" ? ">" : "<") . " :dateStart_" . $k . "_" . $i . ")";
                                 $param['dateStart_' . $k . '_' . $i] = $start;
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
                                 // If "between"
                                 $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.dateCreation BETWEEN :dateStart_" . $k . "_" . $i . " AND :dateFin_" . $k . "_" . $i . ")";
@@ -1249,11 +1251,11 @@ class segementationRepo extends ServiceEntityRepository
                                 $queryEntities .= ",debt_force_seg.dt_Creance_Accord ca";
                             }
 
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.montant " . ($details[$i]["action"] === "2" ? ">" : "<") . " :valueMontant1_" . $k . "_" . $i . ")";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.montant " . ($details[$i]["action"] == "2" ? ">" : "<") . " :valueMontant1_" . $k . "_" . $i . ")";
                                 $param['valueMontant1_' . $k . '_' . $i] = $details[$i]["value1"];
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.montant BETWEEN :valueMontant1_" . $k . "_" . $i . " AND :valueMontant2_" . $k . "_" . $i . ")";
                                 $param['valueMontant1_' . $k . '_' . $i] =  $details[$i]["value1"];
@@ -1282,11 +1284,11 @@ class segementationRepo extends ServiceEntityRepository
                                 $queryEntities .= ",debt_force_seg.dt_Creance_Accord ca";
                             }
 
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.montant_a_payer " . ($details[$i]["action"] === "2" ? ">" : "<") . " :valueMontant1_" . $k . "_" . $i . ")";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.montant_a_payer " . ($details[$i]["action"] == "2" ? ">" : "<") . " :valueMontant1_" . $k . "_" . $i . ")";
                                 $param['valueMontant1_' . $k . '_' . $i] = $details[$i]["value1"];
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.montant_a_payer BETWEEN :valueMontant1_" . $k . "_" . $i . " AND :valueMontant2_" . $k . "_" . $i . ")";
                                 $param['valueMontant1_' . $k . '_' . $i] =  $details[$i]["value1"];
@@ -1351,12 +1353,12 @@ class segementationRepo extends ServiceEntityRepository
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Paiement pm";
                             }
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
                                 $start = $this->GeneralService->dateStart($details[$i]["value1"]);
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (pm.id_creance_id) AND pm.date_paiement " . ($details[$i]["action"] === "2" ? ">" : "<") . " :dateStart_" . $k . "_" . $i . ")";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (pm.id_creance_id) AND pm.date_paiement " . ($details[$i]["action"] == "2" ? ">" : "<") . " :dateStart_" . $k . "_" . $i . ")";
                                 $param['dateStart_' . $k . '_' . $i] = $start;
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $start = $this->GeneralService->dateStart($details[$i]["value1"]);
                                 $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
@@ -1386,11 +1388,11 @@ class segementationRepo extends ServiceEntityRepository
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Paiement pm";
                             }
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (pm.id_creance_id) AND pm.montant " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (pm.id_creance_id) AND pm.montant " . ($details[$i]["action"] == "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
                                 $param['dateStart_' . $k . '_' . $i] = $details[$i]["value1"];
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (pm.id_creance_id) AND pm.montant BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] =  $details[$i]["value1"];
@@ -1492,12 +1494,12 @@ class segementationRepo extends ServiceEntityRepository
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Facture f";
                             }
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
                                 $start = $this->GeneralService->yearStart($details[$i]["value1"]);
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (f.id_creance_id) AND f.date_creation " . ($details[$i]["action"] === "2" ? ">" : "<") . " :dateStart_" . $k . "_" . $i . ")";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (f.id_creance_id) AND f.date_creation " . ($details[$i]["action"] == "2" ? ">" : "<") . " :dateStart_" . $k . "_" . $i . ")";
                                 $param['dateStart_' . $k . '_' . $i] = $start;
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $start = $this->GeneralService->yearStart($details[$i]["value1"]);
                                 $end = $this->GeneralService->yearEnd($details[$i]["value2"]);
@@ -1522,12 +1524,12 @@ class segementationRepo extends ServiceEntityRepository
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Facture f";
                             }
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
                                 $montant1 = $details[$i]["value1"];
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (f.id_creance_id) AND f.total_ttc " . ($details[$i]["action"] === "2" ? ">" : "<") . " :totalTtc_" . $k . "_" . $i . ")";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (f.id_creance_id) AND f.total_ttc " . ($details[$i]["action"] == "2" ? ">" : "<") . " :totalTtc_" . $k . "_" . $i . ")";
                                 $param['totalTtc_' . $k . '_' . $i] = $montant1;
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $montant1 =  $details[$i]["value1"];
                                 $montant2 =  $details[$i]["value2"];
@@ -1590,12 +1592,12 @@ class segementationRepo extends ServiceEntityRepository
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Facture f";
                             }
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
                                 $montant1 = $details[$i]["value1"];
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " ( c.taux_honoraire " . ($details[$i]["action"] === "2" ? ">" : "<") . " :taux_honoraire_" . $k . "_" . $i . ")";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " ( c.taux_honoraire " . ($details[$i]["action"] == "2" ? ">" : "<") . " :taux_honoraire_" . $k . "_" . $i . ")";
                                 $param['taux_honoraire_' . $k . '_' . $i] = $montant1;
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $montant1 =  $details[$i]["value1"];
                                 $montant2 =  $details[$i]["value2"];
@@ -1621,12 +1623,12 @@ class segementationRepo extends ServiceEntityRepository
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Facture f";
                             }
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
                                 $montant1 = $details[$i]["value1"];
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (  c.honoraire_petentiel " . ($details[$i]["action"] === "2" ? ">" : "<") . " :honoraire_" . $k . "_" . $i . ")";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (  c.honoraire_petentiel " . ($details[$i]["action"] == "2" ? ">" : "<") . " :honoraire_" . $k . "_" . $i . ")";
                                 $param['honoraire_' . $k . '_' . $i] = $montant1;
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $montant1 =  $details[$i]["value1"];
                                 $montant2 =  $details[$i]["value2"];
@@ -1651,12 +1653,12 @@ class segementationRepo extends ServiceEntityRepository
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Facture f";
                             }
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
                                 $montant1 = $details[$i]["value1"];
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " ( c.id = (f.id_creance_id) AND c.honoraire_facture " . ($details[$i]["action"] === "2" ? ">" : "<") . " :honoraire_" . $k . "_" . $i . ")";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " ( c.id = (f.id_creance_id) AND c.honoraire_facture " . ($details[$i]["action"] == "2" ? ">" : "<") . " :honoraire_" . $k . "_" . $i . ")";
                                 $param['honoraire_' . $k . '_' . $i] = $montant1;
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $montant1 =  $details[$i]["value1"];
                                 $montant2 =  $details[$i]["value2"];
@@ -1681,12 +1683,12 @@ class segementationRepo extends ServiceEntityRepository
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Facture f";
                             }
-                            if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if ($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
                                 $montant1 = $details[$i]["value1"];
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (  c.honoraire_restant " . ($details[$i]["action"] === "2" ? ">" : "<") . " :honoraire_" . $k . "_" . $i . ")";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (  c.honoraire_restant " . ($details[$i]["action"] == "2" ? ">" : "<") . " :honoraire_" . $k . "_" . $i . ")";
                                 $param['honoraire_' . $k . '_' . $i] = $montant1;
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $montant1 =  $details[$i]["value1"];
                                 $montant2 =  $details[$i]["value2"];
@@ -1753,12 +1755,12 @@ class segementationRepo extends ServiceEntityRepository
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Cadrages_Creance cc";
                             }
-                            if($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
+                            if($details[$i]["action"] == "2" || $details[$i]["action"] == "3") {
                                 // If "supérieur" or "inférieur"
                                 $start = $this->GeneralService->dateStart($details[$i]["value1"]);
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (cc.id_creance_id) AND  cd.id = (cc.id_cadrage_id) AND cd.date_retour " . ($details[$i]["action"] === "2" ? ">" : "<") . " :dateRStart_" . $k . "_" . $i . ")";
+                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (cc.id_creance_id) AND  cd.id = (cc.id_cadrage_id) AND cd.date_retour " . ($details[$i]["action"] == "2" ? ">" : "<") . " :dateRStart_" . $k . "_" . $i . ")";
                                 $param['dateRStart_' . $k . '_' . $i] = $start;
-                            } elseif ($details[$i]["action"] === "1") {
+                            } elseif ($details[$i]["action"] == "1") {
                                 // If "between"
                                 $start = $this->GeneralService->dateStart($details[$i]["value1"]);
                                 $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
@@ -1829,39 +1831,59 @@ class segementationRepo extends ServiceEntityRepository
         $stmt = $stmt->executeQuery();
     }
     public function deleteSegmentation($id){
-        
-        $listQueue = $this->em->getRepository(Queue::class)->findBy(['id_segmentation'=>$id]);
+    
+        $listQueue = $this->em->getRepository(Queue::class)->findBy(['id_segmentation' => $id]);
+
         foreach ($listQueue as $q) {
-            $this->deleteQueue($q->getId());
+            $this->deleteQueue($q->getId());  
         }
 
-        $sql="
-        -- Delete from seg_values
-            DELETE seg_values
-            FROM seg_values
-            INNER JOIN seg_critere ON seg_values.id_critere_id = seg_critere.id
-            INNER JOIN seg_groupe_critere ON seg_critere.id_groupe_id = seg_groupe_critere.id
-            WHERE seg_groupe_critere.id_seg_id = :id;
+        $sql = "
+        DELETE seg_values
+        FROM seg_values
+        INNER JOIN seg_critere ON seg_values.id_critere_id = seg_critere.id
+        INNER JOIN seg_groupe_critere ON seg_critere.id_groupe_id = seg_groupe_critere.id
+        WHERE seg_groupe_critere.id_seg_id = :id;
+        ";
 
-            -- Delete from seg_critere
-            DELETE seg_critere
-            FROM seg_critere
-            INNER JOIN seg_groupe_critere ON seg_critere.id_groupe_id = seg_groupe_critere.id
-            WHERE seg_groupe_critere.id_seg_id = :id;
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':id', $id, \PDO::PARAM_INT);  
+        $stmt->execute();
 
-            -- Delete from seg_groupe_critere
-            DELETE FROM seg_groupe_critere
-            WHERE id_seg_id = :id;
+        $sql = "
+        DELETE seg_critere
+        FROM seg_critere
+        INNER JOIN seg_groupe_critere ON seg_critere.id_groupe_id = seg_groupe_critere.id
+        WHERE seg_groupe_critere.id_seg_id = :id;
+        ";
 
-            -- Delete from segmentation
-            DELETE FROM segmentation
-            WHERE id = :id;
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':id', $id, \PDO::PARAM_INT);  
+        $stmt->execute();
+        $sql = "
+        DELETE FROM seg_groupe_critere
+        WHERE id_seg_id = :id;
+        ";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':id', $id, \PDO::PARAM_INT);  
+        $stmt->execute();
+        $sql = "
+        DELETE FROM interm_workflow_segmentation WHERE id_segmentaion_id = :id;
         ";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bindValue(":id",$id);
-        $stmt = $stmt->executeQuery();
-        // return $data;
+        $stmt->bindParam(':id', $id, \PDO::PARAM_INT);  
+        $stmt->execute();
+        $sql = "
+        DELETE FROM segmentation
+        WHERE id = :id;
+        ";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':id', $id, \PDO::PARAM_INT);  
+        $stmt->execute();
     }
+    
     public function getListSegment(){
         $sql="SELECT * FROM `segmentation` s ";
         $stmt = $this->conn->prepare($sql);
@@ -1870,6 +1892,7 @@ class segementationRepo extends ServiceEntityRepository
         $statut = $stmt->fetchAll();
         return $statut;
     }
+    
     public function getTypesQueue($type){
         $resultList = $this->em->getRepository(TypeQueue::class)->find($type);
         return $resultList;
@@ -1942,4 +1965,22 @@ class segementationRepo extends ServiceEntityRepository
         $stmt = $this->conn->prepare($sql);
         $stmt = $stmt->executeQuery();
     }
+
+    public function getSegmentation($id){
+        $resultList = $this->em->getRepository(Segmentation::class)->find($id);
+        return $resultList;
+    }
+
+    public function clearSegmentation($id){
+        $sql = '
+       DELETE FROM `debt_force_seg`.`seg_adresse` WHERE id_seg = '.$id.';
+        DELETE FROM `debt_force_seg`.`seg_creance` WHERE id_seg = '.$id.';
+        DELETE FROM `debt_force_seg`.`seg_debiteur` WHERE id_seg = '.$id.';
+        DELETE FROM `debt_force_seg`.`seg_dossier` WHERE id_seg = '.$id.';
+        DELETE FROM `debt_force_seg`.`seg_telephone` WHERE id_seg = '.$id.';';
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+    }
+
+    
 }

@@ -77,4 +77,12 @@ class ModelCourierRepository extends ServiceEntityRepository
         return $resulat;
     }
 
+    public function deleteModelCourrier($id){
+        
+        $sql="DELETE FROM `model_courier` WHERE id = ".$id." ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+
+    }
+
 }
