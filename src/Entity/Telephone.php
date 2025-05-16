@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\TelephoneRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -75,6 +77,14 @@ class Telephone
 
     #[ORM\ManyToOne]
     private ?TypeSource $id_type_source = null;
+
+    #[ORM\OneToMany(mappedBy: 'telephone', targetEntity: CreanceActivite::class)]
+    private Collection $creanceActivites;
+
+    public function __construct()
+    {
+        $this->creanceActivites = new ArrayCollection();
+    }
 
 
 
@@ -319,6 +329,36 @@ class Telephone
     public function setIdTypeSource(?TypeSource $id_type_source): static
     {
         $this->id_type_source = $id_type_source;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, CreanceActivite>
+     */
+    public function getCreanceActivites(): Collection
+    {
+        return $this->creanceActivites;
+    }
+
+    public function addCreanceActivite(CreanceActivite $creanceActivite): static
+    {
+        if (!$this->creanceActivites->contains($creanceActivite)) {
+            $this->creanceActivites->add($creanceActivite);
+            $creanceActivite->setTelephone($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCreanceActivite(CreanceActivite $creanceActivite): static
+    {
+        if ($this->creanceActivites->removeElement($creanceActivite)) {
+            // set the owning side to null (unless already changed)
+            if ($creanceActivite->getTelephone() === $this) {
+                $creanceActivite->setTelephone(null);
+            }
+        }
 
         return $this;
     }

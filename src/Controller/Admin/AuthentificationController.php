@@ -84,10 +84,10 @@ class AuthentificationController extends AbstractController
                     $respObjects["nom"] = $user->getNom();
                     $respObjects["prenom"] = $user->getPrenom();
                     $respObjects["token"] = $tokenJWT;
-                    // $respObjects["data"] = $user;
+                    $respObjects["services"] = $user->getServices();
 
                 }else{
-                    $codeStatut="ERROR-AUTHENTICATION";
+                    $codeStatut=$login;
                 }
             }else{
                 $codeStatut="EMPTY-DATA";

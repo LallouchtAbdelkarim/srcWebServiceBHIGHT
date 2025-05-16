@@ -57,7 +57,7 @@ class GeneralController extends AbstractController
         $this->AuthService->checkAuth(0,$request);
         $data = [];
         try{
-            $data = ['creance' ,"accord","dossier","paiement","telephone"]; 
+            $data = ['creance' ,"accord","dossier"]; 
             $codeStatut = "OK";
         }catch(\Exception $e){
             $codeStatut = "ERROR";

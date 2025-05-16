@@ -245,12 +245,8 @@ class queueRepo extends ServiceEntityRepository
         return $data;
     }      
     public function findQueue($id){
-        $sql="select * from queue where id = :id";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindValue(":id",$id);
-        $stmt = $stmt->executeQuery();
-        $data = $stmt->fetchOne();
-        return $data;
+        $Queue = $this->em->getRepository(Queue::class)->find($id);
+        return $Queue;
     }
     public function getOneQueue($id){
         $sql="select * from queue where id = :id";
@@ -442,6 +438,20 @@ class queueRepo extends ServiceEntityRepository
         $stmt = $this->conn->prepare($sql);
         $stmt->bindValue(":queue_id",$idQueue);
         $stmt = $stmt->executeQuery();
+    }
+
+    public function getSegmentationNonAssigneWithQueue($id){
+        $sql=" SELECT * 
+            FROM segmentation 
+            WHERE 
+                (id_status_id = 3 AND id NOT IN (SELECT q.id_segmentation_id FROM queue q))
+                OR id = :id
+            ORDER BY `id` DESC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(":id",$id);
+        $stmt = $stmt->executeQuery();
+        $data = $stmt->fetchAll();
+        return $data;
     }
     
 }

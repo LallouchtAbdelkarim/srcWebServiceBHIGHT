@@ -20,6 +20,7 @@ class QueueController extends AbstractController
 {
     private $MessageService;
     private $AuthService;
+    private $segementationRepo;
 
     private $GeneralService;
     private $conn;
@@ -215,7 +216,7 @@ class QueueController extends AbstractController
                             $description = $data['description'];
                         }
                         $createQueue = $queueRepo->createQueue($titre,$description,$queue_groupe_id ,$id_type_id , $seg ,$active );
-                        if($createQueue){
+                        /*if($createQueue){
                             $data_critere = $data["data"];
                             for ($i=0; $i < count($data_critere); $i++) { 
                                 $titre_groupe = $data_critere[$i]["groupe"]["titre_groupe"];
@@ -284,7 +285,7 @@ class QueueController extends AbstractController
                             }
                             $codeStatut="OK";
                             $this->sauvguardeQueue($request,$segementationRepo , $queueRepo , $queueId);
-                        }
+                        }*/
                     }else{
                         $codeStatut = "ERROR-EMPTY-PARAMS";
                     }
@@ -308,7 +309,8 @@ class QueueController extends AbstractController
             $id_queue = $request->get("id_queue");
             $queue = $queueRepo->findQueue($id_queue);
             if($queue){
-                $data = $queueRepo->getCritereQueue($id_queue);
+                //$data = $queueRepo->getCritereQueue($id_queue);
+                $data = $this->segementationRepo->getCritereSegmentation($queue->getIdSegmentation()->getId());
                 $codeStatut = "OK";
                 $respObjects["data"] = $data;
             }else{
@@ -937,11 +939,11 @@ class QueueController extends AbstractController
         for ($j=0; $j < count($groupe) ; $j++) {
             if(0 == $j)
             {
-                $operateur0[$j] =" ";
+                 $queryConditions .=" ";
             }
             else
             {
-                $operateur0[$j] = " and ";
+                $queryConditions .= " and ";
             }
             
             if($groupe[$j]['groupe'] == "Creance"){
@@ -968,7 +970,7 @@ class QueueController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( (c.id_type_creance_id) LIKE :type_creance".$k."_".$i.") ";
+                            $queryConditions .= $operateur[$k]." ".$operateur1[$i]." ( (c.id_type_creance_id) LIKE :type_creance".$k."_".$i.") ";
                             $param['type_creance'.$k.'_'.$i] = $details[$i]["value1"];
                         }
                     }
@@ -995,21 +997,23 @@ class QueueController extends AbstractController
                                 // Check if it's "supérieur" or "inférieur" and assign the appropriate operator
                                 $operator = $details[$i]["action"] === "2" ? ">" : "<";
                                 
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.date_echeance $operator :date_echeance" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.date_echeance $operator :date_echeance" . $k . "_" . $i . ")";
                                 $param['date_echeance' . $k . '_' . $i] = $start;
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
                                 $start = $this->GeneralService->dateStart($details[$i]["value1"]);
                                 $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
                             
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." " . $operateur[$k] . " " . $operateur1[$i] . " (c.date_echeance BETWEEN :date_echeance1" . $k . "_" . $i . " AND :date_echeance2" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.date_echeance BETWEEN :date_echeance1" . $k . "_" . $i . " AND :date_echeance2" . $k . "_" . $i . ")";
                                 $param['date_echeance1' . $k . '_' . $i] = $start;
                                 $param['date_echeance2' . $k . '_' . $i] = $end;
                             }
                         }
+                    
                     }
+
                     if($criteres[$k]["critere"] == "total creance"){
-                        # code...
+
                         $details = $criteres[$k]["details"];
                         for ($i=0; $i < count($details ); $i++) { 
                             # code...
@@ -1021,17 +1025,17 @@ class QueueController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            // $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.total_creance between :total_creance1".$k."_".$i." and :total_creance2".$k."_".$i.") ";
+                            // $queryConditions .= $operateur[$k]." ".$operateur1[$i]." ( c.total_creance between :total_creance1".$k."_".$i." and :total_creance2".$k."_".$i.") ";
                             // $param['total_creance1'.$k.'_'.$i] = $details[$i]["value1"];
                             // $param['total_creance2'.$k.'_'.$i] = $details[$i]["value2"];
 
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." " . $operateur[$k] . " " . $operateur1[$i] . " (c.total_creance " . ($details[$i]["action"] === "2" ? ">" : "<") . " :total_creance" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.total_creance " . ($details[$i]["action"] === "2" ? ">" : "<") . " :total_creance" . $k . "_" . $i . ")";
                                 $param['total_creance' . $k . '_' . $i] = $details[$i]["value1"];
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.total_creance BETWEEN :total_creance1" . $k . "_" . $i . " AND :total_creance2" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.total_creance BETWEEN :total_creance1" . $k . "_" . $i . " AND :total_creance2" . $k . "_" . $i . ")";
                                 $param['total_creance1' . $k . '_' . $i] = $details[$i]["value1"];
                                 $param['total_creance2' . $k . '_' . $i] = $details[$i]["value2"];
                             }
@@ -1053,15 +1057,14 @@ class QueueController extends AbstractController
 
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.total_restant " . ($details[$i]["action"] === "2" ? ">" : "<") . " :total_restant" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.total_restant " . ($details[$i]["action"] === "2" ? ">" : "<") . " :total_restant" . $k . "_" . $i . ")";
                                 $param['total_restant' . $k . '_' . $i] = $details[$i]["value1"];
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.total_restant BETWEEN :total_restant1" . $k . "_" . $i . " AND :total_restant2" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.total_restant BETWEEN :total_restant1" . $k . "_" . $i . " AND :total_restant2" . $k . "_" . $i . ")";
                                 $param['total_restant1' . $k . '_' . $i] = $details[$i]["value1"];
                                 $param['total_restant2' . $k . '_' . $i] = $details[$i]["value2"];
                             }
-
                         }
                     }
                     
@@ -1089,16 +1092,16 @@ class QueueController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Garantie_creance gc") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_garantie_creance gc") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Garantie_creance gc";
+                                $queryEntities .= ",debt_force_seg.dt_garantie_creance gc";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Garantie g") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_garantie g") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Garantie g";
+                                $queryEntities .= ",debt_force_seg.dt_garantie g";
                             } 
 
-                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." (  c.id = (gc.id_creance_id) and (gc.id_garantie_id) = g.id and  g.type_garantie LIKE :type_garantie".$k."_".$i.") ";
+                            $queryConditions .= $operateur[$k]." ".$operateur1[$i]." (  c.id = (gc.id_creance_id) and (gc.id_garantie_id) = g.id and  g.type_garantie LIKE :type_garantie".$k."_".$i.") ";
                             $param['type_garantie'.$k.'_'.$i] = $details[$i]["value1"]; 
                         }
                     }
@@ -1113,22 +1116,22 @@ class QueueController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Garantie_creance gc") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_garantie_creance gc") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Garantie_creance gc";
+                                $queryEntities .= ",debt_force_seg.dt_garantie_creance gc";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Garantie g") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_garantie g") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Garantie g";
+                                $queryEntities .= ",debt_force_seg.dt_garantie g";
                             }
 
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ") ." " . $operateur[$k] . " " . $operateur1[$i] . " ( c.id = (gc.id_creance_id) and (gc.id_garantie_id) = g.id and  g.taux " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " ( c.id = (gc.id_creance_id) and (gc.id_garantie_id) = g.id and  g.taux " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (gc.id_creance_id) and (gc.id_garantie_id) = g.id and  g.taux BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (gc.id_creance_id) and (gc.id_garantie_id) = g.id and  g.taux BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
                                 $param['value2_' . $k . '_' . $i] = $details[$i]["value2"];
                             }
@@ -1139,39 +1142,41 @@ class QueueController extends AbstractController
             }
             if($groupe[$j]['groupe'] == "Donneur ordre"){
                 $criteres = $groupe[$j]["criteres"];
-                for ($k= 0; $k < count($criteres);$k++){
-                    if($k==0)
-                    {
-                        $operateur[$k]="";
+                $donneurOrdreAdded = false; // Flag to check if 'dn' alias is already added
+                $portefeuilleAdded = false; // Flag to check if 'p' alias is already added
+
+                for ($k = 0; $k < count($criteres); $k++) {
+                    if ($k == 0) {
+                        $operateur[$k] = "";
+                    } else {
+                        $operateur[$k] = " and ";
                     }
-                    else
-                    {
-                        $operateur[$k]=" and ";
-                    }
-                    if($criteres[$k]["critere"] == "type donneur ordre"){
+
+                    if ($criteres[$k]["critere"] == "type donneur ordre") {
                         $details = $criteres[$k]["details"];
-                        for ($i=0; $i < count($details ); $i++) { 
-                            if($i==0)
-                            {
-                                $operateur1[$i]="";
+                        for ($i = 0; $i < count($details); $i++) {
+                            if ($i == 0) {
+                                $operateur1[$i] = "";
+                            } else {
+                                $operateur1[$i] = " or ";
                             }
-                            else
-                            {
-                                $operateur1[$i]=" or ";
+
+                            if (!$portefeuilleAdded) {
+                                $queryEntities .= ",debt_force_seg.dt_portefeuille p";
+                                $portefeuilleAdded = true; // Set flag to true after adding the alias
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Portefeuille p") == false)
-                            {
-                                $queryEntities .= ",debt_force_seg.dt_Portefeuille p";
+
+                            if (!$donneurOrdreAdded) {
+                                $queryEntities .= ",debt_force_seg.dt_donneur_Ordre dn";
+                                $donneurOrdreAdded = true; // Set flag to true after adding the alias
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Donneur_Ordre dn") == false)
-                            {
-                                $queryEntities .= ",debt_force_seg.dt_Donneur_Ordre dn";
-                            }
-                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." ".$operateur[$k]." ".$operateur1[$i]." (  p.id = (c.id_ptf_id) and (p.id_donneur_ordre_id) = dn.id and  (dn.id_type_id) = :type_donneur".$k."_".$i.") ";
-                            $param['type_donneur'.$k.'_'.$i] = $details[$i]["value1"];
+
+                            $queryConditions .= $operateur[$k] . " " . $operateur1[$i] . " (p.id = c.id_ptf_id and p.id_donneur_ordre_id = dn.id and dn.id_type_id = :type_donneur" . $k . "_" . $i . ") ";
+                            $param['type_donneur' . $k . '_' . $i] = $details[$i]["value1"];
                         }
                     }
                 }
+
             }
             if($groupe[$j]['groupe'] == "Porte feuille"){
                 $criteres = $groupe[$j]["criteres"];
@@ -1196,13 +1201,13 @@ class QueueController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Portefeuille p") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_portefeuille p") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Portefeuille p";
+                                $queryEntities .= ",debt_force_seg.dt_portefeuille p";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Donneur_Ordre dn") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_donneur_Ordre dn") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Donneur_Ordre dn";
+                                $queryEntities .= ",debt_force_seg.dt_donneur_Ordre dn";
                             }
                             
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
@@ -1211,14 +1216,14 @@ class QueueController extends AbstractController
                             
                                 // Check if it's "supérieur" or "inférieur" and assign the appropriate operator
                                 $operator = $details[$i]["action"] === "2" ? ">" : "<";
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (   p.id = (c.id_ptf_id) and p.date_debut_gestion $operator :date_debut_gestion" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (   p.id = (c.id_ptf_id) and p.date_debut_gestion $operator :date_debut_gestion" . $k . "_" . $i . ")";
                                 $param['date_debut_gestion' . $k . '_' . $i] = $start;
 
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
                                 $start = $this->GeneralService->dateStart($details[$i]["value1"]);
                                 $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (    p.id = (c.id_ptf_id) and p.date_debut_gestion BETWEEN :date_debut_gestion1" . $k . "_" . $i . " AND :date_debut_gestion2" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (    p.id = (c.id_ptf_id) and p.date_debut_gestion BETWEEN :date_debut_gestion1" . $k . "_" . $i . " AND :date_debut_gestion2" . $k . "_" . $i . ")";
                                 $param['date_debut_gestion1' . $k . '_' . $i] = $start;
                                 $param['date_debut_gestion2' . $k . '_' . $i] = $end;
                             }
@@ -1235,13 +1240,13 @@ class QueueController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Portefeuille p") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_portefeuille p") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Portefeuille p";
+                                $queryEntities .= ",debt_force_seg.dt_portefeuille p";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Donneur_Ordre dn") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_donneur_Ordre dn") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Donneur_Ordre dn";
+                                $queryEntities .= ",debt_force_seg.dt_donneur_Ordre dn";
                             }
 
                             // $start = $this->GeneralService->dateStart($details[$i]["value1"]);
@@ -1254,7 +1259,7 @@ class QueueController extends AbstractController
                                 // Check if it's "supérieur" or "inférieur" and assign the appropriate operator
                                 $operator = $details[$i]["action"] === "2" ? ">" : "<";
                                 
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " ( p.id = (d.id_ptf_id) and p.date_fin_gestion $operator :date_fin_gestion" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " ( p.id = (d.id_ptf_id) and p.date_fin_gestion $operator :date_fin_gestion" . $k . "_" . $i . ")";
                                 $param['date_fin_gestion' . $k . '_' . $i] = $start;
 
                             } elseif ($details[$i]["action"] === "1") {
@@ -1262,7 +1267,7 @@ class QueueController extends AbstractController
                                 $start = $this->GeneralService->dateStart($details[$i]["value1"]);
                                 $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
                             
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (  p.id = (d.id_ptf_id) and p.date_fin_gestion BETWEEN :date_fin_gestion1" . $k . "_" . $i . " AND :date_fin_gestion2" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (  p.id = (d.id_ptf_id) and p.date_fin_gestion BETWEEN :date_fin_gestion1" . $k . "_" . $i . " AND :date_fin_gestion2" . $k . "_" . $i . ")";
                                 $param['date_fin_gestion1' . $k . '_' . $i] = $start;
                                 $param['date_fin_gestion2' . $k . '_' . $i] = $end;
                             }
@@ -1292,20 +1297,20 @@ class QueueController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Detail_Creance dc") == false)
+                            /*if(strpos($queryEntities,",debt_force_seg.dt_detail_Creance dc") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Detail_Creance dc";
-                            }
-                            /*$queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = identity(dc.id_creance) and   dc.principale between :VALUE1".$k."_".$i." and :VALUE2".$k."_".$i.") ";
+                                $queryEntities .= ",debt_force_seg.dt_detail_Creance dc";
+                            }*/
+                            /*$queryConditions .= $operateur[$k]." ".$operateur1[$i]." ( c.id = identity(dc.id_creance) and   dc.principale between :VALUE1".$k."_".$i." and :VALUE2".$k."_".$i.") ";
                             $param['VALUE1'.$k.'_'.$i] = $details[$i]["value1"];
                             $param['VALUE2'.$k.'_'.$i] = $details[$i]["value2"];*/
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.principale " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.principale " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.principale BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.principale BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
                                 $param['value2_' . $k . '_' . $i] = $details[$i]["value2"];
                             }
@@ -1322,21 +1327,21 @@ class QueueController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Detail_Creance dc") == false)
+                            /*if(strpos($queryEntities,",debt_force_seg.dt_detail_Creance dc") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Detail_Creance dc";
-                            }
-                            // $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = identity(dc.id_creance) and   dc.frais between :VALUE1".$k."_".$i." and :VALUE2".$k."_".$i.") ";
+                                $queryEntities .= ",debt_force_seg.dt_detail_Creance dc";
+                            }*/
+                            // $queryConditions .= $operateur[$k]." ".$operateur1[$i]." ( c.id = identity(dc.id_creance) and   dc.frais between :VALUE1".$k."_".$i." and :VALUE2".$k."_".$i.") ";
                             // $param['VALUE1'.$k.'_'.$i] = $details[$i]["value1"];
                             // $param['VALUE2'.$k.'_'.$i] = $details[$i]["value2"];
 
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.frais " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.frais " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.frais BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.frais BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
                                 $param['value2_' . $k . '_' . $i] = $details[$i]["value2"];
                             }
@@ -1353,20 +1358,20 @@ class QueueController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Detail_Creance dc") == false)
+                            /*if(strpos($queryEntities,",debt_force_seg.dt_detail_creance dc") == false)
                             {
-                                $queryEntities .= ",debt_force_seg.dt_Detail_Creance dc";
-                            }
-                            // $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = identity(dc.id_creance) and   dc.interet between :VALUE1".$k."_".$i." and :VALUE2".$k."_".$i.") ";
+                                $queryEntities .= ",debt_force_seg.dt_detail_creance dc";
+                            }*/
+                            // $queryConditions .= $operateur[$k]." ".$operateur1[$i]." ( c.id = identity(dc.id_creance) and   dc.interet between :VALUE1".$k."_".$i." and :VALUE2".$k."_".$i.") ";
                             // $param['VALUE1'.$k.'_'.$i] = $details[$i]["value1"];
                             // $param['VALUE2'.$k.'_'.$i] = $details[$i]["value2"];
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.interet " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.interet " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.interet BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (dc.id_creance_id) AND dc.interet BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
                                 $param['value2_' . $k . '_' . $i] = $details[$i]["value2"];
                             }
@@ -1404,7 +1409,7 @@ class QueueController extends AbstractController
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Telephone tel";
                             }
-                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)  and (tel.id_debiteur)=deb.id  and  (tel.id_type_tel_id) like :typeTel".$k."_".$i." ) ";
+                            $queryConditions .= $operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)  and (tel.id_debiteur_id)=deb.id  and  (tel.id_type_tel_id) like :typeTel".$k."_".$i." ) ";
                             $param['typeTel'.$k.'_'.$i] = $details[$i]["value1"];
                         }
                     }
@@ -1427,7 +1432,7 @@ class QueueController extends AbstractController
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Telephone tel";
                             }
-                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)  and (tel.id_debiteur)=deb.id  and  (tel.id_status_id) like :statusTel".$k."_".$i." ) ";
+                            $queryConditions .= $operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)  and (tel.id_debiteur)=deb.id  and  (tel.id_status_id) like :statusTel".$k."_".$i." ) ";
                             $param['statusTel'.$k.'_'.$i] = $details[$i]["value1"];
                         }
                     }
@@ -1463,7 +1468,7 @@ class QueueController extends AbstractController
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Adresse ad";
                             }
-                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)  and (ad.id_debiteur_id)=deb.id  and  (ad.id_type_adresse_id) like :typeAdresse".$k."_".$i." ) ";
+                            $queryConditions .= $operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)  and (ad.id_debiteur_id)=deb.id  and  (ad.id_type_adresse_id) like :typeAdresse".$k."_".$i." ) ";
                             $param['typeAdresse'.$k.'_'.$i] = $details[$i]["value1"];
                         }
                     }
@@ -1486,7 +1491,7 @@ class QueueController extends AbstractController
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Adresse ad";
                             }
-                            $queryConditions .=  (0 == $k ? $operateur0[$j] : " ")." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)  and (ad.id_debiteur)=deb.id  and  (ad.id_status_id) like :statusAdr".$k."_".$i." ) ";
+                            $queryConditions .=  $operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)  and (ad.id_debiteur_id)=deb.id  and  (ad.id_status_id) like :statusAdr".$k."_".$i." ) ";
                             $param['statusAdr'.$k.'_'.$i] = $details[$i]["value1"];
                         }
                     }
@@ -1518,7 +1523,7 @@ class QueueController extends AbstractController
                             {
                                 $queryEntities .= ",debt_force_seg.dt_type_debiteur t";
                             }
-                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)  and  deb.type_personne like :VALUE1".$k."_".$i." ) ";
+                            $queryConditions .= $operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)  and  deb.type_personne like :VALUE1".$k."_".$i." ) ";
                             $param['VALUE1'.$k.'_'.$i] = $details[$i]["value1"];
                         }
                     }
@@ -1541,7 +1546,7 @@ class QueueController extends AbstractController
                             $start = $this->GeneralService->dateStart($details[$i]["value1"]);
                             $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
 
-                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)   and  (t.id_type_id) like :VALUE1".$k."_".$i." ) ";
+                            $queryConditions .= $operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id)   and  (t.id_type_id) like :VALUE1".$k."_".$i." ) ";
                             $param['VALUE1'.$k.'_'.$i] = $details[$i]["value1"];
                         }
                     }
@@ -1570,7 +1575,7 @@ class QueueController extends AbstractController
                             {
                                 $operateur1[$i]=" or ";
                             }
-                            if(strpos($queryEntities,",debt_force_seg.dt_Proc_Creance pc") == false)
+                            if(strpos($queryEntities,",debt_force_seg.dt_proc_judicaire	 pc") == false)
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Proc_Creance pc";
                             }
@@ -1578,7 +1583,7 @@ class QueueController extends AbstractController
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Proc_Judicaire pj";
                             }
-                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (pc.id_creance_id) and (pc.id_proc_id) = pj.id and  pj.type_proc_judicaire LIKE :type_proc_judicaire".$k."_".$i.") ";
+                            $queryConditions .= $operateur[$k]." ".$operateur1[$i]." ( c.id = (pc.id_creance_id) and (pc.id_proc_id) = pj.id and  pj.type_proc_judicaire LIKE :type_proc_judicaire".$k."_".$i.") ";
                             $param['type_proc_judicaire'.$k.'_'.$i] = $details[$i]["value1"]; 
                         }
                     }
@@ -1615,7 +1620,7 @@ class QueueController extends AbstractController
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Emploi em";
                             }
-                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id) and t.id_debiteur = (em.id_debiteur_id) and (em.id_status_id) like :status_emploi".$k."_".$i." ) ";
+                            $queryConditions .= $operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id) and t.id_debiteur_id = (em.id_debiteur_id) and (em.id_status_id) like :status_emploi".$k."_".$i." ) ";
                             $param['status_emploi'.$k.'_'.$i] = $details[$i]["value1"]; 
                         }
                     }
@@ -1641,11 +1646,11 @@ class QueueController extends AbstractController
 
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (t.id_creance_id) AND t.id_debiteur = (em.id_debiteur_id) AND (em.id_status_id) AND em.dateDebut " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (t.id_creance_id) AND t.id_debiteur = (em.id_debiteur_id) AND (em.id_status_id) AND em.dateDebut " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (t.id_creance_id) AND t.id_debiteur = (em.id_debiteur_id) AND (em.id_status_id) AND em.dateDebut BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (t.id_creance_id) AND t.id_debiteur = (em.id_debiteur_id) AND (em.id_status_id) AND em.dateDebut BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
                                 $param['value2_' . $k . '_' . $i] = $details[$i]["value2"];
                             }
@@ -1675,11 +1680,11 @@ class QueueController extends AbstractController
 
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (t.id_creance_id) AND t.id_debiteur = (em.id_debiteur_id) AND (em.id_status_id) AND em.dateFin " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (t.id_creance_id) AND t.id_debiteur = (em.id_debiteur_id) AND (em.id_status_id) AND em.dateFin " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (t.id_creance_id) AND t.id_debiteur = (em.id_debiteur_id) AND (em.id_status_id) AND em.dateFin BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (t.id_creance_id) AND t.id_debiteur = (em.id_debiteur_id) AND (em.id_status_id) AND em.dateFin BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] = $details[$i]["value1"];
                                 $param['value2_' . $k . '_' . $i] = $details[$i]["value2"];
                             }
@@ -1718,7 +1723,7 @@ class QueueController extends AbstractController
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Employeur emp";
                             }
-                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id) and t.id_debiteur = (emp.id_debiteur_id) and (emp.id_status_id) like :status_employeur".$k."_".$i." ) ";
+                            $queryConditions .= $operateur[$k]." ".$operateur1[$i]." ( c.id = (t.id_creance_id) and t.id_debiteur_id = (emp.id_debiteur_id) and (emp.id_status_id) like :status_employeur".$k."_".$i." ) ";
                             $param['status_employeur'.$k.'_'.$i] = $details[$i]["value1"]; 
                         }
                     }
@@ -1755,7 +1760,7 @@ class QueueController extends AbstractController
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Creance_Accord ca";
                             }
-                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." (  c.id = (ca.id_creance_id) and (ac.id_status_id) like :status_accord".$k."_".$i." ) ";
+                            $queryConditions .= $operateur[$k]." ".$operateur1[$i]." (  c.id = (ca.id_creance_id) and (ac.id_status_id) like :status_accord".$k."_".$i." ) ";
                             $param['status_accord'.$k.'_'.$i] = $details[$i]["value1"]; 
                         }
                     }
@@ -1782,12 +1787,12 @@ class QueueController extends AbstractController
                             $start = $this->GeneralService->dateStart($details[$i]["value1"]);
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.dateCreation " . ($details[$i]["action"] === "2" ? ">" : "<") . " :dateStart_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.dateCreation " . ($details[$i]["action"] === "2" ? ">" : "<") . " :dateStart_" . $k . "_" . $i . ")";
                                 $param['dateStart_' . $k . '_' . $i] = $start;
                             } elseif ($details[$i]["action"] === "1") {
                                 $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
                                 // If "between"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.dateCreation BETWEEN :dateStart_" . $k . "_" . $i . " AND :dateFin_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.dateCreation BETWEEN :dateStart_" . $k . "_" . $i . " AND :dateFin_" . $k . "_" . $i . ")";
                                 $param['dateStart_' . $k . '_' . $i] = $start;
                                 $param['dateFin_' . $k . '_' . $i] = $end;
                             }
@@ -1816,11 +1821,11 @@ class QueueController extends AbstractController
 
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.montant " . ($details[$i]["action"] === "2" ? ">" : "<") . " :valueMontant1_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.montant " . ($details[$i]["action"] === "2" ? ">" : "<") . " :valueMontant1_" . $k . "_" . $i . ")";
                                 $param['valueMontant1_' . $k . '_' . $i] = $details[$i]["value1"];
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.montant BETWEEN :valueMontant1_" . $k . "_" . $i . " AND :valueMontant2_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.montant BETWEEN :valueMontant1_" . $k . "_" . $i . " AND :valueMontant2_" . $k . "_" . $i . ")";
                                 $param['valueMontant1_' . $k . '_' . $i] =  $details[$i]["value1"];
                                 $param['valueMontant2_' . $k . '_' . $i] =  $details[$i]["value2"];
                             }
@@ -1849,11 +1854,11 @@ class QueueController extends AbstractController
 
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.montant_a_payer " . ($details[$i]["action"] === "2" ? ">" : "<") . " :valueMontant1_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.montant_a_payer " . ($details[$i]["action"] === "2" ? ">" : "<") . " :valueMontant1_" . $k . "_" . $i . ")";
                                 $param['valueMontant1_' . $k . '_' . $i] = $details[$i]["value1"];
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.montant_a_payer BETWEEN :valueMontant1_" . $k . "_" . $i . " AND :valueMontant2_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (ca.id_creance_id) AND ac.montant_a_payer BETWEEN :valueMontant1_" . $k . "_" . $i . " AND :valueMontant2_" . $k . "_" . $i . ")";
                                 $param['valueMontant1_' . $k . '_' . $i] =  $details[$i]["value1"];
                                 $param['valueMontant2_' . $k . '_' . $i] =  $details[$i]["value2"];
                             }
@@ -1892,7 +1897,7 @@ class QueueController extends AbstractController
                                 $queryEntities .= ",debt_force_seg.dt_Paiement pm";
                             }
                             
-                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." (  c.id = (pm.id_creance_id) and (pm.id_type_paiement_id) like :typeP".$k."_".$i." ) ";
+                            $queryConditions .= $operateur[$k]." ".$operateur1[$i]." (  c.id = (pm.id_creance_id) and (pm.id_type_paiement_id) like :typeP".$k."_".$i." ) ";
                             $param['typeP'.$k.'_'.$i] = $details[$i]["value1"]; 
                         }
                     }
@@ -1919,13 +1924,13 @@ class QueueController extends AbstractController
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
                                 // If "supérieur" or "inférieur"
                                 $start = $this->GeneralService->dateStart($details[$i]["value1"]);
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (pm.id_creance_id) AND pm.date_paiement " . ($details[$i]["action"] === "2" ? ">" : "<") . " :dateStart_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (pm.id_creance_id) AND pm.date_paiement " . ($details[$i]["action"] === "2" ? ">" : "<") . " :dateStart_" . $k . "_" . $i . ")";
                                 $param['dateStart_' . $k . '_' . $i] = $start;
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
                                 $start = $this->GeneralService->dateStart($details[$i]["value1"]);
                                 $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (pm.id_creance_id) AND pm.date_paiement BETWEEN :dateStart_" . $k . "_" . $i . " AND :dateFin_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (pm.id_creance_id) AND pm.date_paiement BETWEEN :dateStart_" . $k . "_" . $i . " AND :dateFin_" . $k . "_" . $i . ")";
                                 $param['dateStart_' . $k . '_' . $i] = $start;
                                 $param['dateFin_' . $k . '_' . $i] = $end;
                             }
@@ -1953,11 +1958,11 @@ class QueueController extends AbstractController
                             }
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
                                 // If "supérieur" or "inférieur"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (pm.id_creance_id) AND pm.montant " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (pm.id_creance_id) AND pm.montant " . ($details[$i]["action"] === "2" ? ">" : "<") . " :value1_" . $k . "_" . $i . ")";
                                 $param['dateStart_' . $k . '_' . $i] = $details[$i]["value1"];
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (pm.id_creance_id) AND pm.montant BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (pm.id_creance_id) AND pm.montant BETWEEN :value1_" . $k . "_" . $i . " AND :value2_" . $k . "_" . $i . ")";
                                 $param['value1_' . $k . '_' . $i] =  $details[$i]["value1"];
                                 $param['value2_' . $k . '_' . $i] = $details[$i]["value2"];
                             }
@@ -1992,7 +1997,7 @@ class QueueController extends AbstractController
                                 $queryEntities .= ",debt_force_seg.dt_Dossier dss";
                             }
                             
-                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." (  dss.id = (c.id_dossier_id)  and  (dss.id_qualification_id) = :qualification".$k."_".$i.") ";
+                            $queryConditions .= $operateur[$k]." ".$operateur1[$i]." (  dss.id = (c.id_dossier_id)  and  (dss.id_qualification_id) = :qualification".$k."_".$i.") ";
                             $param['qualification'.$k.'_'.$i] = $details[$i]["value1"]; 
                         }
                     }
@@ -2025,7 +2030,7 @@ class QueueController extends AbstractController
                                 $queryEntities .= ",debt_force_seg.dt_Param_Critere pc";
                             }
                             
-                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." ( (c.id_activite_id) = :activite".$k."_".$i.") ";
+                            $queryConditions .= $operateur[$k]." ".$operateur1[$i]." ( (c.id_activite_id) = :activite".$k."_".$i.") ";
                             $param['activite'.$k.'_'.$i] = $details[$i]["value1"]; 
                         }
                     }
@@ -2060,13 +2065,13 @@ class QueueController extends AbstractController
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
                                 // If "supérieur" or "inférieur"
                                 $start = $this->GeneralService->yearStart($details[$i]["value1"]);
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (f.id_creance_id) AND f.date_creation " . ($details[$i]["action"] === "2" ? ">" : "<") . " :dateStart_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (f.id_creance_id) AND f.date_creation " . ($details[$i]["action"] === "2" ? ">" : "<") . " :dateStart_" . $k . "_" . $i . ")";
                                 $param['dateStart_' . $k . '_' . $i] = $start;
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
                                 $start = $this->GeneralService->yearStart($details[$i]["value1"]);
                                 $end = $this->GeneralService->yearEnd($details[$i]["value2"]);
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (f.id_creance_id) AND f.date_creation BETWEEN :dateStart_" . $k . "_" . $i . " AND :dateFin_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (f.id_creance_id) AND f.date_creation BETWEEN :dateStart_" . $k . "_" . $i . " AND :dateFin_" . $k . "_" . $i . ")";
                                 $param['dateStart_' . $k . '_' . $i] = $start;
                                 $param['dateFin_' . $k . '_' . $i] = $end;
                             }
@@ -2090,13 +2095,13 @@ class QueueController extends AbstractController
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
                                 // If "supérieur" or "inférieur"
                                 $montant1 = $details[$i]["value1"];
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (f.id_creance_id) AND f.total_ttc " . ($details[$i]["action"] === "2" ? ">" : "<") . " :totalTtc_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (f.id_creance_id) AND f.total_ttc " . ($details[$i]["action"] === "2" ? ">" : "<") . " :totalTtc_" . $k . "_" . $i . ")";
                                 $param['totalTtc_' . $k . '_' . $i] = $montant1;
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
                                 $montant1 =  $details[$i]["value1"];
                                 $montant2 =  $details[$i]["value2"];
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (f.id_creance_id) AND f.total_ttc BETWEEN :totalTtc_1" . $k . "_" . $i . " AND :totalTtc_2" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (f.id_creance_id) AND f.total_ttc BETWEEN :totalTtc_1" . $k . "_" . $i . " AND :totalTtc_2" . $k . "_" . $i . ")";
                                 $param['totalTtc_1' . $k . '_' . $i] = $montant1;
                                 $param['totalTtc_2' . $k . '_' . $i] = $montant2;
                             }
@@ -2117,7 +2122,7 @@ class QueueController extends AbstractController
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Facture f";
                             }
-                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." (  c.id = (f.id_creance_id) AND (f.id_type_paiement_id) like :typeP".$k."_".$i." ) ";
+                            $queryConditions .= $operateur[$k]." ".$operateur1[$i]." (  c.id = (f.id_creance_id) AND (f.id_type_paiement_id) like :typeP".$k."_".$i." ) ";
                             $param['typeP'.$k.'_'.$i] = $details[$i]["value1"];  
                         }
                     }
@@ -2136,7 +2141,7 @@ class QueueController extends AbstractController
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Facture f";
                             }
-                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." (  c.id = (f.id_creance_id) AND (f.id_status_id) like :statusP".$k."_".$i." ) ";
+                            $queryConditions .= $operateur[$k]." ".$operateur1[$i]." (  c.id = (f.id_creance_id) AND (f.id_status_id) like :statusP".$k."_".$i." ) ";
                             $param['statusP'.$k.'_'.$i] = $details[$i]["value1"];  
                         }
                     }
@@ -2158,13 +2163,13 @@ class QueueController extends AbstractController
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
                                 // If "supérieur" or "inférieur"
                                 $montant1 = $details[$i]["value1"];
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " ( c.taux_honoraire " . ($details[$i]["action"] === "2" ? ">" : "<") . " :taux_honoraire_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " ( c.taux_honoraire " . ($details[$i]["action"] === "2" ? ">" : "<") . " :taux_honoraire_" . $k . "_" . $i . ")";
                                 $param['taux_honoraire_' . $k . '_' . $i] = $montant1;
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
                                 $montant1 =  $details[$i]["value1"];
                                 $montant2 =  $details[$i]["value2"];
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " ( c.taux_honoraire BETWEEN :totalTtc_1" . $k . "_" . $i . " AND :totalTtc_2" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " ( c.taux_honoraire BETWEEN :totalTtc_1" . $k . "_" . $i . " AND :totalTtc_2" . $k . "_" . $i . ")";
                                 $param['totalTtc_1' . $k . '_' . $i] = $montant1;
                                 $param['totalTtc_2' . $k . '_' . $i] = $montant2;
                             }
@@ -2189,13 +2194,13 @@ class QueueController extends AbstractController
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
                                 // If "supérieur" or "inférieur"
                                 $montant1 = $details[$i]["value1"];
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (  c.honoraire_petentiel " . ($details[$i]["action"] === "2" ? ">" : "<") . " :honoraire_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (  c.honoraire_petentiel " . ($details[$i]["action"] === "2" ? ">" : "<") . " :honoraire_" . $k . "_" . $i . ")";
                                 $param['honoraire_' . $k . '_' . $i] = $montant1;
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
                                 $montant1 =  $details[$i]["value1"];
                                 $montant2 =  $details[$i]["value2"];
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (  c.honoraire_petentiel BETWEEN :honoraire__1" . $k . "_" . $i . " AND :honoraire__2" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (  c.honoraire_petentiel BETWEEN :honoraire__1" . $k . "_" . $i . " AND :honoraire__2" . $k . "_" . $i . ")";
                                 $param['honoraire__1' . $k . '_' . $i] = $montant1;
                                 $param['honoraire__2' . $k . '_' . $i] = $montant2;
                             }
@@ -2219,13 +2224,13 @@ class QueueController extends AbstractController
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
                                 // If "supérieur" or "inférieur"
                                 $montant1 = $details[$i]["value1"];
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " ( c.id = (f.id_creance_id) AND c.honoraire_facture " . ($details[$i]["action"] === "2" ? ">" : "<") . " :honoraire_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " ( c.id = (f.id_creance_id) AND c.honoraire_facture " . ($details[$i]["action"] === "2" ? ">" : "<") . " :honoraire_" . $k . "_" . $i . ")";
                                 $param['honoraire_' . $k . '_' . $i] = $montant1;
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
                                 $montant1 =  $details[$i]["value1"];
                                 $montant2 =  $details[$i]["value2"];
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " ( c.id = (f.id_creance_id) AND c.honoraire_facture BETWEEN :honoraire__1" . $k . "_" . $i . " AND :honoraire__2" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " ( c.id = (f.id_creance_id) AND c.honoraire_facture BETWEEN :honoraire__1" . $k . "_" . $i . " AND :honoraire__2" . $k . "_" . $i . ")";
                                 $param['honoraire__1' . $k . '_' . $i] = $montant1;
                                 $param['honoraire__2' . $k . '_' . $i] = $montant2;
                             }
@@ -2249,13 +2254,13 @@ class QueueController extends AbstractController
                             if ($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
                                 // If "supérieur" or "inférieur"
                                 $montant1 = $details[$i]["value1"];
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (  c.honoraire_restant " . ($details[$i]["action"] === "2" ? ">" : "<") . " :honoraire_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (  c.honoraire_restant " . ($details[$i]["action"] === "2" ? ">" : "<") . " :honoraire_" . $k . "_" . $i . ")";
                                 $param['honoraire_' . $k . '_' . $i] = $montant1;
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
                                 $montant1 =  $details[$i]["value1"];
                                 $montant2 =  $details[$i]["value2"];
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (  c.honoraire_restant BETWEEN :honoraire__1" . $k . "_" . $i . " AND :honoraire__2" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (  c.honoraire_restant BETWEEN :honoraire__1" . $k . "_" . $i . " AND :honoraire__2" . $k . "_" . $i . ")";
                                 $param['honoraire__1' . $k . '_' . $i] = $montant1;
                                 $param['honoraire__2' . $k . '_' . $i] = $montant2;
                             }
@@ -2294,7 +2299,7 @@ class QueueController extends AbstractController
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Cadrages_Creance cc";
                             }
-                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." (  c.id = (cc.id_creance_id) AND  cd.id = (cc.id_cadrage_id) AND cd.type like :typeCad".$k."_".$i." ) ";
+                            $queryConditions .= $operateur[$k]." ".$operateur1[$i]." (  c.id = (cc.id_creance_id) AND  cd.id = (cc.id_cadrage_id) AND cd.type like :typeCad".$k."_".$i." ) ";
                             $param['typeCad'.$k.'_'.$i] = $details[$i]["value1"];  
 
                         }
@@ -2321,13 +2326,13 @@ class QueueController extends AbstractController
                             if($details[$i]["action"] === "2" || $details[$i]["action"] === "3") {
                                 // If "supérieur" or "inférieur"
                                 $start = $this->GeneralService->dateStart($details[$i]["value1"]);
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (cc.id_creance_id) AND  cd.id = (cc.id_cadrage_id) AND cd.date_retour " . ($details[$i]["action"] === "2" ? ">" : "<") . " :dateRStart_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (cc.id_creance_id) AND  cd.id = (cc.id_cadrage_id) AND cd.date_retour " . ($details[$i]["action"] === "2" ? ">" : "<") . " :dateRStart_" . $k . "_" . $i . ")";
                                 $param['dateRStart_' . $k . '_' . $i] = $start;
                             } elseif ($details[$i]["action"] === "1") {
                                 // If "between"
                                 $start = $this->GeneralService->dateStart($details[$i]["value1"]);
                                 $end = $this->GeneralService->dateEnd($details[$i]["value2"]);
-                                $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." " . $operateur[$k] . " " . $operateur1[$i] . " (c.id = (cc.id_creance_id) AND  cd.id = (cc.id_cadrage_id) AND cd.date_retour BETWEEN :dateRStart_" . $k . "_" . $i . " AND :dateRFin_" . $k . "_" . $i . ")";
+                                $queryConditions .=  $operateur[$k] . " " . $operateur1[$i] . " (c.id = (cc.id_creance_id) AND  cd.id = (cc.id_cadrage_id) AND cd.date_retour BETWEEN :dateRStart_" . $k . "_" . $i . " AND :dateRFin_" . $k . "_" . $i . ")";
                                 $param['dateRStart_' . $k . '_' . $i] = $start;
                                 $param['dateRFin_' . $k . '_' . $i] = $end;
                             }
@@ -2352,7 +2357,7 @@ class QueueController extends AbstractController
                             {
                                 $queryEntities .= ",debt_force_seg.dt_Cadrages_Creance cc";
                             }
-                            $queryConditions .= (0 == $k ? $operateur0[$j] : " ")." "." ".$operateur[$k]." ".$operateur1[$i]." (  c.id = (cc.id_creance_id) AND  cd.id = (cc.id_cadrage_id) AND cd.etat like :etatCad".$k."_".$i." ) ";
+                            $queryConditions .= $operateur[$k]." ".$operateur1[$i]." (  c.id = (cc.id_creance_id) AND  cd.id = (cc.id_cadrage_id) AND cd.etat like :etatCad".$k."_".$i." ) ";
                             $param['etatCad'.$k.'_'.$i] = $details[$i]["value1"];  
                         }
                     }
@@ -2483,9 +2488,9 @@ class QueueController extends AbstractController
                             $description = $data['description'];
                         }
 
-                        $createQueue = $queueRepo->updateQueue($id,$titre,$description,$queue_groupe_id ,$id_type_id , $seg ,$active );
+                        $UpdateQueue = $queueRepo->updateQueue($id,$titre,$description,$queue_groupe_id ,$id_type_id , $seg ,$active );
                         
-                        $queueRepo->deleteCritereQueue($id);
+                        /*$queueRepo->deleteCritereQueue($id);
                         
                         if($createQueue){
                             $data_critere = $data["data"];
@@ -2556,7 +2561,9 @@ class QueueController extends AbstractController
                             }
                             $codeStatut="OK";
                             $this->sauvguardeQueue($request,$segementationRepo , $queueRepo , $queueId);
-                        }
+                        }*/
+
+                        $codeStatut = "OK";
                     }else{
                         $codeStatut = "ERROR-EMPTY-PARAMS";
                     }
@@ -2565,6 +2572,42 @@ class QueueController extends AbstractController
         }catch(\Exception $e){
             $codeStatut = "ERROR";
             $respObjects["msg"] = $e->getMessage();
+        }
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+
+    #[Route('/getSegmentationNonAssigneWithQueue')]
+    public function getSegmentationNonAssigneWithQueue(Request $request,queueRepo $queueRepo): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut = "ERROR";
+        try{
+            $this->AuthService->checkAuth(0,$request);
+            $id_queue = $request->get("id");
+
+            $queue = $queueRepo->findQueue($id_queue);
+
+            $data = $queueRepo->getSegmentationNonAssigne();
+
+            if($queue){
+                $segmentation = $queue->getIdSegmentation();
+                if($segmentation)
+                {
+                    $data = $queueRepo->getSegmentationNonAssigneWithQueue($segmentation->getId());
+                }
+               
+            }
+            
+            
+            $respObjects["data"] = $data;
+            $codeStatut = "OK";
+            
+        }catch(\Exception $e){
+            $codeStatut = "ERROR";
+            $respObjects["err"] = $e->getMessage();
         }
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);

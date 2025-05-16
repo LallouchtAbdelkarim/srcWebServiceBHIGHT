@@ -21,16 +21,20 @@ use App\Entity\TypeQueue;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Repository\Sgementaion\queueRepo;
 
 class segementationRepo extends ServiceEntityRepository
 {
     private $conn;
     public $em;
+    public $queueRepo;
 
-    public function __construct(Connection $conn , EntityManagerInterface $em)
+    public function __construct(Connection $conn , EntityManagerInterface $em, queueRepo $queueRepository)
     {
         $this->conn = $conn;
         $this->em = $em;
+        $this->queueRepo = $queueRepository;
+
     }
     public function getListeSegment(){
         $resultList = $this->em->getRepository(Segmentation::class)->findAll();
@@ -155,6 +159,7 @@ class segementationRepo extends ServiceEntityRepository
         } 
         return $array;
     }
+
     public function deleteCritere($id){
         $sql="
         DELETE FROM seg_values WHERE id_critere_id IN (
@@ -172,7 +177,16 @@ class segementationRepo extends ServiceEntityRepository
         $stmt = $this->conn->prepare($sql);
         $stmt->bindValue(":id_seg_id",$id);
         $stmt = $stmt->executeQuery();
+
+        /*$queues = $this->em->getRepository(Queue::class)->findBy(["id_segmentation"=>$id]);
+        foreach ($queues as $queue) {
+            $queueId = $queue->getId(); // Assume Queue entity has a `getId()` method
+            $this->queueRepo->deleteCritereQueue($queueId);
+        }*/
+    
     }
+
+
     public function getValueSegment($id,$entity){
         $table = 'seg_'.$entity.'';
         $sql="SELECT count(id) FROM debt_force_seg.".$table." s WHERE s.id_seg = :id";
@@ -1906,19 +1920,24 @@ class segementationRepo extends ServiceEntityRepository
         $type = $this->getTypesQueue(1);
         $getStatusQueue = $this->getStatusQueue(1);
         
-        $model = new Queue();
-        $model->setTitre('Seg-'.$seg->getCleIdentifiant());
-        $model->setDescription('');
-        $model->setIdSegmentation($seg);
-        $model->setIdType($type);
-        $model->setIdStatus($getStatusQueue);
-        $model->setDateCreation(new \DateTime("now"));
-        $model->setActive(true);
-        $model->setPriority(0);
-        $model->setAssignedStrategy(false);
-        $this->em->persist($model);
-        $this->em->flush();
-        return $model;
+        $queue = $this->em->getRepository(Queue::class)->findOneBy(array("titre" => 'Seg-'.$seg->getCleIdentifiant()));
+        if(!$queue)
+        {
+            $model = new Queue();
+            $model->setTitre('Seg-'.$seg->getCleIdentifiant());
+            $model->setDescription('');
+            $model->setIdSegmentation($seg);
+            $model->setIdType($type);
+            $model->setIdStatus($getStatusQueue);
+            $model->setDateCreation(new \DateTime("now"));
+            $model->setActive(true);
+            $model->setPriority(0);
+            $model->setAssignedStrategy(false);
+            $this->em->persist($model);
+            $this->em->flush();
+            return $model;
+    
+        }
     }
     public function copyDataQueue($idSeg , $idQueue){
         //Adresse

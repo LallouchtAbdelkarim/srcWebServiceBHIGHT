@@ -2,6 +2,7 @@
 
 namespace App\Controller\Missions;
 
+use App\Repository\DossierRepository;
 use Proxies\__CG__\App\Entity\FileMissions;
 use Proxies\__CG__\App\Entity\TypeMissions;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -426,7 +427,7 @@ class MissionsController extends AbstractController
                 $sql = "DELETE FROM `detail_mission`  WHERE  id_mission_id = ".$idMission.";";
                 $stmt = $this->conn->prepare($sql)->executeQuery();
 
-                $sql = "DELETE FROM `mission`  WHERE  id = ".$idMission.";";
+                $sql = "DELETE FROM `missions`  WHERE  id = ".$idMission.";";
                 $stmt = $this->conn->prepare($sql)->executeQuery();
                 
                 $codeStatut="OK";
@@ -502,11 +503,13 @@ class MissionsController extends AbstractController
             $respObjects["data"] = $data;
         }catch(\Exception $e){
             $respObjects["err"] = $e->getMessage();
-            $codeStatut = "ERREUR";
+            $codeStatut = "ERROR";
         }
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
+
     
 }

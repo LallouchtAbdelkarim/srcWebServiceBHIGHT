@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\PersonneRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -40,6 +42,21 @@ class Personne
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $date_creation = null;
+
+    #[ORM\OneToMany(mappedBy: 'idPayeur', targetEntity: Accord::class)]
+    private Collection $accords;
+
+    #[ORM\OneToMany(mappedBy: 'personne', targetEntity: CreanceActivite::class)]
+    private Collection $creanceActivites;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $email = null;
+
+    public function __construct()
+    {
+        $this->accords = new ArrayCollection();
+        $this->creanceActivites = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -150,6 +167,78 @@ class Personne
     public function setDateCreation(?\DateTimeInterface $date_creation): static
     {
         $this->date_creation = $date_creation;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Accord>
+     */
+    public function getAccords(): Collection
+    {
+        return $this->accords;
+    }
+
+    public function addAccord(Accord $accord): static
+    {
+        if (!$this->accords->contains($accord)) {
+            $this->accords->add($accord);
+            $accord->setIdPayeur($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAccord(Accord $accord): static
+    {
+        if ($this->accords->removeElement($accord)) {
+            // set the owning side to null (unless already changed)
+            if ($accord->getIdPayeur() === $this) {
+                $accord->setIdPayeur(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, CreanceActivite>
+     */
+    public function getCreanceActivites(): Collection
+    {
+        return $this->creanceActivites;
+    }
+
+    public function addCreanceActivite(CreanceActivite $creanceActivite): static
+    {
+        if (!$this->creanceActivites->contains($creanceActivite)) {
+            $this->creanceActivites->add($creanceActivite);
+            $creanceActivite->setPersonne($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCreanceActivite(CreanceActivite $creanceActivite): static
+    {
+        if ($this->creanceActivites->removeElement($creanceActivite)) {
+            // set the owning side to null (unless already changed)
+            if ($creanceActivite->getPersonne() === $this) {
+                $creanceActivite->setPersonne(null);
+            }
+        }
+
+        return $this;
+    }
+
+    public function getEmail(): ?string
+    {
+        return $this->email;
+    }
+
+    public function setEmail(?string $email): static
+    {
+        $this->email = $email;
 
         return $this;
     }

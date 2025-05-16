@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\AccordRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -50,6 +52,42 @@ class Accord
 
     #[ORM\Column(nullable: true)]
     private ?float $montant_a_payer = null;
+
+    #[ORM\OneToMany(mappedBy: 'idAccord', targetEntity: AccordNotes::class, orphanRemoval: true)]
+    private Collection $accordNotes;
+
+    #[ORM\OneToMany(mappedBy: 'idAccord', targetEntity: AccordPj::class)]
+    private Collection $url;
+
+    #[ORM\Column(nullable: true)]
+    private ?float $montantDeBase = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?float $feeAdmin = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?float $feeInstallment = null;
+
+    #[ORM\Column(length: 11, nullable: true)]
+    private ?string $interets = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?float $remise = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?float $accompte = null;
+
+    #[ORM\ManyToOne(inversedBy: 'accords')]
+    private ?Debiteur $idDebiteur = null;
+
+    #[ORM\ManyToOne(inversedBy: 'accords')]
+    private ?Personne $idPayeur = null;
+
+    public function __construct()
+    {
+        $this->accordNotes = new ArrayCollection();
+        $this->url = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -196,6 +234,162 @@ class Accord
     public function setMontantAPayer(?float $montant_a_payer): static
     {
         $this->montant_a_payer = $montant_a_payer;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, AccordNotes>
+     */
+    public function getAccordNotes(): Collection
+    {
+        return $this->accordNotes;
+    }
+
+    public function addAccordNote(AccordNotes $accordNote): static
+    {
+        if (!$this->accordNotes->contains($accordNote)) {
+            $this->accordNotes->add($accordNote);
+            $accordNote->setIdAccord($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAccordNote(AccordNotes $accordNote): static
+    {
+        if ($this->accordNotes->removeElement($accordNote)) {
+            // set the owning side to null (unless already changed)
+            if ($accordNote->getIdAccord() === $this) {
+                $accordNote->setIdAccord(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, AccordPj>
+     */
+    public function getUrl(): Collection
+    {
+        return $this->url;
+    }
+
+    public function addUrl(AccordPj $url): static
+    {
+        if (!$this->url->contains($url)) {
+            $this->url->add($url);
+            $url->setIdAccord($this);
+        }
+
+        return $this;
+    }
+
+    public function removeUrl(AccordPj $url): static
+    {
+        if ($this->url->removeElement($url)) {
+            // set the owning side to null (unless already changed)
+            if ($url->getIdAccord() === $this) {
+                $url->setIdAccord(null);
+            }
+        }
+
+        return $this;
+    }
+
+    public function getMontantDeBase(): ?float
+    {
+        return $this->montantDeBase;
+    }
+
+    public function setMontantDeBase(?float $montantDeBase): static
+    {
+        $this->montantDeBase = $montantDeBase;
+
+        return $this;
+    }
+
+    public function getFeeAdmin(): ?float
+    {
+        return $this->feeAdmin;
+    }
+
+    public function setFeeAdmin(?float $feeAdmin): static
+    {
+        $this->feeAdmin = $feeAdmin;
+
+        return $this;
+    }
+
+    public function getFeeInstallment(): ?float
+    {
+        return $this->feeInstallment;
+    }
+
+    public function setFeeInstallment(?float $feeInstallment): static
+    {
+        $this->feeInstallment = $feeInstallment;
+
+        return $this;
+    }
+
+    public function getInterets(): ?string
+    {
+        return $this->interets;
+    }
+
+    public function setInterets(?string $interets): static
+    {
+        $this->interets = $interets;
+
+        return $this;
+    }
+
+    public function getRemise(): ?float
+    {
+        return $this->remise;
+    }
+
+    public function setRemise(?float $remise): static
+    {
+        $this->remise = $remise;
+
+        return $this;
+    }
+
+    public function getAccompte(): ?float
+    {
+        return $this->accompte;
+    }
+
+    public function setAccompte(?float $accompte): static
+    {
+        $this->accompte = $accompte;
+
+        return $this;
+    }
+
+    public function getIdDebiteur(): ?Debiteur
+    {
+        return $this->idDebiteur;
+    }
+
+    public function setIdDebiteur(?Debiteur $idDebiteur): static
+    {
+        $this->idDebiteur = $idDebiteur;
+
+        return $this;
+    }
+
+    public function getIdPayeur(): ?Personne
+    {
+        return $this->idPayeur;
+    }
+
+    public function setIdPayeur(?Personne $idPayeur): static
+    {
+        $this->idPayeur = $idPayeur;
 
         return $this;
     }

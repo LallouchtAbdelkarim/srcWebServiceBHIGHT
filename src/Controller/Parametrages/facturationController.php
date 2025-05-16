@@ -231,10 +231,9 @@ class facturationController extends AbstractController
                             }
                         }
                     }
-                    $codeStatut = "OK";
-                }else{
-                    $codeStatut = "ERROR";
+                   
                 }
+                $codeStatut = "OK";
                 }else{
                     $codeStatut = "ERROR";
                 }

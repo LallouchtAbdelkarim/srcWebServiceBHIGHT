@@ -169,7 +169,7 @@ class affichageController extends AbstractController
             $length = $data["length"];
             $type_creance = $data["type_creance"];
             $type_champ = $data["type_champ"];
-            $required = $data['required'];        
+            $required = !empty($data['required']) ? (int) $data['required'] : 0;
             $findModel = $affichageRepo->findModel($id);
             if($findModel){
             if($table != "" or $champ_name != "" or $length != "" or $etat != "" or $required != ""){
@@ -223,14 +223,15 @@ class affichageController extends AbstractController
         $data = json_decode($request->getContent(), true);
 
         try {
-            $id_detail_model = $data["id"];
-            $table = $data["table_name"];
-            $champ_name = $data["champ_name"];
-            $etat = $data["etat"];
-            $length = $data["length"];
-            $type_creance = $data["type_creance"];
-            $type_champ = $data["type_champ"];
-            $required = $data['required'];        
+            $id_detail_model = $data["id"] ?? null;
+            $table = $data["table_name"] ?? null;
+            $champ_name = $data["champ_name"] ?? null;
+            $etat = $data["etat"] ?? null;
+            $length = $data["length"] ?? null;
+            $type_creance = $data["type_creance"] ?? null;
+            $type_champ = $data["type_champ"] ?? null;
+            $required = $data['required'] ?? null;
+ 
             $data = $affichageRepo->findDetailModel($id_detail_model);
             if($data){
                 if($table != "" or $champ_name != "" or $length != "" or $etat != "" or $required != ""){
@@ -247,7 +248,7 @@ class affichageController extends AbstractController
                 $codeStatut="NOT_EXIST_ELEMENT";
             }
         } catch (\Exception $th) {
-            $codeStatut="ERROR";
+            $codeStatut=$th;
         }
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);

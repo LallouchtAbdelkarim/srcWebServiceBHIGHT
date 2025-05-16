@@ -26,11 +26,21 @@ class competenceRepo extends ServiceEntityRepository
         $this->conn = $conn;
         $this->em = $em;
     }
-    public function getListModels(){
+
+    public function getListModels() {
+        $qb = $this->em->createQueryBuilder();
         
-        $resultList = $this->em->getRepository(Competence::class)->findBy([],['id' => 'DESC'] );
+        $qb->select('c', 'COUNT(cp.id) as competenceCount')
+            ->from(Competence::class, 'c')
+            ->leftJoin(CompetenceProfil::class, 'cp', 'WITH', 'cp.id_competence = c.id')
+            ->groupBy('c.id')
+            ->orderBy('c.id', 'DESC');
+        
+        $resultList = $qb->getQuery()->getResult();
+        
         return $resultList;
     }
+        
     public function createModel($titre  ){
         $data = new Competence();
         $data->setTitre($titre);

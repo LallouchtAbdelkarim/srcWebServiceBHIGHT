@@ -54,16 +54,27 @@ class DonneurOrdreController extends AbstractController
         try {
             $data = json_decode($request->getContent(), true);
             if(isset($data['nom']) && isset($data['num_rc'])){
-                $do = $entityManager->getRepository(DonneurOrdre::class)->findBy(array("numero_rc" => $data['num_rc']));
-                if ($do) {
-                    $codeStatut="DONNEUR_DEJA_EXIST";
-                } else {
-                    if (
-                        !isset($data['input'])   || !isset($data['metier'])  || !isset($data['nom'])  || !isset($data['rs'])  ||
-                        !isset($data['num_rc'])  || !isset($data['c_postale'])  || !isset($data['compte_bancaire'])  || !isset($data['dateDebut'])   || !isset($data['id_type'])
-                    ) {
-                        $codeStatut="ERROR-EMPTY-PARAMS";
+                if (
+                    !isset($data['metier']) || empty($data['metier']) ||
+                    !isset($data['nom']) || empty($data['nom']) ||
+                    !isset($data['rs']) || empty($data['rs']) ||
+                    !isset($data['num_rc']) || empty($data['num_rc']) ||
+                    !isset($data['c_postale']) || empty($data['c_postale']) ||
+                    !isset($data['compte_bancaire']) || empty($data['compte_bancaire']) ||
+                    !isset($data['dateDebut']) || empty($data['dateDebut']) ||
+                    !isset($data['dateFin']) || empty($data['dateFin']) ||
+                    !isset($data['id_type']) || empty($data['id_type'])
+                ){
+                    $codeStatut="ERROR-EMPTY-PARAMS";
+                }
+                 else {
+
+                    $do = $entityManager->getRepository(DonneurOrdre::class)->findBy(array("numero_rc" => $data['num_rc']));
+
+                    if ($do) {
+                        $codeStatut="DONNEUR_DEJA_EXIST";
                     } else {
+
                         $donneur = $donneurRepo->createDonneurOrdre($data);
                         $historique = $data['listeHistorique'];
                         if(count($historique)>0)
@@ -102,6 +113,7 @@ class DonneurOrdreController extends AbstractController
 
         return $this->json($respObjects);
     }
+    
     #[Route('/donneur-ordre/getTypeDonneur')]
     public function type_donneur(Request $request ,EntityManagerInterface $entityManager): JsonResponse
     {
@@ -178,8 +190,8 @@ class DonneurOrdreController extends AbstractController
                 $contact->setPrenom($data['prenom']);
                 $contact->setposte($data['poste']);
                 $contact->setemail($data['email']);
-                $contact->setMobile($data['mobile']);
-                $contact->setTel($data['fix']);
+                $contact->setMobile($data['fix']);
+                $contact->setTel($data['mobile']);
                 $contact->setAdresse($data['adresse']);
                 $contact->setIdDonneurOrdre($find_dn);
                 $entityManager->persist($contact);
@@ -213,7 +225,11 @@ class DonneurOrdreController extends AbstractController
             $respObjects["codeStatut"] = "Not OK";
         } else {
 
-            $donneur = $donneurRepo->UpdateDonneur($data, $id);
+            $donneur1 = $donneurRepo->UpdateDonneur($data, $id);
+            if (isset($data['contact'])) {
+                $donneurRepo->AddContacts($data['contact'], $donneur);
+            }
+
             $respObjects["message"] = "Opération effectuée";
         $respObjects["codeStatut"] = "OK";
         $entityManager->flush();
@@ -262,7 +278,7 @@ class DonneurOrdreController extends AbstractController
             $respObjects["message"] = "Une erreur s'est produite !";
             $respObjects["codeStatut"] = "NOT OK";
         } else {
-            if ($nom && $prenom && $poste && $email && $tel && $mobile && $adresse) {
+            if ($nom && $prenom && $poste && $email && $tel) {
                 $contact = $donneurRepo->UpdateContact($id, $nom, $prenom, $poste, $email, $tel, $mobile, $adresse);
                 if ($contact) {
                     $respObjects["message"] = "Modifier avec success";
@@ -288,10 +304,16 @@ class DonneurOrdreController extends AbstractController
         $respObjects = [];
 
         $donneur = $donneurRepo->DeleteDonneurOrdre($id);
-        if ($donneur) {
+        if ($donneur == 'OK') {
             $respObjects["message"] = "success";
             $respObjects["codeStatut"] = "OK";
-        } else {
+        } 
+        else if ($donneur)
+        {
+            $respObjects["message"] = $donneur;
+            $respObjects["codeStatut"] = "NOT OK";
+        }
+        else {
             $respObjects["message"] = "Une error s'est produite !";
             $respObjects["codeStatut"] = "NOT OK";
         }

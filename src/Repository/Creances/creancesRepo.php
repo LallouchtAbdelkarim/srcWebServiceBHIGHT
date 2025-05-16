@@ -6,16 +6,25 @@ use App\Entity\ActiviteAssigned;
 use App\Entity\Adresse;
 use App\Entity\Bookmarks;
 use App\Entity\Creance;
+use App\Entity\CreanceAccord;
 use App\Entity\CreanceActivite;
+use App\Entity\Debiteur;
+use App\Entity\DetailsAccord;
+use App\Entity\Email;
 use App\Entity\ModelCourier;
 use App\Entity\ModelSMS;
 use App\Entity\Paiement;
+use App\Entity\PaiementAccord;
 use App\Entity\ParamActivite;
+use App\Entity\Personne;
 use App\Entity\Portefeuille;
 use App\Entity\Promise;
+use App\Entity\RecentCreance;
 use App\Entity\ReglePortefeuille;
 use App\Entity\Task;
 use App\Entity\TaskAssigned;
+use App\Entity\Teams;
+use App\Entity\Telephone;
 use App\Entity\TypeDebiteur;
 use App\Entity\TypePaiement;
 use App\Entity\Utilisateurs;
@@ -24,6 +33,9 @@ use App\Service\typeService;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
+use DateTime;
+use PhpParser\Builder\Function_;
+
 class creancesRepo extends ServiceEntityRepository
 {
     private $conn;
@@ -52,20 +64,27 @@ class creancesRepo extends ServiceEntityRepository
         $query = 'SELECT DISTINCT c.*
         FROM creance c
         INNER JOIN type_debiteur t ON c.id = t.id_creance_id
-        INNER JOIN debiteur deb ON t.id_debiteur_id = deb.id';
+        INNER JOIN debiteur deb ON t.id_debiteur_id = deb.id ';
 
         if ($tel != "") {
-            $query .= ' INNER JOIN telephone tel ON deb.id = tel.id_debiteur_id';
+            $query .= ' INNER JOIN telephone tel ON deb.id = tel.id_debiteur_id AND tel.numero = "'.$tel.'" ';
         }
         if ($addr != "") {
-            $query .= ' INNER JOIN adresse ad ON deb.id = ad.id_debiteur_id';
+            $query .= ' INNER JOIN adresse ad ON deb.id = ad.id_debiteur_id 
+            AND (
+                ad.adresse_complet = "'.$addr.'" 
+                OR ad.pays = "'.$addr.'" 
+                OR ad.ville = "'.$addr.'" 
+                OR ad.code_postal = "'.$addr.'" 
+                OR ad.province = "'.$addr.'"
+            ) ';
         }
 
         if ($ptf != "") {
             $query .= ' AND c.id_ptf_id = "'.$ptf.'"';
         }
 
-         if ($numero_creance != "") {
+        if ($numero_creance != "") {
             $query .= ' WHERE c.numero_creance = "'.$numero_creance.'" ';
         }
         if ($agent != "") {
@@ -176,6 +195,12 @@ class creancesRepo extends ServiceEntityRepository
             $stmt = $stmt->executeQuery();
             $act = $stmt->fetchAssociative();
             $resulat[$i]["status_accord"] = $act;
+
+            $sql="select * from utilisateurs u where u.id = ".$resulat[$i]['id_users_id']." ";
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $act = $stmt->fetchAssociative();
+            $resulat[$i]["agent"] = $act;
         }
         return $resulat;
     }
@@ -204,12 +229,24 @@ class creancesRepo extends ServiceEntityRepository
             $stmt = $stmt->executeQuery();
             $type = $stmt->fetchAssociative();
             $result[$i]["famille"] = $type;
+
+            $sql="select * from param_activite ca where ca.id = ".$result[$i]['id_param_parent_id']." ";
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $act = $stmt->fetchAssociative();
+            $result[$i]["parent"] = $act;
+
+            $sql="select * from utilisateurs u where u.id = ".$result[$i]['created_by_id']." ";
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $act = $stmt->fetchAssociative();
+            $result[$i]["agent"] = $act;
         }
         return $result;
     }
     
     public function getPaiement($id){
-        $sql="SELECT * FROM `paiement` where id = ".$id."";
+        $sql="SELECT * FROM `paiement` where id_creance_id = ".$id."";
         $stmt = $this->conn->prepare($sql);
         $stmt = $stmt->executeQuery();
         $resulat = $stmt->fetchAll();
@@ -398,6 +435,7 @@ class creancesRepo extends ServiceEntityRepository
                     $nbrAccordsSys++;
                     $montantAccordsSys+=$solde;
                 }
+                
                 $sql = "SELECT MAX(id) FROM details_accord";
                 $maxDetailAccord = $this->conn->executeQuery($sql)->fetchOne();
                 $date=new \DateTime();
@@ -440,6 +478,7 @@ class creancesRepo extends ServiceEntityRepository
                 $creance->setTotalRestant($total);
                 $this->em->flush();
                 $stmt = $this->conn->prepare($sql)->executeQuery();
+                
             }
             elseif($paiement)
             {
@@ -465,8 +504,8 @@ class creancesRepo extends ServiceEntityRepository
                                 $sql="update details_accord set `id_status_id`=1,`id_type_paiement_id`=".$typePaiement->getId().", `montant_paiement`=".$autreDetail["montant_restant"].", `montant_restant`=0, `date_paiement`=sysdate() where id=".$autreDetail["id"];
                                 $stmt = $this->conn->prepare($sql)->executeQuery();
 
-                                $nbrAccordsAgent++;
-                                $montantAccordsAgent+=$autreDetail["montant_restant"];
+                                // $nbrAccordsAgent++;
+                                // $montantAccordsAgent+=$autreDetail["montant_restant"];
 
                                 $date=new \DateTime();
                                 $dmy = $date->format('dmYHis');
@@ -485,7 +524,7 @@ class creancesRepo extends ServiceEntityRepository
                                 $sql="insert into paiement_accord (`id_paiement_id`,`id_details_accord_id`) values(".$maxPaiement.",".$autreDetail["id"].")";
                                 $stmt = $this->conn->prepare($sql)->executeQuery();
                                 
-                                $total=($creance->getTotalRestant()-$autreDetail->getMontantRestant());
+                                $total=($creance->getTotalRestant()-$autreDetail["montant_restant"]);
                                 $creance->setTotalRestant($total);
                                 $this->em->flush();
 
@@ -501,8 +540,8 @@ class creancesRepo extends ServiceEntityRepository
                                 $sql="update details_accord set `id_status_id`=2,`id_type_paiement_id`=".$typePaiement->getId().", `montant_paiement`=".$rest.", `montant_restant`=".($autreDetail["montant_restant"]-$rest).", `date_paiement`=sysdate() where id=".$autreDetail["id"];
                                 $stmt = $this->conn->prepare($sql)->executeQuery();
 
-                                $nbrAccordsAgent++;
-                                $montantAccordsAgent+=$rest;
+                                // $nbrAccordsAgent++;
+                                // $montantAccordsAgent+=$rest;
 
                                 $date=new \DateTime();
                                 $dmy = $date->format('dmYHis');
@@ -669,14 +708,54 @@ class creancesRepo extends ServiceEntityRepository
         }
     }
     
-    public function getListeAccordByDossier($id){
-        $query = $this->em->createQuery('SELECT a  from App\Entity\Accord a   where a.id in (SELECT identity(ca.id_accord) from App\Entity\CreanceAccord ca  where identity(ca.id_creance) in (select c.id from App\Entity\Creance c where identity(c.id_dossier) = :id) )')
-        ->setParameters([
-            'id' => $id
-        ]);
-        $result = $query->getResult();
-        return $result;
+
+
+    public function getListeAccordByDossier($id)
+    {
+        $sql = "SELECT * FROM creance WHERE id_dossier_id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $resultat = $stmt->executeQuery(['id' => $id])->fetchAll(); // Fetch all creances for the dossier
+        
+        $resultatArray = [];
+        $existingAccordIds = []; // Array to keep track of the unique accord IDs
+
+        foreach ($resultat as $creance) {
+            $creanceId = $creance['id'];
+    
+            // Query for the accords, including the status and type of payment
+            $sqlAccord = "
+                SELECT 
+                    a.*, 
+                    sa.status AS status_statut, 
+                    tp.type AS type_paiement 
+                FROM accord a
+                LEFT JOIN status_accord sa ON a.id_status_id = sa.id
+                LEFT JOIN type_paiement tp ON a.id_type_paiement_id = tp.id
+                WHERE a.id IN (
+                    SELECT distinct id_accord_id FROM creance_accord WHERE id_creance_id = :creanceId
+                )
+            ";
+            $stmtAccord = $this->conn->prepare($sqlAccord);
+            $accords = $stmtAccord->executeQuery(['creanceId' => $creanceId])->fetchAll(); // Fetch accords with joins
+    
+            // Merge results into the final array
+            foreach ($accords as $accord) {
+                $accordId = $accord['id'];
+    
+                // Check if the accord has already been added to the result array
+                if (!in_array($accordId, $existingAccordIds)) {
+                    $resultatArray[] = $accord; // Add the unique accord to the result array
+                    $existingAccordIds[] = $accordId; // Mark this accord ID as processed
+                }
+            }
+
+        }
+    
+        return $resultatArray;
     }
+        
+
+
     public function getListeCreanceByDoss($id){
         $sql="select * from creance where id_dossier_id = ".$id." and total_restant != '0'";
         $stmt = $this->conn->prepare($sql)->executeQuery();
@@ -691,6 +770,21 @@ class creancesRepo extends ServiceEntityRepository
             $stmt = $stmt->executeQuery();
             $type = $stmt->fetchAssociative();
             $resultatArray[$i]['type_creance'] = $type;
+
+            // Fetch the detail_creance associated with the current creance
+            $sql = "SELECT * FROM `detail_creance` WHERE id_creance_id = ".$resultat[$i]["id"]."";
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $detailsCreance = $stmt->fetchAssociative();
+            $resultatArray[$i]['detail_creance'] = $detailsCreance;
+
+            $sql="SELECT * FROM `portefeuille` where id = ".$resultat[$i]['id_ptf_id']."";
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $portefeuille = $stmt->fetchAssociative();
+            $resultatArray[$i]['portefeuille'] = $portefeuille;
+
+            $resultatArray[$i]['allDebiteur'] = $this->getListesDebiteurByDossier($resultat[$i]["id"]);
 
         }
 
@@ -733,62 +827,83 @@ class creancesRepo extends ServiceEntityRepository
     }
 
     public function createPromise($data){
-        $sql = "INSERT INTO `promise` (";
-        $values = [];
-        foreach ($data as $key => $value) {
-            // Enclose column names within backticks if needed
-            $values[] = "`$key`";
-            
-        }
-        $sql .= implode(', ', $values) . ')';
-        
-        $sql .= ' VALUES (';  
-
-        $params = [];
-        foreach ($data as $key => $value) {
-            // Enclose column names within backticks if needed
-            if($key != "date_creation"){
-                $params[] = '"'.$value.'"';
-            }else{
-                $params[] = 'now()';
+        // Convert date format for MySQL
+        if (isset($data['date']) && $data['date']) {
+            $dateObj = DateTime::createFromFormat('d/m/Y', $data['date']);
+            if ($dateObj) {
+                $data['date'] = $dateObj->format('Y-m-d H:i:s');
             }
         }
-        $sql .= implode(', ', $params) . ')';
-        $stmt = $this->conn->prepare($sql);
-        $stmt = $stmt->executeQuery();
-        
-        if($stmt){
-            $sql="SELECT max(id) FROM `promise`";
+    
+        // Convert date_creation to string format
+        $data['date_creation'] = date('Y-m-d H:i:s');
+    
+        $sql = "INSERT INTO `promise` (";
+        $columns = [];
+        $placeholders = [];
+        $values = [];
+    
+        foreach ($data as $key => $value) {
+            // Skip null or empty values
+            if ($value === null || $value === '') {
+                continue;
+            }
+    
+            $columns[] = "`$key`";
+            $placeholders[] = "?";
+            $values[] = $value;
+        }
+    
+        $sql .= implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')';
+    
+        try {
             $stmt = $this->conn->prepare($sql);
-            $stmt = $stmt->executeQuery();
-            $resulat = $stmt->fetchOne();
-            return $resulat;
-        }else{
+            $stmt->executeQuery($values);
+    
+            // Fetch and return the last inserted ID
+            $resultStmt = $this->conn->prepare("SELECT LAST_INSERT_ID()");
+            $result = $resultStmt->executeQuery();
+            return $result->fetchOne();
+        } catch (\Exception $e) {
+            // Log the error
+            error_log('Promise creation error: ' . $e->getMessage());
             return null;
         }
     }
 
-    public function updatePromise($data , $id){
-        // $primaryKey = "id";
+    public function updatePromise($data, $id){
+        // Convert date format for MySQL
+        if (isset($data['date']) && $data['date']) {
+            $dateObj = DateTime::createFromFormat('d/m/Y', $data['date']);
+            if ($dateObj) {
+                $data['date'] = $dateObj->format('Y-m-d H:i:s');
+            }
+        }
+
+
         $sql = "UPDATE `promise` SET ";
         $setClauses = [];
         foreach ($data as $key => $value) {
-            // Enclose column names within backticks if needed
-                $setClauses[] = "`$key` = :$key";
+            $setClauses[] = "`$key` = :$key";
         }
         $sql .= implode(', ', $setClauses);
-        // You need to specify which row to update, typically using the primary key
         $sql .= " WHERE `id` = :id";
+        
         $stmt = $this->conn->prepare($sql);
-        // Bind parameters for the SET clauses
+        
+        // Use bindValue instead of bindParam
         foreach ($data as $key => $value) {
-            $stmt->bindParam($key, $value);  // Use $key directly as the parameter name
-            // Bind the primary key parameter
+            // Handle special cases
+            if ($value === 'now()') {
+                $stmt->bindValue($key, date('Y-m-d H:i:s'), \PDO::PARAM_STR);
+            } else {
+                $stmt->bindValue($key, $value);
+            }
         }
-        $stmt->bindParam("id", $id);
-        $stmt = $stmt->executeQuery();
+        $stmt->bindValue("id", $id);
+        
+        return $stmt->executeQuery();
     }
-
     
     public function getListPromise($id){
         $entity  = $this->em->getRepository(Promise::class)->findBy(['id_creance'=>$id]);
@@ -822,6 +937,29 @@ class creancesRepo extends ServiceEntityRepository
         return $task;
     }
 
+    public function addTaskWithAssigned($creance, $activity, $dateEcheance, $time, $assigned , $user , $comment, $assignedUser, $assignedD, $dep)
+    {
+        $user = $this->getUser($user);
+        $task = new Task();
+        $task->setIdCreance($creance);
+        $task->setIdActivity($activity);
+        $task->setDateEcheance($dateEcheance);
+        $task->setTemps($time);
+        $task->setAssignedType($assigned);
+        $task->setDateCreation(new \DateTime());
+        $task->setCreatedBy($user);
+        $task->setCommentaire($comment);
+        $task->setAssignedUser($assignedUser);
+        $task->setEquipe($assignedD);
+        $task->setAssignedDepartement($dep);
+        $this->em->persist($task);
+        $this->em->flush();
+
+        return $task;
+    }
+
+
+    
     public function addAssignedTask($task,  $user)
     {
         $user = $this->getUser($user);
@@ -836,6 +974,11 @@ class creancesRepo extends ServiceEntityRepository
     public function getUtilisateurs($id){
         $entity  = $this->em->getRepository(Utilisateurs::class)->findAll();
         return $entity;
+    }
+
+    public function getEquipes(){
+        $teams  = $this->em->getRepository(Teams::class)->findAll();
+        return $teams;
     }
 
     public function getListTask($id){
@@ -937,7 +1080,7 @@ class creancesRepo extends ServiceEntityRepository
     public function getModelSMS($id){
         return $this->em->getRepository(ModelSMS::class)->find($id);
     }
-    public function addActivity($creance, $activity, $assigned , $user , $comment)
+    public function addActivity($creance, $activity, $assigned , $user , $comment, $type, $debiteur, $personne, $email, $telephone, $adresse, $activite)
     {
         $user = $this->getUser($user);
         $task = new CreanceActivite();
@@ -947,6 +1090,14 @@ class creancesRepo extends ServiceEntityRepository
         $task->setDateCreation(new \DateTime());
         $task->setCreatedBy($user);
         $task->setCommentaire($comment);
+        $task->setIdParamParent($type);
+        $task->setTypeActivite($activite);
+        $task->setDebiteur($debiteur);
+        $task->setPersonne($personne);
+        $task->setEmail($email);
+        $task->setTelephone($telephone);
+        $task->setAdresse($adresse);
+
         $this->em->persist($task);
         $this->em->flush();
 
@@ -974,12 +1125,19 @@ class creancesRepo extends ServiceEntityRepository
         // Fetch type information for each telephone
         
         for ($i=0; $i <count($resulat) ; $i++) { 
-            $sql = "SELECT * FROM `details_type_deb` dt where dt.id in (select d.id_type_id from type_debiteur d where d.id_creance_id in (select c.id from creance c where c.id_dossier_id = :id));";
+            $sql = "SELECT * FROM `details_type_deb` dt 
+                    WHERE dt.id IN (
+                        SELECT d.id_type_id 
+                        FROM type_debiteur d 
+                        WHERE d.id_creance_id = :id 
+                        AND d.id_debiteur_id = :idDebiteur
+                    )";
             $stmt = $this->conn->prepare($sql);
-            $stmt->bindParam('id', $resulat[$i]['id']);
+            $stmt->bindParam('idDebiteur', $resulat[$i]['id']);
+            $stmt->bindParam('id', $id);
             $stmt = $stmt->executeQuery();
             $type = $stmt->fetchAssociative();
-            $resulat[$i]["type"] = $type;
+            $resulat[$i]["type"] = $type ? $type : null;  // Ensure it handles the case when no type is found
         }
 
         for ($i=0; $i <count($resulat) ; $i++) { 
@@ -990,6 +1148,757 @@ class creancesRepo extends ServiceEntityRepository
             $type = $stmt->fetchAll();
             $resulat[$i]["relation"] = $type;
         }
+
+        for ($i=0; $i <count($resulat) ; $i++) { 
+            $sql = "SELECT * FROM `telephone` t where  t.id_debiteur_id =:id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam('id', $resulat[$i]['id']);
+            $stmt = $stmt->executeQuery();
+            $type = $stmt->fetchAll();
+            $resulat[$i]["telephones"] = $type;
+        }
+
+        for ($i=0; $i <count($resulat) ; $i++) { 
+            $sql = "SELECT * FROM `adresse` a where  a.id_debiteur_id =:id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam('id', $resulat[$i]['id']);
+            $stmt = $stmt->executeQuery();
+            $type = $stmt->fetchAll();
+            $resulat[$i]["adresses"] = $type;
+        }
+
+        for ($i=0; $i <count($resulat) ; $i++) { 
+            $sql = "SELECT * FROM `email` e where  e.id_debiteur_id =:id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam('id', $resulat[$i]['id']);
+            $stmt = $stmt->executeQuery();
+            $type = $stmt->fetchAll();
+            $resulat[$i]["emails"] = $type;
+        }
         return $resulat;
     }
+
+
+    public function deletePromise($id){
+        $promise  = $this->em->getRepository(Promise::class)->find($id);
+        $this->em->remove($promise);
+        $this->em->flush();
+    }
+
+
+    public function deletePaiement($id){
+        // Start a transaction
+        $this->em->beginTransaction();
+    
+        try {
+            // Find the Paiement entity
+            $paiement = $this->em->getRepository(Paiement::class)->find($id);
+            
+            if (!$paiement) {
+                return 'NOT_EXIST_PAIEMENT';
+            }
+    
+
+            // Remove related PaiementAccord entries
+            $paiementAccordEntries = $this->em->getRepository(PaiementAccord::class)
+                ->findBy(['id_paiement' => $paiement]);
+            
+            foreach ($paiementAccordEntries as $paiementAccord) {
+                $detailsAccord = $paiementAccord->getIdDetailsAccord();
+                
+                // Remove PaiementAccord
+                $this->em->remove($paiementAccord);
+    
+                // Check if we can remove DetailsAccord
+                if ($detailsAccord) {
+                    $relatedPaiements = $this->em->getRepository(PaiementAccord::class)
+                        ->findBy(['id_details_accord' => $detailsAccord]);
+                    
+                    // If no other paiements are linked to this DetailsAccord
+                    if (count($relatedPaiements) <= 1) {
+                        // Get the associated Accord
+                        $accord = $detailsAccord->getIdAccord();
+                        
+                        // Remove DetailsAccord
+                        $this->em->remove($detailsAccord);
+    
+                        // Check if we can remove Accord
+                        if ($accord) {
+                            $remainingDetailsAccords = $this->em->getRepository(DetailsAccord::class)
+                                ->findBy(['id_accord' => $accord]);
+                            
+                            // If no other DetailsAccords exist for this Accord
+                            if (count($remainingDetailsAccords) <= 1) {
+                                // Remove associated CreanceAccord
+                                $creanceAccords = $this->em->getRepository(CreanceAccord::class)
+                                    ->findBy(['id_accord' => $accord]);
+                                
+                                foreach ($creanceAccords as $creanceAccord) {
+                                    $this->em->remove($creanceAccord);
+                                }
+    
+                                // Remove Accord
+                                $this->em->remove($accord);
+                            }
+                        }
+                    }
+                }
+            }
+
+            $creance = $this->em->getRepository(Creance::class)->find($paiement->getIdCreance());
+            if($creance)
+            {
+                $montant = $paiement->getMontant();
+    
+                $total=($creance->getTotalRestant()+$montant);
+                $creance->setTotalRestant($total);
+    
+            }
+
+            // Remove the Paiement
+            $this->em->remove($paiement);
+    
+            // Flush all changes
+            $this->em->flush();
+    
+            // Commit the transaction
+            $this->em->commit();
+            return "OK";
+
+    
+        } catch (\Exception $e) {
+            // Rollback the transaction
+            $this->em->rollback();
+    
+            // Re-throw the exception or handle it as needed
+            throw $e;
+        }
+    }
+
+
+    public function deleteTask($id)
+    {
+        // Start a transaction
+        $this->em->beginTransaction();
+    
+        try {
+            // Find the Task entity
+            $task = $this->em->getRepository(Task::class)->find($id);
+            
+            if (!$task) {
+                return 'NOT_EXIST_TASK';
+
+            }
+    
+            // Remove related TaskAssigned entries
+            $taskAssignedEntries = $this->em->getRepository(TaskAssigned::class)
+                ->findBy(['id_task' => $task]);
+            
+            foreach ($taskAssignedEntries as $taskAssigned) {
+                // Remove TaskAssigned
+                $this->em->remove($taskAssigned);
+            }
+    
+            // Remove the Task
+            $this->em->remove($task);
+    
+            // Flush all changes
+            $this->em->flush();
+    
+            // Commit the transaction
+            $this->em->commit();
+    
+            return "OK";
+    
+        } catch (\Exception $e) {
+            // Rollback the transaction
+            $this->em->rollback();
+    
+            // Re-throw the exception or handle it as needed
+            throw $e;
+        }
+    }
+
+    public function getBookMarks($idUser)
+    {
+        $sql = '
+            SELECT c.* 
+            FROM creance c
+            WHERE c.id IN (
+                SELECT b.id_creance_id 
+                FROM bookmarks b
+                WHERE b.id_user_id = "'.$idUser.'"
+            )';
+    
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAll();
+        return $resulat;
+    }
+    
+    
+
+    public function addRecentCreance($creance, $user)
+    {
+        $user = $this->getUser($user);
+        $creance = $this->getCreance($creance);
+    
+        // Check if the recentCreance entry already exists
+        $recentCreance = $this->em->getRepository(RecentCreance::class)
+            ->findOneBy(['user_id' => $user, 'creance_id' => $creance]);
+    
+        // If it exists, remove it
+        if ($recentCreance) {
+            $this->em->remove($recentCreance);
+            $this->em->flush();
+        }
+    
+        // Create a new RecentCreance entry
+        $recent = new RecentCreance();
+        $recent->setUserId($user);
+        $recent->setDate(new \DateTime());
+        $recent->setCreanceId($creance);
+    
+        // Persist and flush the new entry
+        $this->em->persist($recent);
+        $this->em->flush();
+    
+        return $recent;
+    }
+
+    public function getRecentsCreance($idUser)
+    {
+        $sql = '
+        SELECT c.* 
+        FROM creance c
+        INNER JOIN recent_creance r ON c.id = r.creance_id_id
+        WHERE r.user_id_id = '.$idUser.'
+        ORDER BY r.date DESC';
+    
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAll();
+        return $resulat;
+    }
+
+    public function getAccordWithDetails($id)
+    {
+        // Fetch the main accord
+        $sql = "
+            SELECT 
+                a.*, 
+                tp.type AS type_paiement,
+                sa.status AS status_accord
+            FROM 
+                accord a
+            LEFT JOIN 
+                type_paiement tp ON a.id_type_paiement_id = tp.id
+            LEFT JOIN 
+                status_accord sa ON a.id_status_id = sa.id
+            WHERE 
+                a.id = :id;
+        ";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':id', $id);
+        $stmt = $stmt->executeQuery();
+        $accord = $stmt->fetchAssociative();
+
+        if ($accord) {
+            // Fetch the details, attachments, and notes for this accord
+            $accord['details'] = $this->getDetailsAccord($id);
+            $accord['attachments'] = $this->getAccordAttachments($id);
+            $accord['notes'] = $this->getAccordNotes($id);
+            $accord['creances'] = $this->getAccordCreances($id);
+
+        }
+    
+        return $accord;
+    }
+
+    public function getDetailsAccord($id)
+    {
+        $sql = "
+            SELECT 
+                da.*, 
+                tp.type AS type_paiement,
+                sa.status AS status_accord
+            FROM 
+                details_accord da
+            INNER JOIN 
+                accord a ON da.id_accord_id = a.id
+            LEFT JOIN 
+                type_paiement tp ON da.id_type_paiement_id = tp.id
+            LEFT JOIN 
+                status_details_accord sa ON da.id_status_id = sa.id
+            WHERE 
+                da.id_accord_id = :id;
+        ";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':id', $id);
+        $stmt = $stmt->executeQuery();
+
+        // Fetch all associative results
+        return $stmt->fetchAllAssociative();
+    }   
+
+    public function getAccordAttachments($id)
+    {
+        $sql = "
+            SELECT 
+                pj.* 
+            FROM 
+                accord_pj pj
+            WHERE 
+                pj.id_accord_id = :id;
+        ";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':id', $id);
+        $stmt = $stmt->executeQuery();
+
+        return $stmt->fetchAllAssociative();
+    }
+
+    public function getAccordNotes($id)
+    {
+        $sql = "
+            SELECT 
+                n.* 
+            FROM 
+                accord_notes n
+            WHERE 
+                n.id_accord_id = :id
+            ORDER BY 
+                n.date_creation DESC;
+        ";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':id', $id);
+        $stmt = $stmt->executeQuery();
+
+        return $stmt->fetchAllAssociative();
+    }
+
+    public function UpdateAccord($id, $dataAccord)
+    {
+        $sql = "
+            UPDATE accord
+            SET 
+                date_premier_paiement = :date_premier_paiement,
+                date_fin_paiement = :date_fin_paiement,
+                nbr_echeanciers = :nbr_echeanciers
+            WHERE id = :id;
+        ";
+    
+        // Prepare the SQL query
+        $stmt = $this->conn->prepare($sql);
+    
+        // Bind the parameters to the prepared statement
+        $stmt->bindParam(':date_premier_paiement', $dataAccord['date_premier_paiement']);
+        $stmt->bindParam(':date_fin_paiement', $dataAccord['date_fin_paiement']);
+        $stmt->bindParam(':nbr_echeanciers', $dataAccord['nbr_echeanciers'], \PDO::PARAM_INT);
+        $stmt->bindParam(':id', $id, \PDO::PARAM_INT);
+    
+        // Execute the query and return the result
+        return $stmt->execute();
+    }
+        
+    public function deleteDetailsByAccordId($accordId)
+    {
+        $sql = "
+            DELETE FROM details_accord
+            WHERE id_accord_id = :id_accord_id;
+        ";
+    
+        // Prepare and execute the delete query
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':id_accord_id', $accordId, \PDO::PARAM_INT);
+        return $stmt->execute();
+    }
+  
+    public function deleteNotesByAccordId($accordId)
+    {
+        $sql = "
+            DELETE FROM accord_notes
+            WHERE id_accord_id = :id_accord_id;
+        ";
+
+        // Prepare and execute the delete query
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':id_accord_id', $accordId, \PDO::PARAM_INT);
+        return $stmt->execute();
+    }
+
+
+    public function getAccordCreances($id)
+    {
+        // Query to fetch creances and their type_creance
+        $sql = "
+            SELECT 
+                c.*, 
+                dtc.type AS type_creance
+            FROM 
+                creance c
+            INNER JOIN 
+                creance_accord ca ON c.id = ca.id_creance_id
+            LEFT JOIN 
+                details_type_creance dtc ON c.id_type_creance_id = dtc.id
+            WHERE 
+                ca.id_accord_id = :id;
+        ";
+    
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':id', $id);
+        $stmt = $stmt->executeQuery();
+    
+        // Fetch all creances with their type_creance
+        return $stmt->fetchAllAssociative();
+    }
+    
+    public function updateCreance($data, $id){
+        // Convert date format for MySQL
+        if (isset($data['date']) && $data['date']) {
+            $dateObj = DateTime::createFromFormat('d/m/Y', $data['date']);
+            if ($dateObj) {
+                $data['date'] = $dateObj->format('Y-m-d H:i:s');
+            }
+        }
+
+
+        $sql = "UPDATE `creance` SET ";
+        $setClauses = [];
+        foreach ($data as $key => $value) {
+            $setClauses[] = "`$key` = :$key";
+        }
+        $sql .= implode(', ', $setClauses);
+        $sql .= " WHERE `id` = :id";
+        
+        $stmt = $this->conn->prepare($sql);
+        
+        // Use bindValue instead of bindParam
+        foreach ($data as $key => $value) {
+            // Handle special cases
+            if ($value === 'now()') {
+                $stmt->bindValue($key, date('Y-m-d H:i:s'), \PDO::PARAM_STR);
+            } else {
+                $stmt->bindValue($key, $value);
+            }
+        }
+        $stmt->bindValue("id", $id);
+        
+        return $stmt->executeQuery();
+    }
+
+
+    public function UpdateAccordEtat($id, $dataAccord)
+    {
+        $sql = "
+            UPDATE accord
+            SET 
+                id_status_id = :id_status_id,
+                motif = :motif
+            WHERE id = :id;
+        ";
+    
+        // Prepare the SQL query
+        $stmt = $this->conn->prepare($sql);
+    
+        // Bind the parameters to the prepared statement
+        $stmt->bindParam(':id_status_id', $dataAccord['id_status_id']);
+        $stmt->bindParam(':motif', $dataAccord['motif']);
+        $stmt->bindParam(':id', $id, \PDO::PARAM_INT);
+    
+        // Execute the query and return the result
+        return $stmt->execute();
+    }
+
+
+    public function UpdateAccordSave($id, $dataAccord)
+    {
+        // Prepare the SQL query with the correct fields
+        $sql = "
+            UPDATE accord
+            SET 
+                date_premier_paiement = :date_premier_paiement,
+                date_fin_paiement = :date_fin_paiement,
+                nbr_echeanciers = :nbr_echeanciers,
+                remise = :remise,
+                montant_a_payer = :montant_a_payer,
+                montant_de_base = :montant_de_base
+            WHERE id = :id;
+        ";
+
+        // Prepare the SQL statement
+        $stmt = $this->conn->prepare($sql);
+
+        // Bind the parameters to the prepared statement
+        $stmt->bindParam(':date_premier_paiement', $dataAccord['date_premier_paiement']);
+        $stmt->bindParam(':date_fin_paiement', $dataAccord['date_fin_paiement']);
+        $stmt->bindParam(':nbr_echeanciers', $dataAccord['nbr_echeanciers'], \PDO::PARAM_INT);
+        $stmt->bindParam(':remise', $dataAccord['remise']);
+        $stmt->bindParam(':montant_a_payer', $dataAccord['montant_a_payer']);
+        $stmt->bindParam(':montant_de_base', $dataAccord['montant_de_base']);
+        $stmt->bindParam(':id', $id, \PDO::PARAM_INT);
+
+        // Execute the query and return the result
+        return $stmt->execute();
+    }
+
+
+    public function getOneActivite($idActivite){
+
+        return $this->em->getRepository(CreanceActivite::class)->findOneBy(["id" => $idActivite]);
+
+    }
+
+    public function getOneDebiteur($id){
+
+        return $this->em->getRepository(Debiteur::class)->findOneBy(["id" => $id]);
+
+    }
+
+    public function getOnePersonne($id){
+
+        return $this->em->getRepository(Personne::class)->findOneBy(["id" => $id]);
+
+    }
+
+    public function getOneTelephone($id){
+
+        return $this->em->getRepository(Telephone::class)->findOneBy(["id" => $id]);
+
+    }
+
+    public function getOneEmail($id){
+
+        return $this->em->getRepository(Email::class)->findOneBy(["id" => $id]);
+
+    }
+
+    public function getOneAdresse($id){
+
+        return $this->em->getRepository(Adresse::class)->findOneBy(["id" => $id]);
+
+    }
+
+
+    public function getCalendrierTache($id)
+    {
+        // Query to fetch tasks assigned to the user
+        $sql = "
+            SELECT 
+                t.* 
+            FROM 
+                task t
+            WHERE 
+                t.assigned_user_id = :id;
+        ";
+    
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':id', $id);
+        $stmt = $stmt->executeQuery();
+    
+        // Fetch all tasks
+        return $stmt->fetchAllAssociative();
+    }
+
+    public function getCalendrierTacheByTeam($id)
+    {
+        // Query to fetch tasks assigned to the team
+        $sql = "
+            SELECT 
+                t.* 
+            FROM 
+                task t
+            WHERE 
+                t.equipe_id = :id;
+        ";
+    
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':id', $id);
+        $stmt = $stmt->executeQuery();
+    
+        // Fetch all tasks
+        return $stmt->fetchAllAssociative();
+    }
+    
+    public function getCalendrierTacheByDepartement($id)
+    {
+        // Query to fetch tasks assigned to the department
+        $sql = "
+            SELECT 
+                t.* 
+            FROM 
+                task t
+            WHERE 
+                t.assigned_departement_id = :id;
+        ";
+    
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':id', $id);
+        $stmt = $stmt->executeQuery();
+    
+        // Fetch all tasks
+        return $stmt->fetchAllAssociative();
+    }
+
+
+    /*public function getProductionByUser()
+    {
+        $sqlAccord = "
+            SELECT 
+                a.*, 
+            FROM 
+                accord a
+            WHERE 
+                a.id_users_id = :id;
+        ";
+
+        $stmtAcc = $this->conn->prepare($sqlAccord);
+        $stmtAcc->bindParam(':id', $id);
+        $stmtAcc = $stmtAcc->executeQuery();
+
+
+        $sql = "
+            SELECT 
+                c.*, 
+            FROM 
+                creance_activite c
+            WHERE 
+                c.created_by_id = :id;
+        ";
+        
+
+        // Fetch all creances with their type_creance
+        return $stmtAcc->fetchAllAssociative();
+    }*/
+
+
+    public function getProductionByUser($id)
+    {
+        // Query for accord table
+        $sqlAccord = "
+            SELECT 
+                a.* 
+            FROM 
+                accord a
+            WHERE 
+                a.id_users_id = :id;
+        ";
+
+        $stmtAcc = $this->conn->prepare($sqlAccord);
+        $stmtAcc->bindParam(':id', $id);
+        $stmtAcc = $stmtAcc->executeQuery();
+        $accords = $stmtAcc->fetchAllAssociative();
+
+        // Query for creance_activite table
+        $sqlCreance = "
+            SELECT 
+                c.* 
+            FROM 
+                creance_activite c
+            WHERE 
+                c.created_by_id = :id;
+        ";
+
+        $stmtCreance = $this->conn->prepare($sqlCreance);
+        $stmtCreance->bindParam(':id', $id);
+        $stmtCreance = $stmtCreance->execute();
+        $creances = $stmtCreance->fetchAllAssociative();
+
+
+        // Query for creance_activite table
+        $sqlPromesse = "
+            SELECT 
+                p.* 
+            FROM 
+                promise p
+            WHERE 
+                p.id_user_id = :id;
+        ";
+
+        $stmtPro = $this->conn->prepare($sqlPromesse);
+        $stmtPro->bindParam(':id', $id);
+        $stmtPro = $stmtPro->execute();
+        $promisses = $stmtPro->fetchAllAssociative();
+    
+
+        // Combine results
+        $result = [
+            'accords' => $accords,
+            'creances' => $creances,
+            'promisses' => $promisses
+        ];
+
+        return $result;
+    }
+
+    public function getProductionByUsers(array $ids)
+    {
+        if (empty($ids)) {
+            return [
+                'accords' => [],
+                'creances' => [],
+                'promesses' => []
+            ];
+        }
+    
+        // Convert array of IDs to a comma-separated string
+        $idsString = implode(',', array_map('intval', $ids));
+    
+        // Query for accord table
+        $sqlAccord = "
+            SELECT 
+                a.* 
+            FROM 
+                accord a
+            WHERE 
+                a.id_users_id IN ($idsString);
+        ";
+    
+        $stmtAcc = $this->conn->prepare($sqlAccord);
+        $stmtAcc = $stmtAcc->execute();
+        $accords = $stmtAcc->fetchAllAssociative();
+    
+        // Query for creance_activite table
+        $sqlCreance = "
+            SELECT 
+                c.* 
+            FROM 
+                creance_activite c
+            WHERE 
+                c.created_by_id IN ($idsString);
+        ";
+    
+        $stmtCreance = $this->conn->prepare($sqlCreance);
+        $stmtCreance = $stmtCreance->execute();
+        $creances = $stmtCreance->fetchAllAssociative();
+    
+        // Query for promesse table
+        $sqlPromesse = "
+            SELECT 
+                p.* 
+            FROM 
+                promise p
+            WHERE 
+                p.id_user_id IN ($idsString);
+        ";
+    
+        $stmtPromesse = $this->conn->prepare($sqlPromesse);
+        $stmtPromesse = $stmtPromesse->execute();
+        $promesses = $stmtPromesse->fetchAllAssociative();
+    
+        // Combine results
+        return [
+            'accords' => $accords,
+            'creances' => $creances,
+            'promesses' => $promesses
+        ];
+    }
+    
+
+
+    
 }

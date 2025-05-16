@@ -19,6 +19,7 @@ class GroupeCompetence
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $dateCreation = null;
+    
 
     public function getId(): ?int
     {

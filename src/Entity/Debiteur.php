@@ -70,9 +70,17 @@ class Debiteur
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $rc = null;
 
+    #[ORM\OneToMany(mappedBy: 'idDebiteur', targetEntity: Accord::class)]
+    private Collection $accords;
+
+    #[ORM\OneToMany(mappedBy: 'debiteur', targetEntity: CreanceActivite::class)]
+    private Collection $creanceActivites;
+
     public function __construct()
     {
         $this->y = new ArrayCollection();
+        $this->accords = new ArrayCollection();
+        $this->creanceActivites = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -310,6 +318,66 @@ class Debiteur
     public function setRc(?string $rc): static
     {
         $this->rc = $rc;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Accord>
+     */
+    public function getAccords(): Collection
+    {
+        return $this->accords;
+    }
+
+    public function addAccord(Accord $accord): static
+    {
+        if (!$this->accords->contains($accord)) {
+            $this->accords->add($accord);
+            $accord->setIdDebiteur($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAccord(Accord $accord): static
+    {
+        if ($this->accords->removeElement($accord)) {
+            // set the owning side to null (unless already changed)
+            if ($accord->getIdDebiteur() === $this) {
+                $accord->setIdDebiteur(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, CreanceActivite>
+     */
+    public function getCreanceActivites(): Collection
+    {
+        return $this->creanceActivites;
+    }
+
+    public function addCreanceActivite(CreanceActivite $creanceActivite): static
+    {
+        if (!$this->creanceActivites->contains($creanceActivite)) {
+            $this->creanceActivites->add($creanceActivite);
+            $creanceActivite->setDebiteur($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCreanceActivite(CreanceActivite $creanceActivite): static
+    {
+        if ($this->creanceActivites->removeElement($creanceActivite)) {
+            // set the owning side to null (unless already changed)
+            if ($creanceActivite->getDebiteur() === $this) {
+                $creanceActivite->setDebiteur(null);
+            }
+        }
 
         return $this;
     }

@@ -2,6 +2,7 @@
 
 namespace App\Repository\DonneurOrdreAndPTF;
 
+use App\Entity\Creance;
 use App\Entity\Champs;
 use App\Entity\ContactDonneurOrdre;
 use App\Entity\ContactHistorique;
@@ -14,6 +15,8 @@ use App\Entity\Portefeuille;
 use App\Entity\PtfTypeCreanceD;
 use App\Entity\TypeDonneur;
 use App\Entity\DetailsSecteurActivite;
+use App\Entity\Integration;
+use App\Entity\ReglePortefeuille;
 use DateTime;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -165,7 +168,7 @@ class donneurRepo extends ServiceEntityRepository
 
     public function UpdateContact($id, $nom, $prenom, $poste, $email, $tel, $mobile, $adresse)
     {
-        if ($id && $nom && $prenom && $poste && $email && $tel && $mobile && $adresse) {
+        if ($id && $nom && $prenom && $poste && $email && $tel) {
 
             $contact = $this->em->getRepository(ContactDonneurOrdre::class)->findOneBy(["id" => (int)$id]);
 
@@ -173,8 +176,8 @@ class donneurRepo extends ServiceEntityRepository
             $contact->setPrenom($prenom);
             $contact->setposte($poste);
             $contact->setemail($email);
-            $contact->setMobile($tel);
-            $contact->settel($mobile);
+            $contact->setMobile($mobile);
+            $contact->settel($tel);
             $contact->setAdresse($adresse);
 
             $this->em->persist($contact);
@@ -190,6 +193,13 @@ class donneurRepo extends ServiceEntityRepository
 
             return false;
         } else {
+
+            $portefeuille = $this->em->getRepository(Portefeuille::class)->findBy(['id_donneur_ordre' => $id]);
+            if (!empty($portefeuille) ) {
+                // Return error message if creances or integrations exist
+                return "Le donneur ordre ne peut pas être supprimé car des portefeuilles sont associées.";
+            }
+
             $contacts = $this->em->getRepository(ContactHistorique::class)->findBy(['idDonneur' => $id]);
             foreach ($contacts as $contact) {
                 $this->em->remove($contact);
@@ -205,7 +215,7 @@ class donneurRepo extends ServiceEntityRepository
             $this->em->remove($donneur);
             $this->em->flush();
 
-            return true;
+            return 'OK';
         }
         return false;
     }
@@ -324,19 +334,41 @@ class donneurRepo extends ServiceEntityRepository
         $portefeuille = $this->em->getRepository(Portefeuille::class)->findOneBy(["id" => $id]);
         if (!$portefeuille) {
 
-            return false;
-        } else {
+            return "Une error s'est produite !";
+
+        } 
+        else {
+
+            $creances = $this->em->getRepository(Creance::class)->findBy(['id_ptf' => $id]);
+            $integrations = $this->em->getRepository(Integration::class)->findBy(['id_ptf' => $id]);
+            if (!empty($creances) || !empty($integrations)) {
+                // Return error message if creances or integrations exist
+                return "Le portefeuille ne peut pas être supprimé car des créances ou intégrations sont associées.";
+            }
+        
 
             $champs = $this->em->getRepository(Champs::class)->findBy(['form' => $id]);
             foreach ($champs as $champ) {
                 $this->em->remove($champ);
             }
+
+            $ptfs = $this->em->getRepository(PtfTypeCreanceD::class)->findBy(['id_ptf' => $id]);
+            foreach ($ptfs as $ptf) {
+                $this->em->remove($ptf);
+            }
+
+            $regles = $this->em->getRepository(ReglePortefeuille::class)->findBy(['idPtf' => $id]);
+            foreach ($regles as $regle) {
+                $this->em->remove($regle);
+            }
+
+
             $this->em->remove($portefeuille);
             $this->em->flush();
 
-            return true;
+            return "OK";
         }
-        return false;
+        return "Une error s'est produite !";
     }
 
 

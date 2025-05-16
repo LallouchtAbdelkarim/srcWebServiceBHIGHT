@@ -10,6 +10,7 @@ use App\Entity\TypeUtilisateur;
 use App\Entity\Groupe;
 use App\Entity\GroupProfil;
 use App\Entity\ListesRoles;
+use App\Entity\Missions;
 use App\Entity\Profil;
 use App\Entity\Roles;
 use App\Entity\Utilisateurs;
@@ -72,41 +73,48 @@ class UsersController extends AbstractController
                     if($pr){
                         $codeStatut='TITRE_DEJE_EXIST';
                     }else{
-                        $profil = new Profil();
-                        $profil->setTitre($data['titre']);
-                        $profil->setDateCreation(new \DateTime());
-                        $entityManager->persist($profil);
-                        $entityManager->flush();
-            
-                        $inputRoles = array_keys($data['input']);
-                        $compTenc = array_keys($data['comp']);
-            
-                        foreach ($Liste_roles as $roles) {
-                            $role = new Roles();
-                            $role->setIdProfil($profil);
-                            $role->setIdRole($roles);
-            
-                            if (in_array($roles->getId(), $inputRoles) && $data['input'][$roles->getId()] === "on") {
-                                $role->setStatus(1);
-                            } else {
-                                $role->setStatus(0);
-                            }
-                            $entityManager->persist($role);
+                        if (empty($data['input']) || count($data['input']) === 0) {
+                            $codeStatut='NO_ROLES_FOUND';
                         }
-                        foreach ($competences as $competence) {
-                            $comp = new CompetenceProfil();
-                            $comp->setIdProfil($profil);
-                            $comp->setIdCompetence($competence);
-            
-                            if (in_array($competence->getId(), $compTenc) && $data['comp'][$competence->getId()] === "on") {
-                                $comp->setStatus(1);
-                            } else {
-                                $comp->setStatus(0);
+                        else
+                        {
+                            $profil = new Profil();
+                            $profil->setTitre($data['titre']);
+                            $profil->setDateCreation(new \DateTime());
+                            $entityManager->persist($profil);
+                            $entityManager->flush();
+                
+                            $inputRoles = array_keys($data['input']);
+                            $compTenc = array_keys($data['comp']);
+                
+                            foreach ($Liste_roles as $roles) {
+                                $role = new Roles();
+                                $role->setIdProfil($profil);
+                                $role->setIdRole($roles);
+                
+                                if (in_array($roles->getId(), $inputRoles) && $data['input'][$roles->getId()] === "on") {
+                                    $role->setStatus(1);
+                                } else {
+                                    $role->setStatus(0);
+                                }
+                                $entityManager->persist($role);
                             }
-                            $entityManager->persist($comp);
+                            foreach ($competences as $competence) {
+                                $comp = new CompetenceProfil();
+                                $comp->setIdProfil($profil);
+                                $comp->setIdCompetence($competence);
+                
+                                if (in_array($competence->getId(), $compTenc) && $data['comp'][$competence->getId()] === "on") {
+                                    $comp->setStatus(1);
+                                } else {
+                                    $comp->setStatus(0);
+                                }
+                                $entityManager->persist($comp);
+                            }
+                            $entityManager->flush();
+                            $codeStatut = 'OK';
                         }
-                        $entityManager->flush();
-                        $codeStatut = 'OK';
+                        
                     }
                 }
         } catch (\Exception $e) {
@@ -149,46 +157,39 @@ class UsersController extends AbstractController
             if($pr && $pr->getId() != $id){
                 $codeStatut='TITRE_DEJE_EXIST';
             }else{
-                $profil->setTitre($data['titre']);
-                $profil->setDateCreation(new \DateTime());
-                $entityManager->persist($profil);
-                $entityManager->flush();
-    
-                $inputRoles = array_keys($data['input']);
-                $compTenc = array_keys($data['comp']);
-    
-                foreach ($Liste_roles as $role) {
-                    $roleObject = $entityManager->getRepository(Roles::class)->findOneBy([
-                        'id_profil' => $profil->getId(),
-                        'id_role' => $role->getId(),
-                    ]);
-    
-                    if (in_array($role->getId(), $inputRoles) && $data['input'][$role->getId()] === "on") {
-                        $roleObject->setStatus(1);
-                    } else {
-                        $roleObject->setStatus(0);
-                    }
-                    $entityManager->persist($roleObject);
+                if (empty($data['input']) || count($data['input']) === 0) {
+                    $codeStatut='NO_ROLES_FOUND';
                 }
-                $entityManager->flush();
+                else
+                {
+                    $profil->setTitre($data['titre']);
+                    $profil->setDateCreation(new \DateTime());
+                    $entityManager->persist($profil);
+                    $entityManager->flush();
+        
+                    $inputRoles = array_keys($data['input']);
+                    $compTenc = array_keys($data['comp']);
+        
+                    foreach ($Liste_roles as $role) {
+                        $roleObject = $entityManager->getRepository(Roles::class)->findOneBy([
+                            'id_profil' => $profil->getId(),
+                            'id_role' => $role->getId(),
+                        ]);
+        
+                        if (in_array($role->getId(), $inputRoles) && $data['input'][$role->getId()] === "on") {
+                            $roleObject->setStatus(1);
+                        } else {
+                            $roleObject->setStatus(0);
+                        }
+                        $entityManager->persist($roleObject);
+                    }
+                    $entityManager->flush();
     
-                // foreach ($cp as $competence) {
+                    $codeStatut="OK";
 
-                //     $compObject = $entityManager->getRepository(CompetenceProfil::class)->findOneBy([
-                //         'id_profil' => $profil->getId(),
-                //         'id_competence' => $competence->getId(),
-                //     ]);
+                }
     
-                //     if (in_array($competence->getId(), $compTenc) && $data['comp'][$competence->getId()] === "on") {
-                //         $compObject->setStatus(1);
-                //     } else {
-                //         $compObject->setStatus(0);
-                //     }
-                //     $entityManager->persist($compObject);
-                // }
     
-                $entityManager->flush();
-                $codeStatut="OK";
             }
         }
         } catch (\Exception $e) {
@@ -206,32 +207,48 @@ class UsersController extends AbstractController
         $respObjects =array();
         $codeStatut="ERROR";
         try {
-            //code...
+
             $profile = $entityManager->getRepository(Profil::class)->findOneBy(array('id' => $id));
             $response = "";
 
-        if (!$profile) {
-            $codeStatut = "NOT_EXIST_ELEMENT";
-        } else {
-            $roles = $entityManager->getRepository(Roles::class)->findBy(array('id_profil' => $id));
-            foreach ($roles as $role) {
-                $entityManager->remove($role);
-            }
-            $competences = $entityManager->getRepository(CompetenceProfil::class)->findBy(array('id_profil' => $id));
-            foreach ($competences as $competence) {
-                $entityManager->remove($competence);
-            }
-            $gp = $entityManager->getRepository(GroupProfil::class)->findBy(array('id' => $id));
-            foreach ($gp as $item) {
-                $entityManager->remove($item);
-            }
+            if (!$profile) {
+                $codeStatut = "NOT_EXIST_ELEMENT";
+            } else {
+                $roles = $entityManager->getRepository(Roles::class)->findBy(array('id_profil' => $id));
 
-            $entityManager->remove($profile);
-            $entityManager->flush();
-            $codeStatut = "OK";
-        }
+                $competences = $entityManager->getRepository(CompetenceProfil::class)->findBy(array('id_profil' => $id));
+
+                $gp = $entityManager->getRepository(GroupProfil::class)->findBy(array('id_profil' => $id));
+
+                if($gp)
+                {
+                    $codeStatut="PROFIL-LIAISON";
+
+                }
+                else
+                {
+                    if ($roles) {
+                        foreach ($roles as $role) {
+                            // Remove each role
+                            $entityManager->remove($role);
+                        }
+                    }
+
+                    if ($competences) {
+                        foreach ($competences as $c) {
+                            // Remove each role
+                            $entityManager->remove($c);
+                        }
+                    }
+                    
+                    
+                    $entityManager->remove($profile);
+                    $entityManager->flush();
+                    $codeStatut = "OK";
+    
+                }
+            }       
         } catch (\Exception $th) {
-            //throw $th;
             $codeStatut="ERROR";
         }
         
@@ -254,28 +271,42 @@ class UsersController extends AbstractController
             if ($data['titre'] == null) {
                 $codeStatut="EMPTY-DATA";
             } else {
-                $group = new Groupe();
-                $group->setTitre($data['titre']);
-                // $group->setStatus($data['status']);
-                $group->setDateCreation(new \DateTime());
-                $entityManager->persist($group);
-                $entityManager->flush();
-                // print_r($data['ary']);
-                foreach ($data['ary'] as $key => $value) {
 
-                    $profil = $entityManager->getRepository(Profil::class)->findBy(['id' => $value]);
-                    foreach ($profil as $item) {
-                        $grp_profil = new GroupProfil();
-                        $grp_profil->setIdGroup($group);
-                        $grp_profil->setIdProfil($item);
-                        $entityManager->persist($grp_profil);
-                    }
+
+                $grp = $entityManager->getRepository(Groupe::class)->findOneBy(['titre' => $data['titre']]);
+                if($grp)
+                {
+                    $codeStatut="GROUPE-PROFIL-EXIST";
                 }
-                $entityManager->flush();
-                $codeStatut = "OK";
+                else
+                {
+                    $group = new Groupe();
+                    $group->setTitre($data['titre']);
+                    // $group->setStatus($data['status']);
+                    $group->setDateCreation(new \DateTime());
+                    $entityManager->persist($group);
+                    // Check if $data['ary'] exists and is not empty
+                    if (isset($data['ary']) && !empty($data['ary'])) {
+                        foreach ($data['ary'] as $key => $value) {
+                            $profil = $entityManager->getRepository(Profil::class)->findBy(['id' => $value]);
+                            foreach ($profil as $item) {
+                                $grp_profil = new GroupProfil();
+                                $grp_profil->setIdGroup($group);
+                                $grp_profil->setIdProfil($item);
+                                $entityManager->persist($grp_profil);
+                            }
+                        }
+                        $entityManager->flush();
+                        $codeStatut = "OK";
+                    } else {
+                        // Handle the case where ary is empty or not set
+                        $codeStatut = "NO_PROFILS_FOUND";
+                    }
+    
+                }
             }
         } catch (\Exception $th) {
-            $codeStatut="ERROR";
+            $codeStatut=$th;
         }
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
@@ -297,30 +328,39 @@ class UsersController extends AbstractController
         if ($request->getMethod() === 'POST') {
             $data = json_decode($request->getContent(), true);
 
-            if ($data['titre'] == null || $data['ary'] == null) {
+            if ($data['titre'] == null) {
                 $response = "Un des champs est vide";
             } else {
-                $groupe->setTitre($data['titre']);
-                // $groupe->setStatus($data['status']);
-                $groupe->setDateCreation(new \DateTime());
-                $entityManager->persist($groupe);
-                $entityManager->flush();
-                // Remove existing GroupProfil records for the group
-                foreach ($groupe_profils as $groupe_profil) {
-                    $entityManager->remove($groupe_profil);
-                }
-                $entityManager->flush();
-                foreach ($data['ary'] as $key => $value) {
-                    $profil = $entityManager->getRepository(Profil::class)->findOneBy(['id' => $value]);
-                    // Create a new instance of GroupProfil
-                    $groupe_profil = new GroupProfil();
-                    $groupe_profil->setIdGroup($groupe);
-                    $groupe_profil->setIdProfil($profil);
-                    $entityManager->persist($groupe_profil);
-                }
 
-                $entityManager->flush();
-                $response = "OK";
+                if (isset($data['ary']) && !empty($data['ary'])) {
+
+                    $groupe->setTitre($data['titre']);
+                    // $groupe->setStatus($data['status']);
+                    $groupe->setDateCreation(new \DateTime());
+                    $entityManager->persist($groupe);
+                    // Remove existing GroupProfil records for the group
+                    foreach ($groupe_profils as $groupe_profil) {
+                        $entityManager->remove($groupe_profil);
+                    }
+                    $entityManager->flush();
+                    foreach ($data['ary'] as $key => $value) {
+                        $profil = $entityManager->getRepository(Profil::class)->findOneBy(['id' => $value]);
+                        // Create a new instance of GroupProfil
+                        $groupe_profil = new GroupProfil();
+                        $groupe_profil->setIdGroup($groupe);
+                        $groupe_profil->setIdProfil($profil);
+                        $entityManager->persist($groupe_profil);
+                    }
+
+                    $entityManager->flush();
+                    $response = "OK";
+
+                }
+                else
+                {
+                    $response = "Veuillez sélectionner au moins un profil !";
+
+                }
             }
         }
 
@@ -364,49 +404,66 @@ class UsersController extends AbstractController
             $ville = $request->request->get('ville');
             $pays = $request->request->get('pays');
             $grpr = $request->request->get('grpr');
-            $supp = $request->request->get('supp');
             $imei = $request->request->get('imei');
             $rayon = $request->request->get('rayon');
             $pass = $request->request->get('pass');
             $pass1 = $request->request->get('pass1');
-            $status = $request->request->get('status');
             $email = $request->request->get('email');
             $type = $request->request->get('type');
             $competence = $request->request->get('competence');
             $responsable = $request->request->get('responsable');
-            
-    
+            $servicesUser = $request->request->get('servicesUser');
+
             // Get the image file from the request
             $img = $request->files->get('img');
-            if(empty(trim($nom)) || empty(trim($prenom)) ||  empty(trim($this->formatPhoneNumber($tel))) || empty(trim($pass)) ){
-                $codeStatut = "EMPTY-DATA";
-            }else{
-                if ($pass !== $pass1) {
-                    $codeStatut="PASSWORD_MATCH";
-                } else {
-                    $existUser = $entityManager->getRepository(Utilisateurs::class)->findOneBy(['nom' => $nom ,'prenom' => $prenom  ]);
 
-                    if($existUser){
-                        $codeStatut="ELEMENT_DEJE_EXIST";
-                    }else{
+            // Initialize status code
+            $codeStatut = "OK";
+
+            // Check if mandatory fields are empty
+            if (empty(trim($nom)) || empty(trim($prenom)) || empty(trim($pass))) {
+                $codeStatut = "EMPTY-DATA";
+            } else {
+                // Validate CIN format (assuming it should be numeric and 8 digits)
+                if (!empty(trim($cin)) && !preg_match('/^[A-Z]+[0-9]*[A-Z0-9]*$/', $cin)) {
+                    $codeStatut = "INVALID_CIN_FORMAT";
+                }
+                elseif (!empty(trim($email)) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $codeStatut = "INVALID_EMAIL_FORMAT";
+                }
+                elseif (!empty(trim($tel)) && !preg_match("'^(([\+]([\d]{2,}))([0-9\.\-\/\s]{5,})|([0-9\.\-\/\s]{5,}))*$'", $tel)) {
+                    $codeStatut = "INVALID_TEL_FORMAT";
+                }
+                elseif (empty($servicesUser)) {
+                    $codeStatut = "SERVICES_EMPTY";
+                }
+                elseif ($pass !== $pass1) {
+                    $codeStatut = "PASSWORD_MATCH";
+                } else {
+                    // Continue with user existence check and other validations
+                    $existUser = $entityManager->getRepository(Utilisateurs::class)->findOneBy(['nom' => $nom, 'prenom' => $prenom]);
+
+                    if ($existUser) {
+                        $codeStatut = "ELEMENT_DEJE_EXIST";
+                    } else {
                         $group = $entityManager->getRepository(Groupe::class)->findOneBy(['id' => $grpr]);
-                        $typeUser = $entityManager->getRepository(TypeUtilisateur::class)->findOneBy(['id' => $type]);
+                        $typeUser = $entityManager->getRepository(TypeUtilisateur::class)->find($type);
                         $competenceEntity = $entityManager->getRepository(Competence::class)->findOneBy(['id' => $competence]);
                         $responsableEntity = $entityManager->getRepository(TypeUtilisateur::class)->findOneBy(['id' => $responsable]);
-                        if(!$typeUser){
-                            $codeStatut="EMPTY-DATA";
-                        }else{
-                            if($typeUser->getOrdre() != 1 && ($typeUser->getOrdre() < $responsableEntity->getOrdre())){
-                                $codeStatut="RESPONSABILITY_ERROR";
-                            }else{
-                                if($group != null && $typeUser != null){
+
+                        if (!$typeUser) {
+                            $codeStatut = "EMPTY-DATA";
+                        } else {
+                            if ($typeUser->getOrdre() != 1 && ($responsableEntity && ($typeUser->getOrdre() < $responsableEntity->getOrdre()))) {
+                                $codeStatut = "RESPONSABILITY_ERROR";
+                            } else {
+                                if ($group != null && $typeUser != null) {
                                     // Create a new user entity
                                     $user = new Utilisateurs();
                                     $hashedPassword = md5($pass);
                                     $user->setNom($nom);
                                     $user->setPrenom($prenom);
                                     $user->setPassword($hashedPassword);
-                                    // $user->setStatus($status);
                                     $user->setTel($tel);
                                     $user->setImei($imei);
                                     $user->setMobile($mobile);
@@ -421,11 +478,12 @@ class UsersController extends AbstractController
                                     $user->setStatus(0);
                                     $user->setIdCompetence($competenceEntity);
                                     $user->setResponsable($responsableEntity);
-                                    
+                                    $user->setServices(json_encode($servicesUser));
+
                                     if ($img) {
                                         $destination = $this->getParameter('kernel.project_dir') . '/public/profile_img';
                                         $newFilename = uniqid() . '.' . $img->guessExtension();
-                    
+                            
                                         try {
                                             $img->move($destination, $newFilename);
                                         } catch (FileException $e) {
@@ -433,21 +491,22 @@ class UsersController extends AbstractController
                                         }
                                         $user->setImg('/profile_img/' . $newFilename);
                                     }
-                    
+                            
                                     // Persist the user entity
                                     $entityManager->persist($user);
                                     $entityManager->flush();
                                     $codeStatut = "OK";
-                                }else{
-                                    $codeStatut="EMPTY-DATA";
+                                } else {
+                                    $codeStatut = "EMPTY-DATA";
                                 }
-    
                             }
                         }
                     }
                 }
             }
-            } catch (\Exception $e) {
+
+
+        } catch (\Exception $e) {
         $respObjects["msg"] = $e->getMessage();
             //throw $th;
             $codeStatut="ERROR";
@@ -487,12 +546,28 @@ class UsersController extends AbstractController
                 $type = $request->request->get('type');
                 $competence = $request->request->get('competence');
                 $responsable = $request->request->get('responsable');
+                $servicesUser = $request->request->get('servicesUser');
+                $email = $request->request->get('email');
+
                 // Get the image file from the request
                 $img = $request->files->get('img');
-                if(empty(trim($nom)) || empty(trim($prenom)) ||  empty(trim($this->formatPhoneNumber($tel)))  ){
-                    $codeStatut = "EMPTY-DATA";
-                }else{
-                    if ($pass !== $pass1) {
+                    if(empty(trim($nom)) || empty(trim($prenom)) ||  empty(trim($this->formatPhoneNumber($tel)))  ){
+                        $codeStatut = "EMPTY-DATA";
+                    }else{
+                                        
+                    if (!empty(trim($cin)) && !preg_match('/^[A-Z]+[0-9]*[A-Z0-9]*$/', $cin)) {
+                        $codeStatut = "INVALID_CIN_FORMAT";
+                    }
+                    elseif (!empty(trim($email)) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        $codeStatut = "INVALID_EMAIL_FORMAT";
+                    }
+                    elseif (!empty(trim($tel)) && !preg_match("'^(([\+]([\d]{2,}))([0-9\.\-\/\s]{5,})|([0-9\.\-\/\s]{5,}))*$'", $tel)) {
+                        $codeStatut = "INVALID_TEL_FORMAT";
+                    }
+                    elseif (empty($servicesUser)) {
+                        $codeStatut = "SERVICES_EMPTY";
+                    }
+                    elseif ($pass !== $pass1) {
                         $codeStatut="PASSWORD_MATCH";
                     } else {
                         if(empty(trim($nom)) or empty(trim($nom))){
@@ -505,13 +580,16 @@ class UsersController extends AbstractController
                             if(($typeUser) == null){
                                 $codeStatut="EMPTY-DATA";
                             }else{
-                                if($typeUser->getOrdre() != 1 && ($typeUser->getOrdre() < $responsableEntity->getOrdre())){
+                                if($typeUser->getOrdre() != 1 &&  ($responsableEntity && ($typeUser->getOrdre() < $responsableEntity->getOrdre()))){
                                     $codeStatut="RESPONSABILITY_ERROR";
                                 }else{
-                                    $hashedPassword = md5($pass);
+                                    if (!empty($pass)) {
+                                        // Hash and update password if it's not empty, null, or equal to an empty string
+                                        $hashedPassword = md5($pass);
+                                        $user->setPassword($hashedPassword);
+                                    }
                                     $user->setNom($nom);
                                     $user->setPrenom($prenom);
-                                    $user->setPassword($hashedPassword);
                                     $user->setTel($tel);
                                     $user->setImei($imei);
                                     $user->setMobile($mobile);
@@ -524,6 +602,10 @@ class UsersController extends AbstractController
                                     $user->setIdTypeUser($typeUser);
                                     $user->setIdCompetence($competenceEntity);
                                     $user->setResponsable($responsableEntity);
+                                    $user->setServices(json_encode($servicesUser));
+                                    $user->setEmail($email);
+
+
                                     // Handle the image file upload
                                     if ($img) {
                                         // Remove the existing image file
@@ -562,7 +644,6 @@ class UsersController extends AbstractController
             $codeStatut="ERROR";
         }
         
-       
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
@@ -578,9 +659,15 @@ class UsersController extends AbstractController
             $response = "Ce profile n'existe pas !";
         } else {
             $workflow = $entityManager->getRepository(Workflow::class)->findOneBy(array('id_user' => $id));
+            $mission = $entityManager->getRepository(Missions::class)->findOneBy(array('id_users' => $id));
             if($workflow){
                 $response="Cet utilisateur est affecté à un workflow";
-            }else{
+            }
+            elseif($mission)
+            {
+                $response="Cet utilisateur est affecté à un mission";
+            }
+            else{
                 $token = $entityManager->getRepository(Token::class)->findOneBy(array('userIdent' => $id));
                 if($token)
                 $entityManager->remove($token);
@@ -619,6 +706,7 @@ class UsersController extends AbstractController
         }
         return new JsonResponse($result);
     }
+    
     #[Route('/getCompetences', name: 'get_competence', methods: ['GET'])]
     public function getAllCompetence(Request $request, EntityManagerInterface $entityManager): JsonResponse
     {
@@ -796,7 +884,7 @@ class UsersController extends AbstractController
             if(!empty($department)){
                 $exist = $this->userRepo->getDepartmentByName($department);
                 if(!$exist){
-                    $this->userRepo->saveDepartment($department);
+                    $this->userRepo->saveDepartment($department,null);
                     $codeStatut = 'OK';
                 }else{
                     $codeStatut="ELEMENT_DEJE_EXIST";
@@ -815,8 +903,8 @@ class UsersController extends AbstractController
         return $this->json($respObjects);
     }
 
-    #[Route('/department/{id}' ,methods:['PUT'])]
-    public function updateDepartment(Request $request, $id ,EntityManagerInterface $entityManager): JsonResponse
+    #[Route('/department' ,methods:['PUT'])]
+    public function updateDepartment(Request $request ,EntityManagerInterface $entityManager): JsonResponse
     {
         $respObjects =array();
         $codeStatut="ERROR";
@@ -824,12 +912,13 @@ class UsersController extends AbstractController
             $this->AuthService->checkAuth(0,$request);
             
             $data = json_decode($request->getContent(), true);
+            $departmentId = $data['id'];
             $departmentName = $data['department'];
-            
+
             if(!empty($departmentName)){
                 $exist = $this->userRepo->getDepartmentByName($departmentName);
-                $department = $this->userRepo->getDepartment($id);
-                if(!$exist && ($exist->getId() != $id)){
+                $department = $this->userRepo->getDepartment($departmentId);
+                if(!$exist || ( $exist && $exist->getId() == $departmentId)){
                     $this->userRepo->saveDepartment($departmentName , $department);
                     $codeStatut = 'OK';
                 }else{
@@ -884,6 +973,8 @@ class UsersController extends AbstractController
         return $this->json($respObjects);
     }
 
+
+
     #[Route('/getuserCompetence/{id}', name: 'get_user_comp', methods: ['GET'])]
     public function getUserCompetence(Request $request, EntityManagerInterface $entityManager,$id,SerializerInterface $serializer): JsonResponse
     {
@@ -916,4 +1007,304 @@ class UsersController extends AbstractController
         }
         return $phoneNumber;
     }
+
+
+    #[Route('/oneDepartment' ,methods:['GET'])]
+    public function oneDepartment(Request $request ,EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            $id = $request->get('id');
+            $respObjects['data'] = $this->userRepo->getDepartment($id);
+            $codeStatut="OK";
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/department/{id}' ,methods:['DELETE'])]
+    public function deleteDepartment(Request $request, $id ,EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            
+            $department = $this->userRepo->getDepartment($id);
+            $entityManager->remove($department);
+            $entityManager->flush();
+            $codeStatut="OK";
+        } catch (\Exception $e) {
+            $codeStatut=$e->getMessage();
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/getUtilisateursLibres' ,methods:['GET'])]
+    public function getUtilisateursLibres(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            
+            $respObjects['data'] = $this->userRepo->getUtilisateursLibres();
+            $codeStatut="OK";
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/addEquipe' ,methods:['POST'])]
+    public function AddEquipe(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            
+            $data = json_decode($request->getContent(), true);
+            $equipe = $data['equipe'];
+            $department = $data['selectedDepartment'];
+            $users = $data['users'];
+
+            if(!empty($equipe) && !empty($department)){
+                $exist = $this->userRepo->getEquipeByNameAndDepartement($equipe,$department);
+                if(!$exist){
+                    $this->userRepo->saveEquipe($equipe,$department,$users,null);
+                    $codeStatut = 'OK';
+                }else{
+                    $codeStatut="ELEMENT_DEJE_EXIST";
+                }
+            }else{
+                $codeStatut="ERROR-EMPTY-PARAMS";
+            }
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+        $respObjects["et"] = $e->getMessage();
+
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+
+    #[Route('/getTeams' ,methods:['GET'])]
+    public function getTeams(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            
+            $equipes = $this->userRepo->getAllEquipes();
+           // Transform each equipe into an array
+            foreach ($equipes as $equipe) {
+                $result[] = [
+                    'id' => $equipe->getId(),
+                    'name' => $equipe->getTeam(), // Replace with the actual field names
+                    'createdAt' => $equipe->getDateCreation(), // Replace with the actual field names
+                    'department' => $equipe->getIdDepartement()->getNom(), // Replace with the actual field names
+                   
+                ];
+            }
+            $respObjects["data"] = $result;
+
+            $codeStatut="OK";
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+            $respObjects["et"] = $e->getMessage();
+
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/deleteTeam/{id}' ,methods:['DELETE'])]
+    public function deleteTeam(Request $request, $id ,EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            
+            $equipe = $this->userRepo->getOneEquipe($id);
+            $users = $equipe->getUsers();
+            foreach ($users as $user) {
+                $user->setTeams(null);
+            };
+            $entityManager->remove($equipe);
+            $entityManager->flush();
+            $codeStatut="OK";
+        } catch (\Exception $e) {
+            $codeStatut=$e->getMessage();
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+    #[Route('/getTeam/{id}' ,methods:['GET'])]
+    public function getTeam(Request $request, $id, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            
+            $equipe = $this->userRepo->getOneEquipe($id);
+            $result = [
+                'id' => $equipe->getId(),
+                'name' => $equipe->getTeam(), // Replace with the actual field names
+                'createdAt' => $equipe->getDateCreation(), // Replace with the actual field names
+                'department' => $equipe->getIdDepartement()->getId(), // Replace with the actual field names
+               
+            ];
+            $respObjects["data"] = $result;
+
+            $codeStatut="OK";
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+            $respObjects["et"] = $e->getMessage();
+
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+
+    #[Route('/getUtilisateursLibresAndSelected/{id}' ,methods:['GET'])]
+    public function getUtilisateursLibresAndSelected(Request $request,$id ,EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            
+            $this->AuthService->checkAuth(0,$request);
+
+            $respObjects['data'] = $this->userRepo->getUtilisateursLibresAndSelected($id);
+            $codeStatut="OK";
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+
+    #[Route('/updateTeam' ,methods:['PUT'])]
+    public function updateTeam(Request $request ,EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+            $this->AuthService->checkAuth(0,$request);
+            
+            $data = json_decode($request->getContent(), true);
+            $equipeId = $data['id'];
+            $equipe = $data['equipe'];
+            $department = $data['selectedDepartment'];
+            $users = $data['users'];
+
+            if(!empty($equipe) && !empty($department)){
+                $exist = $this->userRepo->getEquipeByNameAndDepartement($equipe,$department);
+                if(!$exist || ($exist && $exist->getId() == $equipeId)){
+                    $this->userRepo->saveEquipe($equipe,$department,$users,$equipeId);
+                    $codeStatut = 'OK';
+                }else{
+                    $codeStatut="ELEMENT_DEJE_EXIST";
+                }
+            }else{
+                $codeStatut="ERROR-EMPTY-PARAMS";
+            }
+        
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+        $respObjects["et"] = $e->getMessage();
+
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+
+    #[Route('/getUserInfos',methods:['GET'])]
+    public function getUserInfos(Request $request ,EntityManagerInterface $entityManager): JsonResponse
+    {
+        $respObjects =array();
+        $codeStatut="ERROR";
+        try {
+
+
+            $senderId = $this->AuthService->returnUserId($request);
+            $user = $this->userRepo->getUser($senderId);
+            $respObjects["user"] = $user;
+
+            $equipe = null;
+            if($user["teams_id"])
+            {
+                $equipe = $this->userRepo->getTeam($user["teams_id"]);
+            }
+            $respObjects["equipe"] = $equipe;   
+
+            $department = null;
+            if($equipe["id_departement_id"])
+            {
+                $department = $this->userRepo->getOneDepatement($equipe["id_departement_id"]); 
+            }
+            $respObjects["department"] = $department;
+
+            $users = null;
+            if($equipe)
+            {
+                $users = $this->userRepo->getUsersTeam($equipe["id"]); 
+            }
+            $respObjects["users"] = $users;
+
+            $equipes = null;
+            if($department)
+            {
+                $equipes = $this->userRepo->getTeamsDepartement($department["id"]); 
+            }
+            $respObjects["equipes"] = $equipes;
+
+
+
+            $codeStatut="OK";
+
+        } catch (\Exception $e) {
+            $codeStatut="ERROR";
+        $respObjects["et"] = $e->getMessage();
+
+        }   
+        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
+        return $this->json($respObjects);
+    }
+
+
+
+
 }

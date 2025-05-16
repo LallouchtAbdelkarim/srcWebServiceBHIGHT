@@ -17,7 +17,7 @@ class ModelSMS
     #[ORM\Column(length: 255)]
     private ?string $titre = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 4000)]
     private ?string $message = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]

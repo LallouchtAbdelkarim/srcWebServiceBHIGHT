@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\UtilisateursRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: UtilisateursRepository::class)]
@@ -51,6 +53,7 @@ class Utilisateurs
 
     // #[ORM\ManyToOne(inversedBy: 'utilisateurs')]
     // #[ORM\JoinColumn(onDelete:"CASCADE")]
+    #[ORM\ManyToOne]
     private ?Groupe $id_group = null;
 
     #[ORM\Column(length: 255, nullable: true)]
@@ -76,6 +79,24 @@ class Utilisateurs
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: true)]
     private ?Departement $id_departement = null;
+
+    #[ORM\Column(length: 255)]
+    private ?string $services = null;
+
+    #[ORM\OneToMany(mappedBy: 'user_id', targetEntity: RecentCreance::class)]
+    private Collection $recentCreances;
+
+    #[ORM\ManyToOne(inversedBy: 'users')]
+    private ?Teams $teams = null;
+
+    #[ORM\OneToMany(mappedBy: 'assignedUser', targetEntity: Task::class)]
+    private Collection $tasks;
+
+    public function __construct()
+    {
+        $this->recentCreances = new ArrayCollection();
+        $this->tasks = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -318,6 +339,90 @@ class Utilisateurs
     public function setIdDepartement(?Departement $id_departement): static
     {
         $this->id_departement = $id_departement;
+
+        return $this;
+    }
+
+    public function getServices(): ?string
+    {
+        return $this->services;
+    }
+
+    public function setServices(string $services): static
+    {
+        $this->services = $services;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, RecentCreance>
+     */
+    public function getRecentCreances(): Collection
+    {
+        return $this->recentCreances;
+    }
+
+    public function addRecentCreance(RecentCreance $recentCreance): static
+    {
+        if (!$this->recentCreances->contains($recentCreance)) {
+            $this->recentCreances->add($recentCreance);
+            $recentCreance->setUserId($this);
+        }
+
+        return $this;
+    }
+
+    public function removeRecentCreance(RecentCreance $recentCreance): static
+    {
+        if ($this->recentCreances->removeElement($recentCreance)) {
+            // set the owning side to null (unless already changed)
+            if ($recentCreance->getUserId() === $this) {
+                $recentCreance->setUserId(null);
+            }
+        }
+
+        return $this;
+    }
+
+    public function getTeams(): ?Teams
+    {
+        return $this->teams;
+    }
+
+    public function setTeams(?Teams $teams): static
+    {
+        $this->teams = $teams;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Task>
+     */
+    public function getTasks(): Collection
+    {
+        return $this->tasks;
+    }
+
+    public function addTask(Task $task): static
+    {
+        if (!$this->tasks->contains($task)) {
+            $this->tasks->add($task);
+            $task->setAssignedUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeTask(Task $task): static
+    {
+        if ($this->tasks->removeElement($task)) {
+            // set the owning side to null (unless already changed)
+            if ($task->getAssignedUser() === $this) {
+                $task->setAssignedUser(null);
+            }
+        }
 
         return $this;
     }

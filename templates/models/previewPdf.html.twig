@@ -1,19 +1,19 @@
-<page backtop="100px" backbottom="150px">
+<page backtop="100px" backbottom="150px" {% if  background %} backimg="./{{ background.url }}" {% endif %}>
     <page_header>
         <div style="text-align:{{ headerStyle }}; height:100px">
-            <img src="{{ headerLogo }}" alt="Logo" style="width: 33%; ">
+            {% if  headerLogo %}<img src="{{ headerLogo }}" alt="Logo" style="width: 33%; ">{% endif %}
         </div>
     </page_header>
 
     <page_footer>
-        <div style="text-align: center; font-size: 11px; border-top: 1px solid black;">
+        <div style="text-align: left; font-size: 11px; border-top: 1px solid black">
             <p>{{ footerText | raw }}</p>
         </div>
         <div style="text-align: center; font-size: 15px; margin-top: 5px;">
             page : [[page_cu]] / [[page_nb]]
         </div>
     </page_footer>
-    <table style="width: 100%;">
+    {# <table style="width: 100%;">
         <tr>
             <td style="width: 60%;">
                 <div>
@@ -34,32 +34,17 @@
                 </div>
             </td>
         </tr>
-    </table>
-    <table style="width: 100%;">
+    </table> #}
+    {# <table style="width: 100%;">
         <tr>
             <td style="width: 60%;">
                 <p class="title">Objet: {{ objet }}</p>
             </td>
         </tr>
-    </table>
+    </table> #}
 
-    {% if background %}
-        <div style="position: relative; width: 100%; min-height: 1000px;margin-top:30px;">
-            <div style="position: absolute; top: 0; bottom: 0; left: 0; right: 0; z-index: -1;">
-                <img src="{{ background.url }}" style="width: 100%; height: 100%; object-fit: cover;">
-            </div>
-            <p>{{ message | raw }} {{ background.url }}</p>
-        </div>
-    {% else %}
-        {# <table style="width: 100%;position: relative;">
-            <tr>
-                <td style="width: 100%;">
-                    
-                </td>
-            </tr>
-        </table> #}
-        <div style="position: relative; width: 100%;;">
-            <p>{{ message | raw }}</p>
-        </div>
-    {% endif %}
+    <div style="position: relative; width: 100%;;">
+        <p>{{ message | raw }}</p>
+    </div>
+    
 </page>

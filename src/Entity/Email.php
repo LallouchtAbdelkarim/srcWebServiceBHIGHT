@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\EmailRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -43,6 +45,14 @@ class Email
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $date_creation = null;
+
+    #[ORM\OneToMany(mappedBy: 'email', targetEntity: CreanceActivite::class)]
+    private Collection $creanceActivites;
+
+    public function __construct()
+    {
+        $this->creanceActivites = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -153,6 +163,36 @@ class Email
     public function setDateCreation(?\DateTimeInterface $date_creation): static
     {
         $this->date_creation = $date_creation;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, CreanceActivite>
+     */
+    public function getCreanceActivites(): Collection
+    {
+        return $this->creanceActivites;
+    }
+
+    public function addCreanceActivite(CreanceActivite $creanceActivite): static
+    {
+        if (!$this->creanceActivites->contains($creanceActivite)) {
+            $this->creanceActivites->add($creanceActivite);
+            $creanceActivite->setEmail($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCreanceActivite(CreanceActivite $creanceActivite): static
+    {
+        if ($this->creanceActivites->removeElement($creanceActivite)) {
+            // set the owning side to null (unless already changed)
+            if ($creanceActivite->getEmail() === $this) {
+                $creanceActivite->setEmail(null);
+            }
+        }
 
         return $this;
     }

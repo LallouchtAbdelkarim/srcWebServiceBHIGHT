@@ -42,6 +42,9 @@ class Promise
     #[ORM\JoinColumn(nullable: false)]
     private ?StatusPromise $id_status = null;
 
+    #[ORM\ManyToOne]
+    private ?Accord $idAccord = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -139,6 +142,18 @@ class Promise
     public function setIdStatus(?StatusPromise $id_status): static
     {
         $this->id_status = $id_status;
+
+        return $this;
+    }
+
+    public function getIdAccord(): ?Accord
+    {
+        return $this->idAccord;
+    }
+
+    public function setIdAccord(?Accord $idAccord): static
+    {
+        $this->idAccord = $idAccord;
 
         return $this;
     }

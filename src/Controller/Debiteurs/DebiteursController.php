@@ -600,7 +600,8 @@ class DebiteursController extends AbstractController
         try{
             $this->AuthService->checkAuth(0,$request);
             $data_list = json_decode($request->getContent(), true);
-            if($data_list["employeur"] != "" || $data_list["montant"] != "" || $data_list["poste"] != "" ||  $data_list["id_debiteur_id"] != ""   ){
+            if($data_list["employeur"] != "" && $data_list["poste"] != "" && $data_list["entreprise"] != "" 
+             && $data_list["adresse_employeur"] != "" &&  $data_list["id_debiteur_id"] != "" && $data_list["id_status_id"] != 0){
                 $checkDebiteur = $this->debiteursRepo->checkDebiteur($data_list["id_debiteur_id"]);
                 if($checkDebiteur){
                     $data = $debiteursRepo->createEmployeur($data_list);
@@ -627,7 +628,8 @@ class DebiteursController extends AbstractController
         try{
             $this->AuthService->checkAuth(0,$request);
             $data_list = json_decode($request->getContent(), true);
-            if($data_list["employeur"] != "" ||  $data_list["poste"] != "" ||  $data_list["id_debiteur_id"] != ""   ){
+            if($data_list["employeur"] != "" && $data_list["poste"] != "" && $data_list["entreprise"] != "" 
+             && $data_list["adresse_employeur"] != "" &&  $data_list["id_debiteur_id"] != "" && $data_list["id_status_id"] != 0){
                 $id = $request->get("id");
                 $checkElement = $this->TypeService->checkElement($id , "employeur");
                 if($checkElement ){
@@ -973,7 +975,7 @@ class DebiteursController extends AbstractController
             $data_list = json_decode($request->getContent(), true);
             $date_debut = $data_list["date_debut"];
             $date_fin = $data_list["date_fin"];
-            if($data_list["nom_empl"] != ""){
+            if($data_list["nom_empl"] != "" && $data_list["salaire"] != "" && $data_list["profession_id"] != 0){
                 $checkDebiteur = $this->debiteursRepo->checkDebiteur($data_list["id_debiteur_id"]);
                 if($checkDebiteur){
                     $date = DateTime::createFromFormat('Y-m-d', $date_debut);
@@ -1017,12 +1019,32 @@ class DebiteursController extends AbstractController
         try{
             $this->AuthService->checkAuth(0,$request);
             $data_list = json_decode($request->getContent(), true);
-            if($data_list["nom_empl"] != ""){
+            if($data_list["nom_empl"] != "" && $data_list["salaire"] != "" && $data_list["profession_id"] != 0){
                 $id = $request->get("id");
+                $date_debut = $data_list["date_debut"];
+                $date_fin = $data_list["date_fin"];    
                 $checkElement = $this->TypeService->checkElement($id , "emploi");
                 if($checkElement ){
-                    $data = $debiteursRepo->updateEmploi($data_list,$id);
-                    $codeStatut="OK";
+
+                    $date = DateTime::createFromFormat('Y-m-d', $date_debut);
+                    $dateF = DateTime::createFromFormat('Y-m-d', $date_fin);
+                    if (($date && $date->format('Y-m-d') === $date_debut ) && ($dateF && $dateF->format('Y-m-d') === $date_fin   ) ) {
+                        $checkDetailsDate = $this->GeneralService->checkDateDebutDatefin($date_debut , $date_fin);
+                        if($checkDetailsDate ){
+                            $data = $debiteursRepo->updateEmploi($data_list,$id);
+                            $codeStatut="OK";
+                        }else{
+                            $codeStatut="ERROR_DATE";
+                        }
+                    }else{
+                        if($date_debut == '' && $date_fin == ''){
+                            $data = $debiteursRepo->updateEmploi($data_list,$id);
+                            $codeStatut="OK";
+                        }else{
+                            $codeStatut="ERROR_DATE";
+                        }
+                    }
+
                 }else{
                     $codeStatut="NOT_EXIST_ELEMENT";
                 }
@@ -1219,7 +1241,7 @@ class DebiteursController extends AbstractController
             $data_list["code_p"] = str_replace(" ", "", $data_list["code_p"]);
             $data_list["numero"] = str_replace(" ", "", $data_list["numero"]);
         
-            if ($data_list["numero"] != "" || $data_list["origine"] != "" || $data_list["id_type_tel_id"] != "" || $data_list["status"] != "" || $data_list["active"] != "" || $data_list["code_p"] != "") {
+            if ($data_list["numero"] != "" && $data_list["id_type_tel_id"] != "" && $data_list["id_status_id"] != "" && $data_list["code_p"] != "") {
                 $checkDebiteur = $this->debiteursRepo->checkDebiteur($data_list["id_debiteur_id"]);
                 $checkType = $this->TypeService->checkType($data_list["id_type_tel_id"], "tel");
         
@@ -1229,10 +1251,18 @@ class DebiteursController extends AbstractController
                             try {
                                 // Verify the phone number format
                                 $data_list['numero'] = $this->verifyPhoneNumber($data_list['numero'], $data_list['code_p']);
+                                if($data_list['numero'] == "FORMAT_INCORRECT")
+                                {
+                                    $codeStatut = "FORMAT_INCORRECT";
+                                }
+                                else
+                                {
+                                    $data_list['id_type_source_id'] = 4;
+                                    $data = $debiteursRepo->createTelephone($data_list);
+                                    $codeStatut = "OK";
+    
+                                }
                                 
-                                $data_list['id_type_source_id'] = 4;
-                                $data = $debiteursRepo->createTelephone($data_list);
-                                $codeStatut = "OK";
                             } catch (Exception $e) {
                                 $codeStatut = $e->getMessage();
                             }
@@ -1265,12 +1295,39 @@ class DebiteursController extends AbstractController
         try{
             $this->AuthService->checkAuth(0,$request);
             $data_list = json_decode($request->getContent(), true);
-            if($data_list["numero"] != "" || $data_list["origine"] != "" || $data_list["status"] != "" || $data_list["active"] != ""){
-                $id = $request->get("id");
-                $checkElement = $this->TypeService->checkElement($id , "telephone");
-                if($checkElement ){
-                    $data = $debiteursRepo->updateTelephone($data_list,$id);
-                    $codeStatut="OK";
+            if ($data_list["numero"] != "" && $data_list["id_type_tel_id"] != "" && $data_list["id_status_id"] != "" && $data_list["code_p"] != "") {
+                $checkDebiteur = $this->debiteursRepo->checkDebiteur($data_list["id_debiteur_id"]);
+                $checkType = $this->TypeService->checkType($data_list["id_type_tel_id"], "tel");
+                if ($checkDebiteur && $checkType) {
+                    $id = $request->get("id");
+
+                    if (is_numeric($data_list["numero"]) && is_numeric($data_list["code_p"])) {
+                        if ($debiteursRepo->checkCodePays($data_list["code_p"])) {
+                            try {
+                                // Verify the phone number format
+                                $data_list['numero'] = $this->verifyPhoneNumber($data_list['numero'], $data_list['code_p']);
+                                if($data_list['numero'] == "FORMAT_INCORRECT")
+                                {
+                                    $codeStatut = "FORMAT_INCORRECT";
+                                }
+                                else
+                                {
+                                    $data_list['id_type_source_id'] = 4;
+                                    $data = $debiteursRepo->updateTelephone($data_list,$id);
+                                    $codeStatut = "OK";
+    
+                                }
+                                
+                            } catch (Exception $e) {
+                                $codeStatut = $e->getMessage();
+                            }
+                        } else {
+                            $codeStatut = "FORMAT_INCORRECT";
+                        }
+                    } else {
+                        $codeStatut = "FORMAT_INCORRECT";
+                    }
+
                 }else{
                     $codeStatut="NOT_EXIST_ELEMENT";
                 }
@@ -1373,7 +1430,7 @@ class DebiteursController extends AbstractController
         try{
             $this->AuthService->checkAuth(0,$request);
             $data_list = json_decode($request->getContent(), true);
-            if($data_list["adresse_complet"] != "" || $data_list["code_postal"] != "" ||  $data_list["pays"] != "" || $data_list["ville"] != "" || $data_list["status"] != ""  || $data_list["verifier"] != ""){
+            if($data_list["adresse_complet"] != "" && $data_list["code_postal"] != "" && $data_list["pays"] != "" && $data_list["ville"] != "" && $data_list["id_status_id"] != 0 && $data_list["id_type_adresse_id"] != 0 ){
                 $checkDebiteur = $this->debiteursRepo->checkDebiteur($data_list["id_debiteur_id"]);
                 $checkType = $this->TypeService->checkType($data_list["id_type_adresse_id"] , "adresse");
                 if($checkDebiteur && $checkType){
@@ -1401,7 +1458,7 @@ class DebiteursController extends AbstractController
         try{
             $this->AuthService->checkAuth(0,$request);
             $data_list = json_decode($request->getContent(), true);
-            if($data_list["adresse_complet"] != "" || $data_list["code_postal"] != "" ||  $data_list["pays"] != "" || $data_list["ville"] != "" || $data_list["status"] != ""  || $data_list["verifier"] != ""){
+            if($data_list["adresse_complet"] != "" && $data_list["code_postal"] != "" && $data_list["pays"] != "" && $data_list["ville"] != "" && $data_list["id_status_id"] != 0 && $data_list["id_type_adresse_id"] != 0 ){
                 $id = $request->get("id");
                 $checkElement = $this->TypeService->checkElement($id , "adresse");
                 if($checkElement ){
@@ -1459,21 +1516,21 @@ class DebiteursController extends AbstractController
         try{
             $this->AuthService->checkAuth(0,$request);
             $data_list = json_decode($request->getContent(), true);
-            if($data_list["email"] != ""){
+            if($data_list["email"] != "" && $data_list["id_type_email_id"] != 0 && $data_list["id_status_email_id"] != 0){
                 $checkDebiteur = $this->debiteursRepo->checkDebiteur($data_list["id_debiteur_id"]);
                 $checkType = $this->TypeService->checkType($data_list["id_type_email_id"] , "email");
                 $checkStatus = $this->TypeService->getOneStatus( "email" , $data_list["id_status_email_id"] );
-                // if($checkDebiteur && $checkType && $checkStatus){
-                if($this->isValidEmail($data_list["email"])){
-                    $data_list['id_type_source_id'] = 4;
-                    $data = $debiteursRepo->createEmail($data_list);
-                    $codeStatut="OK";
+                if($checkDebiteur && $checkType && $checkStatus){
+                    if($this->isValidEmail($data_list["email"])){
+                        $data_list['id_type_source_id'] = 4;
+                        $data = $debiteursRepo->createEmail($data_list);
+                        $codeStatut="OK";
+                    }else{
+                        $codeStatut="INVALID_EMAIL";
+                    }
                 }else{
-                    $codeStatut="INVALID_EMAIL";
+                    $codeStatut="NOT_EXIST_ELEMENT";
                 }
-                // }else{
-                //     $codeStatut="NOT_EXIST_ELEMENT";
-                // }
             }else{
                 $codeStatut="ERROR-EMPTY-PARAMS";
             }
@@ -1493,22 +1550,27 @@ class DebiteursController extends AbstractController
         try{
             $this->AuthService->checkAuth(0,$request);
             $data_list = json_decode($request->getContent(), true);
-            if($data_list["email"] != ""){
+            if($data_list["email"] != "" && $data_list["id_type_email_id"] != 0 && $data_list["id_status_email_id"] != 0){
                 $id = $request->get("id");
                 $checkElement = $this->TypeService->checkElement($id , "email");
                 $checkDebiteur = $this->debiteursRepo->checkDebiteur($data_list["id_debiteur_id"]);
                 $checkType = $this->TypeService->checkType($data_list["id_type_email_id"] , "email");
                 $checkStatus = $this->TypeService->getOneStatus( "email" , $data_list["id_status_email_id"] );
-                // if($checkDebiteur && $checkType && $checkStatus){
+                if($checkDebiteur && $checkType && $checkStatus){
                     if($checkElement ){
-                        $data = $debiteursRepo->updateEmail($data_list,$id);
-                        $codeStatut="OK";
+                        if($this->isValidEmail($data_list["email"])){
+                            $data = $debiteursRepo->updateEmail($data_list,$id);
+                            $codeStatut="OK";
+
+                        }else{
+                            $codeStatut="INVALID_EMAIL";
+                        }
                     }else{
                         $codeStatut="NOT_EXIST_ELEMENT";
                     }
-                // }else{
-                //     $codeStatut="NOT_EXIST_ELEMENT";
-                // }
+                }else{
+                    $codeStatut="NOT_EXIST_ELEMENT";
+                }
             }else{
                 $codeStatut="ERROR-EMPTY-PARAMS";
             }
@@ -1654,30 +1716,38 @@ class DebiteursController extends AbstractController
     {
         $respObjects =array();
         $codeStatut="ERROR";
-        try{
-            $this->AuthService->checkAuth(0,$request);
+        try {
+            $this->AuthService->checkAuth(0, $request);
             $data_list = json_decode($request->getContent(), true);
-            $numero = $data_list["numero"] ;
-            $nom = $data_list["nom"] ;
-            $prenom = $data_list["prenom"] ;
-            $adresse = $data_list["adresse"] ;
-
-            if($nom != ""  || $numero != "" ||  $adresse != ""  || $data_list["id_type_relation_id"] != ""  ){
-                $checkType = $this->TypeService->checkType($data_list["id_type_relation_id"] , "relation");
-                $checkDebiteur = $this->debiteursRepo->checkDebiteur($data_list["id_debiteur_id"]);
-                if($checkType && $checkDebiteur){
-                    $data = $debiteursRepo->createRelation($data_list);
-                    $codeStatut="OK";
-                }else{
-                    $codeStatut="NOT_EXIST_ELEMENT";
+            $numero = $data_list["numero"];
+            $nom = $data_list["nom"];
+            $prenom = $data_list["prenom"];
+            $adresse = $data_list["adresse"];
+            $sexe = $data_list["sexe"] ?? ''; // Ensure `sexe` is set
+        
+            // Check for non-empty required fields
+            if (!empty($nom) && !empty($prenom) && !empty($numero) && !empty($sexe)) {
+                if (!empty($data_list["id_type_relation_id"])) {
+                    $checkType = $this->TypeService->checkType($data_list["id_type_relation_id"], "relation");
+                    $checkDebiteur = $this->debiteursRepo->checkDebiteur($data_list["id_debiteur_id"]);
+                    
+                    if ($checkType && $checkDebiteur) {
+                        $data = $this->debiteursRepo->createRelation($data_list);
+                        $codeStatut = "OK";
+                    } else {
+                        $codeStatut = "NOT_EXIST_ELEMENT";
+                    }
+                } else {
+                    $codeStatut = "EMPTY-PARAMS";
                 }
-            }else{
-                $codeStatut="ERROR-EMPTY-PARAMS";
+            } else {
+                $codeStatut = "EMPTY-PARAMS";
             }
-        }catch(\Exception $e){
-            $codeStatut="ERROR";
+        } catch (\Exception $e) {
+            $codeStatut = "ERROR";
             $respObjects["err"] = $e->getMessage();
         }
+        
         $respObjects["codeStatut"] = $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
@@ -1696,7 +1766,7 @@ class DebiteursController extends AbstractController
             $prenom = $data_list["prenom"] ;
             $adresse = $data_list["adresse"] ;
 
-            if($nom != ""  || $numero != "" ||  $adresse != ""  || $data_list["id_type_relation_id"] != ""  ){
+            if($nom != ""  && $numero != "" &&  $prenom != ""  && $data_list["id_type_relation_id"] != ""  ){
                 $checkType = $this->TypeService->checkType($data_list["id_type_relation_id"] , "relation");
                 $checkDebiteur = $this->debiteursRepo->checkDebiteur($data_list["id_debiteur_id"]);
                 if($checkType && $checkDebiteur){
@@ -1775,17 +1845,17 @@ class DebiteursController extends AbstractController
                     if (in_array($phoneNumber[0], ['5', '6', '7', '8'])) {
                         return $phoneNumber;
                     }else{
-                         throw new \Exception("FORMAT_INCORRECT");
+                        return "FORMAT_INCORRECT";
                     }
                 } else {
-                    throw new \Exception("FORMAT_INCORRECT");
+                    return "FORMAT_INCORRECT";
                 }
             } else {
                 // If the phone number does not start with '0', verify the second digit
                 if (in_array($phoneNumber[0], ['5', '6', '7', '8'])) {
                     return $phoneNumber;
                 } else {
-                    throw new \Exception("FORMAT_INCORRECT");
+                    return "FORMAT_INCORRECT";
                 }
             }
         } else {

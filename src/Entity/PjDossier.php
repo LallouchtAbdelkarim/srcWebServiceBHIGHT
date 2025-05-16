@@ -16,9 +16,9 @@ class PjDossier
     #[ORM\ManyToOne]
     private ?Dossier $id_dossier_id = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(type: 'text')]
     private ?string $url = null;
-
+    
     public function getId(): ?int
     {
         return $this->id;

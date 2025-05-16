@@ -4,6 +4,7 @@ monolog:
 
 when@dev:
     monolog:
+        channels: ["custom_channel"]
         handlers:
             main:
                 type: stream

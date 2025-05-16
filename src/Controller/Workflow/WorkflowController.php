@@ -947,7 +947,7 @@ class WorkflowController extends AbstractController
             $type = 2;
         }else if($branchComponent['id_element'] == 'Decision step'){
             $type = 4;
-            $entity->setIdActivityP($branchComponent['activityDecision']);
+            //$entity->setIdActivityP($branchComponent['activityDecision']);
         }else if($branchComponent['id_element'] == 'Split activity'){
             $type = 5;
         }
@@ -969,10 +969,10 @@ class WorkflowController extends AbstractController
 
         if($type == 4){
             //TODO:Save resulat id 
-            $getResultsByParent = $this->workflowRepo->getResultsByParent($branchComponent['activityDecision']);
+            /*$getResultsByParent = $this->workflowRepo->getResultsByParent($branchComponent['activityDecision']);
             for ($i=0; $i < count($getResultsByParent); $i++) { 
                 $this->workflowRepo->saveDetailAction($entity->getId() , $getResultsByParent[$i]['id'] , null ,1 , null);
-            }
+            }*/
         }
 
         if($type == 5){

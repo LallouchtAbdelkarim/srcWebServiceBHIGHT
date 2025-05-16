@@ -36,7 +36,11 @@ class dossiersRepo extends ServiceEntityRepository
         $resulat = $stmt->fetchAll();
         return $resulat;
     }
-    public function getListesDossiersByFiltrages($data){
+
+
+
+    public function getListesDossiersByFiltrages($data, $user) {
+        // Extract filters from the input data
         $num_dossier = $data["num_dossier"];
         $date_fin_prevesionnel = $data["date_fin_prevesionnel"];
         $ptf = $data["ptf"];
@@ -50,82 +54,132 @@ class dossiersRepo extends ServiceEntityRepository
         $date_naissance = $data["date_naissance"];
         $date_echeance = $data["date_echeance"];
         $num_creance = $data["num_creance"];
+    
+        // Base query with joins
+        $query = '
+            SELECT DISTINCT d.*, 
+                   deb.id AS debiteur_id, 
+                   deb.nom AS debiteur_nom,
+                   deb.cin AS debiteur_cin
+            FROM dossier d
+            INNER JOIN creance c ON d.id = c.id_dossier_id
+            INNER JOIN type_debiteur t ON c.id = t.id_creance_id
+            INNER JOIN debiteur deb ON t.id_debiteur_id = deb.id';
+    
+            if ($tel != "") {
+                $query .= ' INNER JOIN telephone tel ON deb.id = tel.id_debiteur_id';
+            }
+            if ($addr != "") {
+                $query .= ' INNER JOIN adresse ad ON deb.id = ad.id_debiteur_id';
+            }
+    
+            if ($num_dossier != "") {
+                $query .= ' WHERE d.numero_dossier = "'.$num_dossier.'" ';
+            }
+    
+            //TODO:Dossier
+            if ($agent != "") {
+                $query .= ' AND d.id_users_id = "'.$agent.'"';
+            }
+            if ($ptf != "") {
+                $query .= ' AND d.id_ptf_id = "'.$ptf.'"';
+            }
+            if ($date_fin_prevesionnel != "") {
+                $dateDebut = $date_fin_prevesionnel . " 00:00:00";
+                $dateFin = $date_fin_prevesionnel . " 23:59:59";
+                $query .= ' AND d.date_fin_prevesionnel BETWEEN "'.$dateDebut.'" AND "'.$dateFin.'"';
+            }
+            //TODO:Creance
+            if ($date_echeance != "") {
+                $dateDebut = $date_echeance . " 00:00:00";
+                $dateFin = $date_echeance . " 23:59:59";
+                $query .= ' AND c.date_echeance BETWEEN "'.$dateDebut.'" AND "'.$dateFin.'"';
+            }
+            if ($num_creance != "") {
+                $query .= ' WHERE c.numero_creance = "'.$num_creance.'" ';
+    
+            }
+            //TODO:deb
+            if ($cin != "") {
+                $query .= ' AND deb.cin like "'.$cin.'" ';
+            }
+            if($raison_social != ""){
+                $query .= ' AND deb.raison_social like "'.$raison_social.'" '; 
+            }
+    
+            
+            if($date_naissance != ""){
+                $dateDebut = $date_naissance. " 00:00:00";
+                $dateFin = $date_naissance. " 23:59:59";
+                $query .= ' AND deb.date_naissance BETWEEN "'.$dateDebut.'" AND "'.$dateFin.'"';
+            }
+    
+            if($tel != ""){
+                $query .=' AND tel.numero = "'.$tel.'" AND tel.active = 1';
+            }
+            if($addr != ""){
+                $query .= ' AND ad.adresse_complet = "'.$addr.'" AND ad.verifier = 1'; 
+            }
         
-
-        $query = 'SELECT DISTINCT d.*
-          FROM dossier d
-          INNER JOIN creance c ON d.id = c.id_dossier_id
-          INNER JOIN type_debiteur t ON c.id = t.id_creance_id
-          INNER JOIN debiteur deb ON t.id_debiteur_id = deb.id';
-
-        if ($tel != "") {
-            $query .= ' INNER JOIN telephone tel ON deb.id = tel.id_debiteur_id';
-        }
-        if ($addr != "") {
-            $query .= ' INNER JOIN adresse ad ON deb.id = ad.id_debiteur_id';
-        }
-
-        if ($num_dossier != "") {
-            $query .= ' WHERE d.numero_dossier = "'.$num_dossier.'" ';
-        }
-
-        //TODO:Dossier
-        if ($agent != "") {
-            $query .= ' AND d.id_users_id = "'.$agent.'"';
-        }
-        if ($ptf != "") {
-            $query .= ' AND d.id_ptf_id = "'.$ptf.'"';
-        }
-        if ($date_fin_prevesionnel != "") {
-            $dateDebut = $date_fin_prevesionnel . " 00:00:00";
-            $dateFin = $date_fin_prevesionnel . " 23:59:59";
-            $query .= ' AND d.date_fin_prevesionnel BETWEEN "'.$dateDebut.'" AND "'.$dateFin.'"';
-        }
-        //TODO:Creance
-        if ($date_echeance != "") {
-            $dateDebut = $date_echeance . " 00:00:00";
-            $dateFin = $date_echeance . " 23:59:59";
-            $query .= ' AND c.date_echeance BETWEEN "'.$dateDebut.'" AND "'.$dateFin.'"';
-        }
-        if ($num_creance != "") {
-            $query .= ' WHERE c.numero_creance = "'.$num_creance.'" ';
-
-        }
-        //TODO:deb
-        if ($cin != "") {
-            $query .= ' AND deb.cin like "'.$cin.'" ';
-        }
-        if($raison_social != ""){
-            $query .= ' AND deb.raison_social like "'.$raison_social.'" '; 
-        }
-
-        
-        if($date_naissance != ""){
-            $dateDebut = $date_naissance. " 00:00:00";
-            $dateFin = $date_naissance. " 23:59:59";
-            $query .= ' AND deb.date_naissance BETWEEN "'.$dateDebut.'" AND "'.$dateFin.'"';
-        }
-
-        if($tel != ""){
-            $query .=' AND tel.numero = "'.$tel.'" AND tel.active = 1';
-        }
-        if($addr != ""){
-            $query .= ' AND ad.adresse_complet = "'.$addr.'" AND ad.verifier = 1'; 
-        }
-       
+        // Order by
+        $query .= ' ORDER BY deb.id, d.id';
+    
+        // Execute query
         $stmt = $this->conn->prepare($query);
         $stmt = $stmt->executeQuery();
-        $resulat = $stmt->fetchAll();
+        $results = $stmt->fetchAll();
 
-        $array = array();
-        for ($i=0; $i < count($resulat); $i++) { 
-            $array[$i] = $resulat[$i];
-            $array[$i]['ptf'] = $this->getPtf($resulat[$i]['id_ptf_id']);
-            $array[$i]['dn'] = $this->getDonneur($array[$i]['ptf']['id_donneur_ordre_id']);
+    
+        // Group results by debiteur
+        $groupedArray = [];
+        foreach ($results as $row) {
+            $debiteurId = $row['debiteur_id'];
+            if (!isset($groupedArray[$debiteurId])) {
+                $groupedArray[$debiteurId] = [
+                    'debiteur_id' => $debiteurId,
+                    'debiteur_nom' => $row['debiteur_nom'],
+                    'debiteur_cin' => $row['debiteur_cin'],
+                    'dossiers' => [],
+                ];
+            }
+    
+            // Fetch additional details if needed
+            $dossier = $row;
+            $dossier['ptf'] = $this->getPtf($row['id_ptf_id']);
+            $dossier['dn'] = $this->getDonneur($dossier['ptf']['id_donneur_ordre_id']);
+    
+            $groupedArray[$debiteurId]['dossiers'][] = $dossier;
         }
+    
+        // Save or update the query in `save_search`
+        if (count($results) > 0) {
+
+            $sql='select * from  save_search WHERE titre is null and id_user_id  = "'.$user.'"';
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $lastSave = $stmt->fetchAll();
+    
+            
+            if (empty($lastSave)) {
+                $insertSql = 'INSERT INTO save_search (id_user_id, titre, query) VALUES (?, NULL, ?)';
+                $stmt = $this->conn->prepare($insertSql);
+                $stmt->executeQuery([$user, $query]); // Save the query as JSON or a string depending on your requirement
+            } else {
+                // If 'lastSave' exists, update the query field with the new query
+                $updateSql = 'UPDATE save_search SET query = ? WHERE id_user_id = ? AND titre IS NULL';
+                $stmt = $this->conn->prepare($updateSql);
+                $stmt->executeQuery([$query, $user]); // Update the query field
+            }
         
-        return $array;
+    
+        }
+    
+        return $groupedArray;
     }
+    
+    
+
+
     public function getPtf($id){
         $sql="SELECT  deb.* FROM portefeuille deb where deb.id = :id";
         $stmt = $this->conn->prepare($sql);
@@ -356,7 +410,7 @@ class dossiersRepo extends ServiceEntityRepository
         return $resulat;
     }
     public function getAccords($id){
-        $sql="SELECT distinct a.* FROM accord a INNER JOIN creance_accord ca ON a.id = ca.id_accord_id
+        $sql="SELECT distinct a.*, COUNT(ca.id_creance_id) AS creance_accord_count FROM accord a INNER JOIN creance_accord ca ON a.id = ca.id_accord_id
         INNER JOIN creance c ON ca.id_creance_id = c.id
         WHERE c.id_dossier_id = :id;
         ";
@@ -463,5 +517,203 @@ class dossiersRepo extends ServiceEntityRepository
         $resulat = $stmt->fetchOne();
         return $resulat;
     }
+
+    public function getPj($id){
+        $sql="select * FROM `pj_dossier` where id_dossier_id_id = :id;";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $id);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAllAssociative();
+        return $resulat;
+    }
+
+    public function saveFileBase64($id , $fileBase64){
+        $sql="INSERT INTO `pj_dossier`( `id_dossier_id_id`, `url`) VALUES (:id,:pj);";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $id);
+        $stmt->bindParam('pj', $fileBase64);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAllAssociative();
+        return $resulat;
+    }
+
+    public function getListesDossiersByFiltragesFast($data, $user)
+    {
+        $numero = $data["numero"];
+        $query = '
+            SELECT DISTINCT d.*, 
+                   deb.id AS debiteur_id, 
+                   deb.nom AS debiteur_nom,
+                   deb.cin AS debiteur_cin
+            FROM dossier d
+            INNER JOIN creance c ON d.id = c.id_dossier_id
+            INNER JOIN type_debiteur t ON c.id = t.id_creance_id
+            INNER JOIN debiteur deb ON t.id_debiteur_id = deb.id
+            WHERE d.numero_dossier = "'.$numero.'" OR c.numero_creance = "'.$numero.'"
+            ORDER BY deb.id, d.id';
+
+        $stmt = $this->conn->prepare($query);
+        $stmt = $stmt->executeQuery();
+        $resulat = $stmt->fetchAll();
+
+        $groupedArray = [];
+        
+        foreach ($resulat as $row) {
+            $debiteurId = $row['debiteur_id'];
+            
+            if (!isset($groupedArray[$debiteurId])) {
+                $groupedArray[$debiteurId] = [
+                    'debiteur_id' => $debiteurId,
+                    'debiteur_nom' => $row['debiteur_nom'],
+                    'debiteur_cin' => $row['debiteur_cin'],
+                    'dossiers' => [],
+                ];
+            }
+            
+            $dossier = $row;
+            $dossier['ptf'] = $this->getPtf($row['id_ptf_id']);
+            $dossier['dn'] = $this->getDonneur($dossier['ptf']['id_donneur_ordre_id']);
+            
+            $groupedArray[$debiteurId]['dossiers'][] = $dossier;
+        }
+
+        // Save search logic remains the same
+        if (count($resulat) > 0) {
+            $sql='select * from  save_search WHERE titre is null and id_user_id  = "'.$user.'"';
+            $stmt = $this->conn->prepare($sql);
+            $stmt = $stmt->executeQuery();
+            $lastSave = $stmt->fetchAll();
+
+            if (empty($lastSave)) {
+                $insertSql = 'INSERT INTO save_search (id_user_id, titre, query) VALUES (?, NULL, ?)';
+                $stmt = $this->conn->prepare($insertSql);
+                $stmt->executeQuery([$user, $query]);
+            } else {
+                $updateSql = 'UPDATE save_search SET query = ? WHERE id_user_id = ? AND titre IS NULL';
+                $stmt = $this->conn->prepare($updateSql);
+                $stmt->executeQuery([$query, $user]);
+            }
+        }
+
+        return array_values($groupedArray);
+    }
+
+    public function saveQuery($data, $user)
+    {
+
+        
+        // Extract description and query from the data
+        $description = $data['description'] ?? null;
+        $forAllUsers = $data['forAllUsers'] ?? null;
+
+        if($description == "" || $description == null)
+        {
+            return "EMPTY-PARAMS";
+        }
+
+        $for = $user;
+
+        if($forAllUsers != null && $forAllUsers)
+        {
+            $for = NULL;
+        }
+
+        $sql='select * from  save_search WHERE titre is null and id_user_id  = "'.$user.'"';
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $lastSave = $stmt->fetchAll();
+
+        
+        if (empty($lastSave)) {
+            return "SAVE_EXIST";
+        } else 
+        {
+            // If 'lastSave' exists, update the query field with the new query
+            $updateSql = 'UPDATE save_search SET titre = ?, for_user_id = ? WHERE id_user_id = ? AND titre IS NULL';
+            $stmt = $this->conn->prepare($updateSql);
+            $stmt->execute([$description, $for, $user]); // Update the titre and for_user_id fields
+
+            return "OK"; // Or false based on success
+
+        }
+
+    }
+
+    public function getSavedSearches($user)
+    {
+        // Query to fetch saved searches for a given user
+        $sql = 'SELECT * FROM save_search WHERE titre is not NULL AND (id_user_id is NULL or id_user_id = "'.$user.'")';
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+
+        // Fetch and return the results
+        return $stmt->fetchAll();  // This returns an array of saved searches
+    }
+
+
+    // In your dossier repository
+
+    public function runQuery($id)
+    {
+        // Get the saved search query from the database based on the given id
+        $sql = 'SELECT query FROM save_search WHERE id = "'.$id.'"';
+        $stmt = $this->conn->prepare($sql);
+        $stmt = $stmt->executeQuery();
+        $savedQuery = $stmt->fetchAll();
+
+        // Check if a saved query exists
+        if (!$savedQuery) {
+            throw new \Exception("Query not found for the given id.");
+        }
+
+        $query = $savedQuery[0]["query"];
+        // Execute the saved query
+        try {
+            $stmt = $this->conn->prepare($query);
+            $stmt = $stmt->executeQuery();
+            $resulat = $stmt->fetchAll();
+
+            $groupedArray = [];
+        
+            foreach ($resulat as $row) {
+                $debiteurId = $row['debiteur_id'];
+                
+                if (!isset($groupedArray[$debiteurId])) {
+                    $groupedArray[$debiteurId] = [
+                        'debiteur_id' => $debiteurId,
+                        'debiteur_nom' => $row['debiteur_nom'],
+                        'debiteur_cin' => $row['debiteur_cin'],
+                        'dossiers' => [],
+                    ];
+                }
+                
+                $dossier = $row;
+                $dossier['ptf'] = $this->getPtf($row['id_ptf_id']);
+                $dossier['dn'] = $this->getDonneur($dossier['ptf']['id_donneur_ordre_id']);
+                
+                $groupedArray[$debiteurId]['dossiers'][] = $dossier;
+            }
+        
+            return $groupedArray;
+        } catch (\Exception $e) {
+            throw new \Exception("Error executing the query: " . $e->getMessage());
+        }
+    }
+
+
+    public function getDebiteurDossiers($id) {
+        $sql = "SELECT d.* FROM dossier d 
+                WHERE d.id IN 
+                (SELECT c.id_dossier_id FROM creance c 
+                 WHERE c.id IN 
+                 (SELECT td.id_creance_id FROM type_debiteur td WHERE td.id_debiteur_id = :id))";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam('id', $id);
+        $stmt = $stmt->executeQuery();
+        $result = $stmt->fetchAllAssociative();
+        return $result;
+    }
+    
+
 }
     

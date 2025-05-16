@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\DossierRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -29,7 +31,7 @@ class Dossier
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $date_fin = null;
 
-    #[ORM\ManyToOne(inversedBy: 'dossiers')]
+    #[ORM\ManyToOne(targetEntity: Qualification::class, inversedBy: 'dossiers')]
     private ?Qualification $id_qualification = null;
 
     #[ORM\ManyToOne(inversedBy: 'dossiers')]
@@ -52,6 +54,14 @@ class Dossier
 
     #[ORM\ManyToOne]
     private ?Utilisateurs $id_user_assign = null;
+
+    #[ORM\OneToMany(mappedBy: 'idDossier', targetEntity: HistoriqueTimer::class)]
+    private Collection $historiqueTimers;
+
+    public function __construct()
+    {
+        $this->historiqueTimers = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -210,6 +220,36 @@ class Dossier
     public function setIdUserAssign(?Utilisateurs $id_user_assign): static
     {
         $this->id_user_assign = $id_user_assign;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, HistoriqueTimer>
+     */
+    public function getHistoriqueTimers(): Collection
+    {
+        return $this->historiqueTimers;
+    }
+
+    public function addHistoriqueTimer(HistoriqueTimer $historiqueTimer): static
+    {
+        if (!$this->historiqueTimers->contains($historiqueTimer)) {
+            $this->historiqueTimers->add($historiqueTimer);
+            $historiqueTimer->setIdDossier($this);
+        }
+
+        return $this;
+    }
+
+    public function removeHistoriqueTimer(HistoriqueTimer $historiqueTimer): static
+    {
+        if ($this->historiqueTimers->removeElement($historiqueTimer)) {
+            // set the owning side to null (unless already changed)
+            if ($historiqueTimer->getIdDossier() === $this) {
+                $historiqueTimer->setIdDossier(null);
+            }
+        }
 
         return $this;
     }

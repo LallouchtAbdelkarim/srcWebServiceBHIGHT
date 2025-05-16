@@ -33,9 +33,13 @@ class ParamActivite
     #[ORM\Column(nullable: true)]
     private ?int $activite_p = null;
 
+    #[ORM\OneToMany(mappedBy: 'id_param_parent', targetEntity: CreanceActivite::class)]
+    private Collection $creanceActivites;
+
     public function __construct()
     {
         $this->qualificationParams = new ArrayCollection();
+        $this->creanceActivites = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -129,6 +133,36 @@ class ParamActivite
     public function setActiviteP(?int $activite_p): static
     {
         $this->activite_p = $activite_p;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, CreanceActivite>
+     */
+    public function getCreanceActivites(): Collection
+    {
+        return $this->creanceActivites;
+    }
+
+    public function addCreanceActivite(CreanceActivite $creanceActivite): static
+    {
+        if (!$this->creanceActivites->contains($creanceActivite)) {
+            $this->creanceActivites->add($creanceActivite);
+            $creanceActivite->setIdParamParent($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCreanceActivite(CreanceActivite $creanceActivite): static
+    {
+        if ($this->creanceActivites->removeElement($creanceActivite)) {
+            // set the owning side to null (unless already changed)
+            if ($creanceActivite->getIdParamParent() === $this) {
+                $creanceActivite->setIdParamParent(null);
+            }
+        }
 
         return $this;
     }

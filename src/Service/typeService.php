@@ -532,7 +532,7 @@ class typeService
     public function getListeTemplate($type)
     {
         switch ($type) {
-            case 1:
+            case 4:
                 // Check if $id matches 'revenu' type
                 $query = $this->em->createQuery('SELECT r FROM App\Entity\ModelCourier r ');
                 $resultList = $query->getResult();
@@ -541,7 +541,7 @@ class typeService
                 }
                 break;
 
-            case 2:
+            case 3:
                 $query = $this->em->createQuery('SELECT r FROM App\Entity\ModelEmail r ');
                 $resultList = $query->getResult();
                 if ($resultList) {
@@ -549,7 +549,7 @@ class typeService
                 }
                 break;
 
-            case 3:
+            case 2:
                 $query = $this->em->createQuery('SELECT r FROM App\Entity\ModelSMS r ');
                 $resultList = $query->getResult();
                 if ($resultList) {

@@ -4,6 +4,9 @@
 namespace App\Service;
 
 use Symfony\Component\PropertyAccess\PropertyAccess;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class FileService
 {
@@ -13,7 +16,7 @@ class FileService
         $requiredHeaders=array();
         $fileError = $file['error'];
         $fileTmpLoc = $file['tmp_name'];
-        $extensions_valides = array('csv');
+        $extensions_valides = array('csv','xlsx','xls');
         $fileName = $file['name'];
         $extension_upload = strtolower(substr(strrchr($fileName, '.'), 1));
         $search = array("à","é","è","\""," ");
@@ -29,30 +32,65 @@ class FileService
             $codeStatut="OK";
             if (in_array($extension_upload, $extensions_valides))
             {
-                if (($handle = fopen($fileTmpLoc, "r+")) !== FALSE)
-                {
-                    while (($data = fgetcsv($handle, 1000000, ";")) !== FALSE)
-                    {
-                        break;
-                    }
-                    $data=array_map("trim",$data);
-                    $data=array_map("utf8_encode",$data);
-                    $data=str_replace($search, $replace, $data);
-                    $pattern = '/[^a-zA-Z0-9\s_]/';
-                    $data[0] = preg_replace($pattern, '', $data[0]);
-                    rewind($handle);
-                    fputcsv($handle, $data,";");
+                if ($extension_upload === 'csv') {
 
-                    if(count(array_intersect($requiredHeaders, $data))==count($requiredHeaders))
+                    if (($handle = fopen($fileTmpLoc, "r+")) !== FALSE)
                     {
-                        $codeStatut="OK";
+                        while (($data = fgetcsv($handle, 1000000, ";")) !== FALSE)
+                        {
+                            break;
+                        }
+                        $data=array_map("trim",$data);
+                        $data=array_map("utf8_encode",$data);
+                        $data=str_replace($search, $replace, $data);
+                        $pattern = '/[^a-zA-Z0-9\s_]/';
+                        $data[0] = preg_replace($pattern, '', $data[0]);
+                        rewind($handle);
+                        fputcsv($handle, $data,";");
+
+                        if(count(array_intersect($requiredHeaders, $data))==count($requiredHeaders))
+                        {
+                            $codeStatut="OK";
+                        }
+                        else
+                        {
+                            $codeStatut = "ERROR_EXTENSION";
+                        }
+                        fclose($handle);
                     }
-                    else
-                    {
+                }
+                elseif ($extension_upload === 'xls' || $extension_upload === 'xlsx') {
+                    $spreadsheet = IOFactory::load($fileTmpLoc); // Load the Excel file
+                    $worksheet = $spreadsheet->getActiveSheet(); // Get the active worksheet
+                    $data = [];
+            
+                    // Iterate through the rows of the worksheet
+                    foreach ($worksheet->getRowIterator() as $row) {
+                        $cellIterator = $row->getCellIterator();
+                        $cellIterator->setIterateOnlyExistingCells(false); // Iterate over all cells, even empty ones
+                        $rowData = [];
+            
+                        // Iterate through each cell in the row
+                        foreach ($cellIterator as $cell) {
+                            $rowData[] = mb_convert_encoding($cell->getValue(), 'UTF-8', 'Windows-1252'); // Convert to UTF-8
+                        }
+                        $data[] = $rowData;
+                        break; // Read only the first row (headers)
+                    }
+            
+                            
+                    // Save the modified Excel file
+                    $writer = IOFactory::createWriter($spreadsheet, ucfirst($extension_upload)); // xls or xlsx
+                    $writer->save($fileTmpLoc);  // Save the changes back to the file
+                
+                    // Validate required headers
+                    if (count(array_intersect($requiredHeaders, $data)) == count($requiredHeaders)) {
+                        $codeStatut = "OK";
+                    } else {
                         $codeStatut = "ERROR_EXTENSION";
                     }
-                    fclose($handle);
                 }
+                
             }
             else
             {

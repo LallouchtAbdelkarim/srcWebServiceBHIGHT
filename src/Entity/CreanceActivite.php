@@ -36,6 +36,27 @@ class CreanceActivite
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $commentaire = null;
 
+    #[ORM\ManyToOne(inversedBy: 'creanceActivites')]
+    private ?ParamActivite $id_param_parent = null;
+
+    #[ORM\Column]
+    private ?int $typeActivite = null;
+
+    #[ORM\ManyToOne(inversedBy: 'creanceActivites')]
+    private ?Debiteur $debiteur = null;
+
+    #[ORM\ManyToOne(inversedBy: 'creanceActivites')]
+    private ?Personne $personne = null;
+
+    #[ORM\ManyToOne(inversedBy: 'creanceActivites')]
+    private ?Telephone $telephone = null;
+
+    #[ORM\ManyToOne(inversedBy: 'creanceActivites')]
+    private ?Email $email = null;
+
+    #[ORM\ManyToOne(inversedBy: 'creanceActivites')]
+    private ?Adresse $adresse = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -107,6 +128,90 @@ class CreanceActivite
     public function setCommentaire(?string $commentaire): static
     {
         $this->commentaire = $commentaire;
+
+        return $this;
+    }
+
+    public function getIdParamParent(): ?ParamActivite
+    {
+        return $this->id_param_parent;
+    }
+
+    public function setIdParamParent(?ParamActivite $id_param_parent): static
+    {
+        $this->id_param_parent = $id_param_parent;
+
+        return $this;
+    }
+
+    public function getTypeActivite(): ?int
+    {
+        return $this->typeActivite;
+    }
+
+    public function setTypeActivite(int $typeActivite): static
+    {
+        $this->typeActivite = $typeActivite;
+
+        return $this;
+    }
+
+    public function getDebiteur(): ?Debiteur
+    {
+        return $this->debiteur;
+    }
+
+    public function setDebiteur(?Debiteur $debiteur): static
+    {
+        $this->debiteur = $debiteur;
+
+        return $this;
+    }
+
+    public function getPersonne(): ?Personne
+    {
+        return $this->personne;
+    }
+
+    public function setPersonne(?Personne $personne): static
+    {
+        $this->personne = $personne;
+
+        return $this;
+    }
+
+    public function getTelephone(): ?Telephone
+    {
+        return $this->telephone;
+    }
+
+    public function setTelephone(?Telephone $telephone): static
+    {
+        $this->telephone = $telephone;
+
+        return $this;
+    }
+
+    public function getEmail(): ?Email
+    {
+        return $this->email;
+    }
+
+    public function setEmail(?Email $email): static
+    {
+        $this->email = $email;
+
+        return $this;
+    }
+
+    public function getAdresse(): ?Adresse
+    {
+        return $this->adresse;
+    }
+
+    public function setAdresse(?Adresse $adresse): static
+    {
+        $this->adresse = $adresse;
 
         return $this;
     }

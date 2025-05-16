@@ -302,9 +302,9 @@ class MessageController extends AbstractController
             JOIN
                 Message m ON dm.Message_id = m.id
             LEFT JOIN
-                Utilisateurs sender_user ON dm.expediteur_id = sender_user.id
+                utilisateurs sender_user ON dm.expediteur_id = sender_user.id
             LEFT JOIN
-                Utilisateurs recipient_user ON dm.distinataire_id = recipient_user.id
+                utilisateurs recipient_user ON dm.distinataire_id = recipient_user.id
             GROUP BY
                 id, messageContent, recipient, sender, date_envoi, sender_name, recipient_name, user_name, user_id
             ORDER BY

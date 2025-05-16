@@ -30,3 +30,37 @@ services:
     # App\EventListener\ExceptionListener:
     #     tags: 
     #         - { name: kernel.event_listener, event: kernel.request , method: onExecuteView}
+
+    Symfony\Component\Serializer\Serializer:
+        arguments:
+            $normalizers:
+                - '@serializer.normalizer.object'
+                - '@serializer.normalizer.datetime'
+            $encoders:
+                - '@serializer.encoder.json'
+
+    # Required encoders
+    serializer.encoder.json:
+        class: Symfony\Component\Serializer\Encoder\JsonEncoder
+
+    # Required normalizers
+    serializer.normalizer.datetime:
+        class: Symfony\Component\Serializer\Normalizer\DateTimeNormalizer
+        tags: [serializer.normalizer]
+
+    serializer.normalizer.object:
+        class: Symfony\Component\Serializer\Normalizer\ObjectNormalizer
+        arguments: 
+            - '@serializer.mapping.class_metadata_factory'
+            - null
+            - null
+            - null
+        tags: 
+            - { name: serializer.normalizer, priority: -1000 }
+        calls:
+            - ['setSerializer', ['@serializer']]
+            
+    App\EventSubscriber\GlobalChangeLogSubscriber:
+        tags:
+            - { name: doctrine.event_subscriber }
+                    

@@ -43,6 +43,7 @@ use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use ZipArchive;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 #[Route('/API/integration')]
 
@@ -2597,6 +2598,8 @@ class IntegrationController extends AbstractController
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
+
+
     #[Route('/getColumn', methods: ['POST'])]
     public function getColumn(integrationRepo $integrationRepo , SerializerInterface $serializer , Request $request): JsonResponse
     {
@@ -2604,11 +2607,11 @@ class IntegrationController extends AbstractController
         $codeStatut = "ERROR";
         try {
             $this->AuthService->checkAuth(0,$request);
-            //code...
+
             if(!empty($_FILES['fichier']['name']))
             {
                 $fileSize=$_FILES['fichier']['size'];
-                $extensions_valides = array('csv');
+                $extensions_valides = array('csv','xls','xlsx');
                 $fileName = $_FILES['fichier']['name'];
                 $extension_upload = strtolower(substr(strrchr($fileName, '.'), 1));
                 $fileError = $_FILES['fichier']['error'];
@@ -2618,27 +2621,46 @@ class IntegrationController extends AbstractController
                 {
                     $codeStatut="ERROR-FILE";
                 }else{
-                    if (in_array($extension_upload, $extensions_valides))
-                    {
-                        if (($handle = fopen($fileTmpLoc, "r")) !== FALSE) {
-                            while (($data = fgetcsv($handle, 1000000, ";")) !== FALSE)
-                            {
-                                break;
+                    if (in_array($extension_upload, $extensions_valides)) {
+                        // Handle CSV file
+                        if ($extension_upload === 'csv') {
+                            if (($handle = fopen($fileTmpLoc, "r")) !== FALSE) {
+                                while (($data = fgetcsv($handle, 1000000, ";")) !== FALSE) {
+                                    break;
+                                }
+                                // Remove BOM and convert encoding to UTF-8
+                                $data[0] = preg_replace('/\x{EF}\x{BB}\x{BF}/', '', $data[0]);
+                                for ($i = 0; $i < count($data); $i++) {
+                                    $data[$i] = mb_convert_encoding($data[$i], 'UTF-8', 'Windows-1252');
+                                }
+                                fclose($handle);
+                                $respObjects["data"] = $data;
+                                $codeStatut = "OK";
                             }
-                            $data[0] = preg_replace('/\x{EF}\x{BB}\x{BF}/', '', $data[0]);
-                            for($i=0; $i < count($data); $i++) { 
-                                $data[$i] = mb_convert_encoding($data[$i], 'UTF-8','Windows-1252');
+                        }
+                        elseif ($extension_upload === 'xls' || $extension_upload === 'xlsx') {
+                            $spreadsheet = IOFactory::load($fileTmpLoc);
+                            $worksheet = $spreadsheet->getActiveSheet();
+                            $data = [];
+    
+                            foreach ($worksheet->getRowIterator() as $row) {
+                                $cellIterator = $row->getCellIterator();
+                                $cellIterator->setIterateOnlyExistingCells(false); // Iterate over all cells
+                                $rowData = [];
+    
+                                foreach ($cellIterator as $cell) {
+                                    $rowData[] = mb_convert_encoding($cell->getValue(), 'UTF-8', 'Windows-1252');
+                                }
+                                $data[] = $rowData;
+                                break; // Read only the first row (headers)
                             }
-                            fclose($handle);
-                            $respObjects["data"] = $data;
+                            $respObjects["data"] = $data[0];
                             $codeStatut = "OK";
                         }
+                    } else {
+                        $codeStatut = "ERROR_FILE_EXTENSION";
                     }
-                    else
-                    {
-                        $codeStatut="ERROR_FILE_EXTENSION";
                     }
-                }
     
             }else{
                 $codeStatut="ERROR-EMPTY-PARAMS";

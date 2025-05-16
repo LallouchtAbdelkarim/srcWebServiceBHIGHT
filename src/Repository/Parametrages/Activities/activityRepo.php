@@ -7,6 +7,7 @@ use App\Entity\ActiviteParent;
 use App\Entity\DetailGroupeCompetence;
 use App\Entity\Etap;
 use App\Entity\EtapActivite;
+use App\Entity\EventAction;
 use App\Entity\IntermResultatActivite;
 use App\Entity\ParamActivite;
 use App\Entity\ResultatActivite;
@@ -88,10 +89,40 @@ class activityRepo extends ServiceEntityRepository
 			return $result;
 		}
     }
-    public function getAllParentActivity(){
-        $resultList = $this->em->getRepository(ActiviteParent::class)->findBy([],["id"=>"DESC"]);
+    public function getAllParentActivity2(){
+        // Create QueryBuilder
+        $qb = $this->em->createQueryBuilder();
+        
+        // Write the query
+        $qb->select('a', 'COUNT(e.id) as eventCount')
+            ->from(Activite::class, 'a')
+            ->leftJoin(EventAction::class, 'e', 'WITH', 'a.id = e.id_activity_p')
+            ->groupBy('a.id')
+            ->orderBy('a.id', 'DESC');
+        
+        // Execute the query
+        $resultList = $qb->getQuery()->getResult();
+        
         return $resultList;
     }
+
+    public function getAllParentActivity(){
+        // Create QueryBuilder
+        $qb = $this->em->createQueryBuilder();
+        
+        // Write the query
+        $qb->select('a', 'COUNT(e.id) as eventCount')
+            ->from(ActiviteParent::class, 'a')
+            ->leftJoin(EventAction::class, 'e', 'WITH', 'a.id = e.id_activity_p')
+            ->groupBy('a.id')
+            ->orderBy('a.id', 'DESC');
+        
+        // Execute the query
+        $resultList = $qb->getQuery()->getResult();
+        
+        return $resultList;
+    }
+
     public function getOneParentActivityByTitre($titre){
         $resultList = $this->em->getRepository(ActiviteParent::class)->findBy(["titre"=>$titre]);
         return $resultList;
@@ -310,6 +341,21 @@ class activityRepo extends ServiceEntityRepository
         $etap->setTypeActivite($typeActivite);
         $this->em->flush();
         return $etap;
+    }
+
+
+    public function getTypesOfSParametragesC(){
+        $resultList = $this->em->getRepository(TypeParametrage::class)->findBy(["id"=>2]);
+        return $resultList;
+    }
+
+    public function getParamsActivityC($id){
+        $param =  $this->em->getRepository(ParamActivite::class)->findBy(["id_branche"=>$id]);
+        if($param){
+            return $param;
+        }else{
+            return null;
+        }
     }
     
 }

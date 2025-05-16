@@ -19,6 +19,9 @@ class CreanceAccord
     #[ORM\ManyToOne]
     private ?Creance $id_creance = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?float $montantAccord = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -44,6 +47,18 @@ class CreanceAccord
     public function setIdCreance(?Creance $id_creance): static
     {
         $this->id_creance = $id_creance;
+
+        return $this;
+    }
+
+    public function getMontantAccord(): ?float
+    {
+        return $this->montantAccord;
+    }
+
+    public function setMontantAccord(?float $montantAccord): static
+    {
+        $this->montantAccord = $montantAccord;
 
         return $this;
     }

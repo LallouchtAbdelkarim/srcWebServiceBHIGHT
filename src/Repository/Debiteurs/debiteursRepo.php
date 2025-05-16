@@ -97,16 +97,27 @@ class debiteursRepo extends ServiceEntityRepository
 
         $tel = $data["tel"];
         $addr = $data["addr"];
+        $email = $data["email"];
 
         $query = 'SELECT DISTINCT d.* FROM debiteur d
         JOIN type_debiteur tp ON d.id = tp.id_debiteur_id
         JOIN creance c ON tp.id_creance_id = c.id ';
 
         if ($tel != "") {
-            $query .= ' INNER JOIN telephone tel ON d.id = tel.id_debiteur_id';
+            $query .= ' INNER JOIN telephone tel ON d.id = tel.id_debiteur_id AND tel.numero = "'.$tel.'" ';
         }
         if ($addr != "") {
-            $query .= ' INNER JOIN adresse ad ON d.id = ad.id_debiteur_id';
+            $query .= ' INNER JOIN adresse ad ON d.id = ad.id_debiteur_id 
+            AND (
+                ad.adresse_complet = "'.$addr.'" 
+                OR ad.pays = "'.$addr.'" 
+                OR ad.ville = "'.$addr.'" 
+                OR ad.code_postal = "'.$addr.'" 
+                OR ad.province = "'.$addr.'"
+            ) ';
+        }     
+        if ($email != "") {
+            $query .= ' INNER JOIN email em ON d.id = em.id_debiteur_id AND em.email = "'.$email.'" ';
         }
 
         //Creance
@@ -131,12 +142,12 @@ class debiteursRepo extends ServiceEntityRepository
             $query .= ' AND d.date_naissance BETWEEN "'.$dateDebut.'" AND "'.$dateFin.'"';
         }
 
-        if($tel != ""){
-            $query .=' AND tel.numero = "'.$tel.'" AND tel.active = 1';
-        }
-        if($addr != ""){
-            $query .= ' AND ad.adresse_complet = "'.$addr.'" AND ad.verifier = 1'; 
-        }
+        // if($tel != ""){
+        //     $query .=' AND tel.numero = "'.$tel.'" AND tel.active = 1';
+        // }
+        // if($addr != ""){
+        //     $query .= ' AND ad.adresse_complet = "'.$addr.'" AND ad.verifier = 1'; 
+        // }
                 
         $stmt = $this->conn->prepare($query);
         $stmt = $stmt->executeQuery();
@@ -1281,9 +1292,9 @@ class debiteursRepo extends ServiceEntityRepository
 
     
     public function getRelationById($id){
-        $sql = "select * from `personne` where id = 10";
+        $sql = "select * from `personne` where id = :id";
         $stmt = $this->conn->prepare($sql);
-        // $stmt->bindParam("id", $id);
+        $stmt->bindParam("id", $id);
         $stmt = $stmt->executeQuery();
         $result = $stmt->fetchAssociative();
 

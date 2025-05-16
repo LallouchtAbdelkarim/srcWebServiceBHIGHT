@@ -193,11 +193,11 @@ class PorteFeuilleController extends AbstractController
         $respObjects = [];
         
         $donneur = $donneurRepo->DeletePortefeuille($id);
-        if ($donneur) {
+        if ($donneur == "OK") {
             $respObjects["message"] = "success";
             $respObjects["codeStatut"] = "OK";
         }else{
-                $respObjects["message"] = "Une error s'est produite !";
+                $respObjects["message"] = $donneur;
             $respObjects["codeStatut"] = "NOT OK";
         }
         return new JsonResponse($respObjects);

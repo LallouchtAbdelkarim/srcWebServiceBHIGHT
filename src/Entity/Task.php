@@ -41,6 +41,15 @@ class Task
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $commentaire = null;
 
+    #[ORM\ManyToOne(inversedBy: 'tasks')]
+    private ?Utilisateurs $assignedUser = null;
+
+    #[ORM\ManyToOne(inversedBy: 'tasks')]
+    private ?Departement $assignedDepartement = null;
+
+    #[ORM\ManyToOne(inversedBy: 'tasks')]
+    private ?Teams $equipe = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -138,6 +147,42 @@ class Task
     public function setCommentaire(?string $commentaire): static
     {
         $this->commentaire = $commentaire;
+
+        return $this;
+    }
+
+    public function getAssignedUser(): ?Utilisateurs
+    {
+        return $this->assignedUser;
+    }
+
+    public function setAssignedUser(?Utilisateurs $assignedUser): static
+    {
+        $this->assignedUser = $assignedUser;
+
+        return $this;
+    }
+
+    public function getAssignedDepartement(): ?Departement
+    {
+        return $this->assignedDepartement;
+    }
+
+    public function setAssignedDepartement(?Departement $assignedDepartement): static
+    {
+        $this->assignedDepartement = $assignedDepartement;
+
+        return $this;
+    }
+
+    public function getEquipe(): ?Teams
+    {
+        return $this->equipe;
+    }
+
+    public function setEquipe(?Teams $equipe): static
+    {
+        $this->equipe = $equipe;
 
         return $this;
     }

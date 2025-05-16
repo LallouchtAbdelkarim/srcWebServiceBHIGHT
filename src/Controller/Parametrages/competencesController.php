@@ -59,7 +59,7 @@ class competencesController extends AbstractController
         }catch(\Exception $e){
             $codeStatut = "ERROR_EXCEPETION";
         }
-        $respObjects["codeStatut"] = $codeStatut;
+        $respObjects["codeStatut"] =  $codeStatut;
         $respObjects["message"] = $this->MessageService->checkMessage($codeStatut);
         return $this->json($respObjects);
     }
@@ -239,12 +239,11 @@ class competencesController extends AbstractController
         $id = $request->get("id");
         if(trim($id) != ""){
             $competence = $competenceRepo->findModel($id);
-            dump($competence);
             if($competence){
                 $codeStatut = "OK";
                 $respObjects["data"]["competence"] = $competence;
                 //Get list param
-                $param_activite = $activityRepo->getParamsActivity();dump($id);
+                $param_activite = $activityRepo->getParamsActivity();
                 // $param_list = array();
                 // for($j = 0 ; $j < count($param_activite) ;$j++){
                 //     $param_list[$j]["param"] = $param_activite[$j];
